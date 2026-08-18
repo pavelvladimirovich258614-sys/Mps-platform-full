@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://mps:mps@localhost:5432/mps"
     redis_url: str = "redis://localhost:6379/3"
     jwt_secret: str = ""
+    jwt_algorithm: str = "HS256"
+    access_token_minutes: int = 30
+    refresh_token_days: int = 30
     bot_token: str = ""
     managers_chat_id: str = ""
     lawyer_tg_id: str = ""

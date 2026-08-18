@@ -1,1 +1,5 @@
-"""SQLAlchemy models registered by subsequent features."""
+"""SQLAlchemy models."""
+
+from app.models.user import Role, User
+
+__all__ = ["Role", "User"]

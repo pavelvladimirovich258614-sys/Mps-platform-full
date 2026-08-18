@@ -24,15 +24,15 @@
       "area": "auth",
       "title": "Авторизация: Telegram Login + email-код, JWT, роли",
       "user_visible_behavior": "Пользователь входит через Telegram или email-код, получает JWT; GET /me отдаёт профиль с ролью reader; PATCH /me меняет имя и аноним-режим.",
-      "status": "not_started",
+      "status": "passing",
       "verification": [
         "pytest tests/test_auth.py -q: валидный tg-hash -> 200 + токены; подделанный hash -> 401",
         "email flow: request -> код в Redis -> verify -> 200; неверный код -> 400",
         "GET /me без токена -> 401, с токеном -> профиль",
         "require_role(editor) для reader -> 403"
       ],
-      "evidence": "",
-      "notes": "BACKEND_SPEC §2 users, §3 auth, §5 безопасность. HMAC-проверка строго по алгоритму Telegram."
+      "evidence": "2026-08-18: cd backend && DATABASE_URL=sqlite+aiosqlite:///:memory: python -m alembic upgrade head — Running upgrade 20260818_0001 -> 20260818_0002, Create users; python -m pytest backend/tests -q — 5 passed in 0.37s; ./init.sh — [OK] Верификация прошла, 5 passed in 0.55s. Auth tests: valid Telegram hash -> 200 + access token/cookie; tampered hash -> 401; wrong/expired email code -> 400; reader editor dependency -> 403.",
+      "notes": "BACKEND_SPEC §2 users, §3 auth, §5 безопасность. HMAC-проверка строго по алгоритму Telegram. Redis-server отсутствовал; в тестах используется fakeredis с реальным SET/TTL/GET/DELETE API. mailer.send_code логирует факт отправки без кода; реальный Unisender transport — F05."
     },
     {
       "id": "F03",

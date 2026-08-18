@@ -13,3 +13,4 @@ nh3
 python-multipart
 PyJWT
 slowapi
+fakeredis

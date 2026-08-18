@@ -4,7 +4,7 @@
 - Repository root directory: mps-platform/
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
-- Highest priority unfinished feature: F02 (авторизация: Telegram Login + email-код, JWT, роли)
+- Highest priority unfinished feature: F03 (публикации: статьи, фишки, видеообзоры, лайки)
 - Current blocker: нет
 - Frontend: M1 ЗАВЕРШЁН — финальный экспорт лежит в frontend/mir-pod-solncem.dc.html (см. frontend/README.md); до F09 работает на локальных данных — это ожидаемо, не баг.
 
@@ -29,3 +29,12 @@
 - Commits: будет создан локальный коммит `F01: каркас бекенда [passing]`.
 - Known risks: миграция подтверждена на SQLite in-memory; подключение к реальному PostgreSQL остаётся задачей среды деплоя.
 - Next best action: F02 — реализовать авторизацию Telegram/email с JWT и ролями.
+
+### Session 2 — 2026-08-18 (Codex, F02)
+- Goal: реализовать пользователей, Telegram/email авторизацию, JWT и роли.
+- Completed: модель users и миграция с CHECK identity, проверка Telegram Login HMAC и auth_date, JWT access/refresh с httpOnly cookie, Redis email-коды, `/me`, профиль, роли, presence middleware и auth rate limit.
+- Verification run: SQLite Alembic upgrade до `20260818_0002`; `python -m pytest backend/tests -q` — `5 passed in 0.37s`; `./init.sh` — `[OK]`, `5 passed in 0.55s`.
+- Evidence recorded: feature_list.json → F02.evidence.
+- Commits: будет создан локальный коммит `F02: авторизация и роли [passing]`.
+- Known risks: fakeredis выбран для тестов, так как redis-server отсутствует; production использует Redis URL из .env. Mailer намеренно логирует отправку до F05.
+- Next best action: F03 — публикации и лайки.
