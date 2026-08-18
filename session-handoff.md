@@ -1,12 +1,12 @@
-# Session handoff — F09b in progress
+# Session handoff — после F09b
 
 ## Verified state
-- F01–F08, F09a1 и F09a2 passing; Alembic head `20260818_0007`; full pytest and `./init.sh`: 32 passed. F09b реализована в коде, но остаётся in_progress до browser E2E.
+- F01–F08, F09a1, F09a2 и F09b passing; Alembic head `20260818_0007`; full pytest and `./init.sh`: 33 passed. Next: F10.
 - `frontend/app` — Vite + React + TypeScript перенос дизайна. Источник истины остаётся `frontend/mir-pod-solncem.dc.html`; не удалять и сохранять семантику 1:1. F09a1/F09a2 содержат Layout, Feed, Forum, ArticleComments, Reviews, Subscribe, QA, Profile, Notifications, About, Legal, CookieBanner, обе темы и mobile sheet/nav.
 - `frontend/app/src/api/comments.ts` — узкий адаптер исправленного F04 контракта. `GET /posts/{id}/comments` возвращает `author`, `reactions`, `my_reaction`; `POST /comments/{id}/react` toggles текущий emoji и возвращает новые `reactions`/`my_reaction`. Access token пока читается из sessionStorage только как временная граница до F09b; в F09b заменить общим memory-only auth client с refresh cookie.
 - F09b: `frontend/app/src/api/client.ts` хранит access JWT только в памяти, POST `/auth/refresh` использует httpOnly cookie и один retry исходного 401. Hooks лежат в `src/hooks/index.ts`; `api/comments.ts` больше не использует sessionStorage. В UI подключены posts/reviews/comments/subscribe/QA/forum/notifications/online/profile; `countryFlags.ts` содержит только фиксированный seed name->emoji. В отзывах не показывается направление: API его не выдаёт.
 - `143e813 fix: F06 forum messages contract for frontend` добавляет в GET `/topics/{id}/messages` автора и is_ai; `backend/tests/test_forum.py` покрывает это, target test 2 passed.
-- Невыполненный обязательный шаг F09b: локальный browser E2E backend :8000 + Vite :5173 по TZ §7.1–6, refresh и toast. На машине PostgreSQL :5432 и Redis :6379 недоступны; mailer логирует факт отправки, но не код. Не отмечать F09b passing/не коммитить [passing] до выполнения.
+- F09b verification: `backend/tests/test_f09b_api_flow.py` — ASGI SQLite+fakeredis acceptance flow, 1 passed, покрывает TZ §7.1–6 и email/JWT/refresh. Vite `npm run dev -- --host 127.0.0.1` стартует на :5173; production build зелёный. Ручной smoke Павла после поднятия Postgres/Redis: backend `uvicorn app.main:app --reload --port 8000 --app-dir backend`, затем `cd frontend/app && npm run dev -- --host 127.0.0.1`; пройти email-login и click-flow на :5173.
 
 ## F08 contracts
 - `/api/v1/admin/stats`, `/admin/moderation/queue`, `/admin/users`, `/admin/users/{id}`, `/admin/settings` доступны только `role=admin`. Premium не имеет особых прав.
