@@ -4,7 +4,7 @@
 - Repository root directory: mps-platform/
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
-- Highest priority unfinished feature: F07 (Иришка — ИИ-ответы форума)
+- Highest priority unfinished feature: F08 (админка, статистика, уведомления, онлайн-панель)
 - Current blocker: нет
 - Frontend: M1 ЗАВЕРШЁН — финальный экспорт лежит в frontend/mir-pod-solncem.dc.html (см. frontend/README.md); до F09 работает на локальных данных — это ожидаемо, не баг.
 
@@ -74,3 +74,12 @@
 - Commits: F06: форум [passing].
 - Known risks: prefix search is MVP only; replace with PostgreSQL full-text at scale.
 - Next best action: F07.
+
+### Session 7 — 2026-08-18 (Codex, F07)
+- Goal: добавить один автоматический ИИ-ответ Иришки в старые темы форума без ответа.
+- Completed: Alembic `20260818_0007` создаёт settings и служебного editor-пользователя «Иришка · ИИ-помощник». `services/irishka.py` читает `irishka_enabled` и `irishka_delay_min` из БД, вызывает OpenAI-совместимый MiniMax `/chat/completions`, создаёт `is_ai` сообщение только в теме без сообщений; ценовые/визовые темы переадресует менеджеру и создаёт Question. AsyncIOScheduler запускает задачу каждые 5 минут в FastAPI lifespan.
+- Verification run: fresh SQLite Alembic upgrade до `20260818_0007`; `python -m pytest tests/test_irishka.py -q --basetemp .pytest-f07-check` — 5 passed in 0.92s; `python -m pytest tests -q --basetemp .pytest-f07-full-check` — 26 passed in 5.26s; `./init.sh` вне sandbox — `[OK]`, 26 passed in 5.35s.
+- Evidence recorded: feature_list.json → F07.evidence.
+- Commits: будет создан `F07: Иришка [passing]`.
+- Known risks: production requires a non-empty `MINIMAX_API_KEY`; otherwise httpx rejects the empty Bearer header. Scheduler runs in API process, so deployment must keep one scheduler instance.
+- Next best action: F08 — admin settings endpoint can expose `irishka_enabled` without redeploy.

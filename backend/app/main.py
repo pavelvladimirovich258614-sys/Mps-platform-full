@@ -23,6 +23,8 @@ from app.api.forum import router as forum_router
 from app.config import Settings, get_settings
 from app.db import Database
 from app.models.user import User
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from app.services.irishka import run as run_irishka
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -32,7 +34,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+        scheduler=AsyncIOScheduler();scheduler.add_job(run_irishka,"interval",minutes=5,args=[application.state.database.session_factory,app_settings]);scheduler.start()
         yield
+        scheduler.shutdown(wait=False)
         await application.state.database.dispose()
 
     app = FastAPI(title="Мир под солнцем", version="0.1.0", lifespan=lifespan)

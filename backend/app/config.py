@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     unisender_from_email: str = "noreply@example.com"
     minimax_api_key: str = ""
     minimax_model: str = ""
+    minimax_base_url: str = "https://api.minimax.io/v1"
     base_url: str = "https://mps-platform.local"
     cors_origins: str = "https://mps-platform.local"
     media_dir: str = "media"

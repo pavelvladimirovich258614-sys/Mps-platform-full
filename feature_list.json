@@ -107,7 +107,7 @@
       "area": "ai",
       "title": "Иришка — ИИ-ответ в темах без ответа (MiniMax)",
       "user_visible_behavior": "Тема без ответа дольше N минут получает один полезный ответ от «Иришка · ИИ-помощник» с пометкой ИИ; вопросы про цены переадресуются менеджеру.",
-      "status": "not_started",
+      "status": "passing",
       "verification": [
         "pytest tests/test_irishka.py -q (MiniMax замокан)",
         "тема старше delay без сообщений -> появился forum_message is_ai=true",
@@ -115,8 +115,8 @@
         "тема с ценовым триггером -> ответ-переадресация + создан question(target=manager)",
         "irishka_enabled=false -> задача ничего не делает"
       ],
-      "evidence": "",
-      "notes": "BACKEND_SPEC §4 irishka. Планировщик: arq или apscheduler (выбрать один, зафиксировать в notes)."
+      "evidence": "2026-08-18: cd backend && python -m pytest tests/test_irishka.py -q --basetemp .pytest-f07-check — 5 passed in 0.92s; MiniMax замокан respx на POST https://api.minimax.io/v1/chat/completions, реальных сетевых вызовов нет. Проверены: старая тема -> одно is_ai=true сообщение; повторный прогон -> 0 и без дубля; ценовой триггер -> ответ-переадресация и Question target=manager; irishka_enabled=false и молодая тема -> 0. DATABASE_URL=sqlite+aiosqlite:///:memory: python -m alembic upgrade head — clean upgrade до 20260818_0007; python -m pytest tests -q --basetemp .pytest-f07-full-check — 26 passed in 5.26s; ./init.sh вне sandbox — [OK] Верификация прошла, 26 passed in 5.35s.",
+      "notes": "BACKEND_SPEC §4 irishka. Выбран APScheduler AsyncIOScheduler в FastAPI lifespan: interval 5 minutes. Миграция 0007 создаёт key-value settings с irishka_delay_min=30 и irishka_enabled=true и служебного пользователя «Иришка · ИИ-помощник» (editor). MINIMAX_BASE_URL настраивается, default https://api.minimax.io/v1; пустой MINIMAX_API_KEY вызывает LocalProtocolError, поэтому в production обязателен корректный ключ в .env."
     },
     {
       "id": "F08",

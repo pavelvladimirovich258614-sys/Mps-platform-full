@@ -1,7 +1,14 @@
-# Session handoff — после F06
+# Session handoff — после F07
 
 ## Verified state
-- F01–F06 passing; Alembic head `20260818_0006`; full pytest and `./init.sh`: 21 passed. Next: F07; frontend не менять до F09.
+- F01–F07 passing; Alembic head `20260818_0007`; full pytest and `./init.sh`: 26 passed. Next: F08; frontend не менять до F09.
+
+## F07 contracts
+- Migration `20260818_0007` creates `settings` key/value records `irishka_delay_min=30`, `irishka_enabled=true`, and the service user `irishka@system.local` / «Иришка · ИИ-помощник» with editor role.
+- `services.irishka.run(session_factory, settings)` reads settings on each execution. Every five minutes `AsyncIOScheduler` invokes it from FastAPI lifespan. If disabled it makes no change; it only processes topics older than the configured delay and with no existing messages, so no second AI response is created.
+- Non-trigger topics call `POST ${MINIMAX_BASE_URL}/chat/completions` with `Authorization: Bearer ${MINIMAX_API_KEY}`, model, system/user messages and `max_completion_tokens=500`; reply is `choices[0].message.content`. `MINIMAX_BASE_URL` defaults to `https://api.minimax.io/v1`.
+- Titles containing price/visa/document markers do not call MiniMax: they receive a short manager handoff and create Question(target=manager) for the topic author. The prompt does not give prices or legal guarantees.
+- Production needs a non-empty `MINIMAX_API_KEY`: an empty value produces httpx LocalProtocolError before request transmission. F08 should expose PATCH /admin/settings for `irishka_enabled` without redeploy; keep one API scheduler instance in deployment.
 
 ## F06 contracts
 - `GET /countries`, `GET /countries/{id}/topics?search=`, `POST /countries/{id}/topics`, `GET/POST /topics/{id}/messages` are ready. Reader and premium share FORUM_TOPIC_LIMIT=3; only editor/admin unlimited.

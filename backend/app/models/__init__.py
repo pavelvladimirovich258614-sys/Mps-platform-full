@@ -8,6 +8,7 @@ from app.models.review import ModerationStatus, Review, ReviewSource, ReviewToke
 from app.models.question import Question, QuestionStatus, QuestionTarget
 from app.models.subscription import Subscription
 from app.models.forum import ForumMessage, ForumTopic
+from app.models.setting import Setting
 
 __all__ = [
     "Role", "User", "Country", "Post", "PostStatus", "PostType", "post_likes",
