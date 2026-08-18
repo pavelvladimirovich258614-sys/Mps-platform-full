@@ -5,7 +5,7 @@
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
 - Highest priority unfinished feature: F09b (API-слой и авторизация фронтенда)
-- Current blocker: нет
+- Current blocker: F09b browser E2E требует локальные PostgreSQL и Redis; оба порта недоступны.
 - Frontend: F09a1/F09a2 ЗАВЕРШЕНЫ — Vite+React перенос дизайна в frontend/app; исходный экспорт frontend/mir-pod-solncem.dc.html сохранён. F09b подключает auth/API.
 
 ## Session Record
@@ -119,3 +119,12 @@
 - Commits: будет создан `F09a2: остальные разделы дизайна [passing]`.
 - Known risks: реальные profile/notifications/reviews/subscribe/QA данные, email/Telegram login, JWT refresh и общие hooks не реализованы намеренно — это отдельная F09b.
 - Next best action: представить план F09b и ждать подтверждения пользователя.
+
+### Session 12 — 2026-08-18 (Codex, F09b — in progress)
+- Goal: подключить перенесённый React-дизайн к REST API и email-авторизации.
+- Completed: добавлены memory-only JWT client с refresh/retry 401, hooks auth/posts/reviews/comments/subscribe/QA/forum/notifications/online; реальные API подключены к компонентам. Email-код — рабочий UI-flow, Telegram-кнопка использует VITE_TELEGRAM_BOT_USERNAME, роль приходит из `/me`, dev role switch ограничен `import.meta.env.DEV`. Флаги стран берутся из фиксированного frontend-справочника. Отдельный commit `143e813` исправил F06 messages response: author и is_ai.
+- Verification run: `npm run build` — 46 modules, built in 1.06s; `python -m pytest tests -q --basetemp .pytest-f09b-final` — 32 passed in 8.61s; `./init.sh` вне sandbox — pip check, 32 passed; localStorage grep — только theme/cookie-consent.
+- Evidence recorded: feature_list.json → F09b.evidence.
+- Commits: `143e813 fix: F06 forum messages contract for frontend`; F09b commit ещё не создан, так как feature не может быть passing.
+- Known risks: browser E2E на :8000/:5173 не выполнен: localhost PostgreSQL :5432 и Redis :6379 недоступны, log-only mailer не раскрывает одноразовый код. Это также не позволяет честно проверить refresh cookie в браузере. Внешние Telegram/Unisender/MiniMax намеренно вне dev boundary.
+- Next best action: поднять утверждённый локальный PostgreSQL+Redis (или дать доступный dev stack), прогнать TZ §7.1–6 с email-кодом, refresh/русский toast, после чего F09b можно перевести в passing и закоммитить.

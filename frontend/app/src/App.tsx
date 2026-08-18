@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-
 import { About } from "./components/About";
 import { ArticleComments } from "./components/ArticleComments";
 import { CookieBanner } from "./components/CookieBanner";
@@ -12,36 +11,17 @@ import { Profile } from "./components/Profile";
 import { QA } from "./components/QA";
 import { Reviews } from "./components/Reviews";
 import { Subscribe } from "./components/Subscribe";
+import { type ApiPost, useAuth, useNotifications, useOnline, usePosts } from "./hooks";
 
-export type Post = { id: number; kind: "article" | "tip" | "video"; tag: string; title: string; text?: string; country?: string; flag?: string; videoDate?: string; byRequest?: boolean };
-const posts: Post[] = [
-  { id: 1, kind: "article", tag: "Направление · 8 мин чтения", title: "Ликийское побережье осенью: куда ехать, когда все уже уехали", text: "Сентябрь и октябрь на юге Турции — та же вода 26 градусов, но вдвое меньше людей и цены как в мае." },
-  { id: 2, kind: "tip", tag: "Фишка · Турция", title: "Трансфер из Антальи дешевле брать не в аэропорту", text: "Стойки внутри терминала берут наценку до 40%. Закажите трансфер заранее — водитель встретит с табличкой." },
-  { id: 3, kind: "video", tag: "Видеообзор", title: "Видеообзор отеля Rixos Bab Al Bahr", country: "ОАЭ", flag: "🇦🇪", videoDate: "12 августа 2026", byRequest: true },
-];
-const initialNotifications = [{ text: "Менеджер ответил на ваш вопрос", when: "12 мин назад", read: false }, { text: "Ваш комментарий одобрен", when: "вчера", read: false }, { text: "Вышел свежий видеообзор отеля Rixos", when: "3 дня назад", read: true }];
-const pageNames: Page[] = ["feed", "countries", "topic", "article", "reviews", "subscribe", "about", "privacy", "terms"];
-
-function pageFromHash(): Page {
-  const candidate = window.location.hash.slice(1) as Page;
-  return pageNames.includes(candidate) ? candidate : "feed";
-}
-
+const pages: Page[] = ["feed", "countries", "topic", "article", "reviews", "subscribe", "about", "privacy", "terms"];
+const pageFromHash = () => pages.includes(window.location.hash.slice(1) as Page) ? window.location.hash.slice(1) as Page : "feed";
 export function App() {
-  const [page, setPage] = useState<Page>(pageFromHash);
-  const [theme, setTheme] = useState<"dark" | "light">(() => localStorage.getItem("mps-theme2") === "light" ? "light" : "dark");
-  const [articleId, setArticleId] = useState<number | null>(null);
-  const [overlay, setOverlay] = useState<"qa" | "profile" | null>(null);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState(initialNotifications);
-  const [cookiesAccepted, setCookiesAccepted] = useState(() => localStorage.getItem("mps-cookie-consent") === "accepted");
-
+  const [page, setPage] = useState<Page>(pageFromHash); const [theme, setTheme] = useState<"dark" | "light">(() => localStorage.getItem("mps-theme2") === "light" ? "light" : "dark"); const [article, setArticle] = useState<ApiPost | null>(null); const [overlay, setOverlay] = useState<"qa" | "profile" | null>(null); const [notificationsOpen, setNotificationsOpen] = useState(false); const [cookiesAccepted, setCookiesAccepted] = useState(() => localStorage.getItem("mps-cookie-consent") === "accepted"); const [toast, setToast] = useState("");
+  const auth = useAuth(); const posts = usePosts(); const notifications = useNotifications(); const online = useOnline(); const [devRole, setDevRole] = useState<string | null>(null);
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem("mps-theme2", theme); }, [theme]);
-  const openArticle = (postId: number) => { setArticleId(postId); setPage("article"); window.scrollTo(0, 0); };
-  const openPage = (nextPage: Page) => { window.location.hash = nextPage; setPage(nextPage); setNotificationsOpen(false); window.scrollTo(0, 0); };
-  const openLegal = (kind: LegalKind) => openPage(kind === "privacy" ? "privacy" : "terms");
-  const article = posts.find((post) => post.id === articleId) ?? posts[0];
-  const acceptCookies = () => { localStorage.setItem("mps-cookie-consent", "accepted"); setCookiesAccepted(true); };
-
-  return <Layout page={page} theme={theme} notificationsOpen={notificationsOpen} unreadCount={notifications.filter((item) => !item.read).length} onNavigate={openPage} onThemeToggle={() => setTheme(theme === "dark" ? "light" : "dark")} onOpenQA={() => setOverlay("qa")} onOpenProfile={() => setOverlay("profile")} onToggleNotifications={() => setNotificationsOpen(!notificationsOpen)} onOpenPrivacy={() => openLegal("privacy")} onOpenTerms={() => openLegal("terms")}>{page === "feed" && <Feed posts={posts} onOpenArticle={openArticle} />}{(page === "countries" || page === "topic") && <Forum page={page} onNavigate={openPage} />}{page === "article" && <ArticleComments article={article} onBack={() => openPage("feed")} />}{page === "reviews" && <Reviews />}{page === "subscribe" && <Subscribe />}{page === "about" && <About />}{(page === "privacy" || page === "terms") && <Legal kind={page} onBack={() => openPage("feed")} />}{notificationsOpen && <Notifications notifications={notifications} onReadAll={() => setNotifications(notifications.map((item) => ({ ...item, read: true })))} />}{overlay === "qa" && <QA onClose={() => setOverlay(null)} />}{overlay === "profile" && <Profile onClose={() => setOverlay(null)} />}{!cookiesAccepted && <CookieBanner onAccept={acceptCookies} onPrivacy={() => openLegal("privacy")} />}</Layout>;
+  const openPage = (next: Page) => { window.location.hash = next; setPage(next); setNotificationsOpen(false); window.scrollTo(0, 0); };
+  const openArticle = (post: ApiPost) => { setArticle(post); openPage("article"); };
+  const showError = (message: string) => { setToast(message); window.setTimeout(() => setToast(""), 4500); };
+  const role = devRole ?? auth.user?.role;
+  return <><Layout page={page} theme={theme} notificationsOpen={notificationsOpen} unreadCount={notifications.items.filter((item) => !item.is_read).length} userName={auth.user ? `${auth.user.name || "Читатель"} · ${role}` : "Войти"} online={online.value ?? []} onNavigate={openPage} onThemeToggle={() => setTheme(theme === "dark" ? "light" : "dark")} onOpenQA={() => setOverlay("qa")} onOpenProfile={() => setOverlay("profile")} onToggleNotifications={() => setNotificationsOpen(!notificationsOpen)} onOpenPrivacy={() => openPage("privacy")} onOpenTerms={() => openPage("terms")}>{page === "feed" && <Feed posts={posts.value ?? []} loading={posts.loading} onOpenArticle={openArticle} />}{(page === "countries" || page === "topic") && <Forum page={page} onNavigate={openPage} onError={showError} />}{page === "article" && article && <ArticleComments article={article} onBack={() => openPage("feed")} onError={showError} />}{page === "reviews" && <Reviews onError={showError} />}{page === "subscribe" && <Subscribe onError={showError} />}{page === "about" && <About />}{(page === "privacy" || page === "terms") && <Legal kind={page as LegalKind} onBack={() => openPage("feed")} />}{notificationsOpen && <Notifications notifications={notifications.items} onReadAll={() => { void notifications.read().catch((cause) => showError(cause instanceof Error ? cause.message : "Не удалось обновить уведомления")); }} />}{overlay === "qa" && <QA onClose={() => setOverlay(null)} onError={showError} />}{overlay === "profile" && <Profile user={auth.user} onClose={() => setOverlay(null)} onRequestCode={auth.requestCode} onVerifyCode={auth.verifyCode} onUpdate={auth.update} onError={showError} />}{!cookiesAccepted && <CookieBanner onAccept={() => { localStorage.setItem("mps-cookie-consent", "accepted"); setCookiesAccepted(true); }} onPrivacy={() => openPage("privacy")} />}{toast && <div className="toast" role="alert">{toast}</div>}</Layout>{import.meta.env.DEV && auth.user && <label className="dev-role-switch">Dev-роль <select value={devRole ?? auth.user.role} onChange={(event) => setDevRole(event.target.value)}><option value="reader">reader</option><option value="editor">editor</option><option value="admin">admin</option></select></label>}</>;
 }

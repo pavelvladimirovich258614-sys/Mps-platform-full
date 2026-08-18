@@ -171,10 +171,10 @@
       "area": "frontend",
       "title": "API-слой и авторизация фронтенда",
       "user_visible_behavior": "Компоненты F09a работают на REST API через fetch-клиент и hooks; email-вход работает локально, Telegram Login Widget доступен из интерфейса, access JWT хранится только в памяти, refresh использует httpOnly cookie.",
-      "status": "not_started",
+      "status": "in_progress",
       "verification": ["npm run build — без ошибок", "сквозной прогон критериев 1-6 docs/TZ.md §7 на backend :8000/frontend :5173 с email-входом", "проверка refresh после 401 и русских toast-ошибок", "grep -r localStorage frontend/app/src — только theme и cookie-consent"],
-      "evidence": "",
-      "notes": "Telegram Login Widget отображается и кликабелен; реальный Telegram/Unisender/MiniMax прогон фиксируется как граница dev-стенда и проверяется при деплое или вручную."
+      "evidence": "2026-08-18: отдельный F06 contract-fix 143e813: python -m pytest tests/test_forum.py -q --basetemp .pytest-f06-contract-green -> 2 passed; GET /topics/{id}/messages теперь возвращает author{id,name,avatar_url} и is_ai. cd frontend/app && npm run build -> tsc -b && vite build, 46 modules transformed, built in 1.06s. cd backend && python -m pytest tests -q --basetemp .pytest-f09b-final -> 32 passed in 8.61s. ./init.sh вне sandbox -> No broken requirements found; 32 passed in 8.05s; [OK]. rg -n 'sessionStorage|localStorage' frontend/app/src -> только localStorage mps-theme2 и mps-cookie-consent; sessionStorage отсутствует.",
+      "notes": "Реализованы fetch client с memory-only access JWT, refresh cookie и повтором 401, hooks и привязка компонентов. Telegram Login Widget отображается как UI с VITE_TELEGRAM_BOT_USERNAME; реальный Telegram/Unisender/MiniMax остаётся границей dev-стенда. F09b остаётся in_progress: запрошенный browser E2E backend :8000 + frontend :5173 по TZ §7.1–6 не выполнен честно — на машине нет PostgreSQL (:5432) и Redis (:6379), а log-only mailer не выдаёт email code для браузерной верификации. Статический country name->emoji справочник добавлен во frontend; отзывы не отображают декоративное направление, которого нет в API-контракте."
     },
     {
       "id": "F10",
