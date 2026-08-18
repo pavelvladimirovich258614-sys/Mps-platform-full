@@ -1,15 +1,13 @@
-# clean-state-checklist.md — F10 passing
+# clean-state-checklist.md — audit remediation C-04/C-06
 
-- [x] `./init.sh` проходит через Git Bash вне sandbox (pip check + 37 тестов зелёные)
-- [x] `python -m pytest backend/tests -q --basetemp .pytest-f10-full` — 37 passed
-- [x] `cd frontend/app && npm run build` — TypeScript + Vite production build без ошибок (46 modules)
-- [x] Визуально проверены F09a2-разделы и F09a1 regression против dc-референса: dark/light и 375px; исходный dc.html сохранён
-- [x] `rg -n 'sessionStorage|localStorage' frontend/app/src` содержит только `mps-theme2` и `mps-cookie-consent`
-- [x] F10 target tests: sitemap/robots/OG/JSON-LD/create_admin — 4 passed
-- [x] `deploy/smoke.sh` — [OK] против localhost staging-double; backup/smoke shell syntax зелёный
-- [x] `claude-progress.md`: F10 passing, все F01–F10 завершены
-- [x] `feature_list.json`: F10 passing с разделением local/VPS evidence
-- [x] `session-handoff.md` и `DEPLOY.md` содержат production/manual шаги Павла, HSTS warning и GSC/Яндекс checklist
-- [x] `git status` проверен перед коммитом; в коммит не попадают .env, __pycache__, node_modules или временные каталоги Pytest
-- [x] Нет placeholder-кода и закомментированных «времянок» в F09a2
-- [x] Реальные VPS DNS/certbot/HSTS/systemd/pg_dump curl проверки вынесены в DEPLOY.md; не могут быть симулированы локально
+- [x] Стартовый и финальный `./init.sh` выполнены через Git Bash вне sandbox: `pip check` согласован, 38 тестов зелёные
+- [x] `python -m pytest tests/test_subscribe.py -q --basetemp .pytest-c04-green` — 2 passed; URL извлечён из реального HTML письма и подтверждает подписку
+- [x] Полный `python -m pytest --basetemp .pytest-c04-c06-full` — 38 passed
+- [x] `bash -n deploy/backup.sh` — синтаксис корректен
+- [x] Негативный backup smoke без `PG_DUMP_URL` — exit 1 с понятным `mps-backup: ERROR` для systemd journal
+- [x] Функциональный backup smoke — непустой `.dump.gz`, атомарная публикация и удаление файла старше 14 дней
+- [x] `mps-backup.service` запускает script через `/usr/bin/bash` и направляет stdout/stderr в journal
+- [x] `DEPLOY.md` разделяет локальный smoke и обязательный реальный VPS `pg_dump`/`pg_restore --list`
+- [x] `feature_list.json`, `claude-progress.md` и `session-handoff.md` содержат актуальные evidence и риски
+- [x] C-05 и пункты «Важно»/«Желательно» не изменялись
+- [x] Перед коммитом проверяются JSON, shell syntax, staged diff и отсутствие временных pytest/smoke каталогов

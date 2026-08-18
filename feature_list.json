@@ -89,7 +89,12 @@
         "функция сборки дайджеста возвращает посты за 7 дней"
       ],
       "evidence": "2026-08-18: pytest tests/test_subscribe.py tests/test_qa.py -q — 4 passed; POST /subscribe -> 201 и Unisender JSON request, confirm/unsub -> 200; build_digest(7) включает только свежий published post; POST /qa -> 201, Telegram #Q{id}, tg_message_id=88; internal answer -> 200 + notification. Alembic -> 20260818_0005; full pytest — 20 passed; init.sh — [OK], 20 passed.",
-      "notes": "Unisender Go: UNISENDER_GO_BASE_URL default go1, Authorization header, POST /email/send.json JSON message. Ошибка отправки логируется и не меняет confirm/unsub. Timer deploy/mps-digest.timer: установить systemctl daemon-reload && systemctl enable --now mps-digest.timer."
+      "notes": "Unisender Go: UNISENDER_GO_BASE_URL default go1, Authorization header, POST /email/send.json JSON message. Ошибка отправки логируется и не меняет confirm/unsub. Confirm-письмо использует публичный BASE_URL и реальный API path /api/v1/subscribe/confirm/{token}. Timer deploy/mps-digest.timer: установить systemctl daemon-reload && systemctl enable --now mps-digest.timer.",
+      "audit_remediation": {
+        "issue": "C-04: confirm-ссылка письма не содержала /api/v1",
+        "status": "passing",
+        "evidence": "python -m pytest tests/test_subscribe.py -q --basetemp .pytest-c04-green — 2 passed: URL извлечён из реального Unisender HTML payload, равен BASE_URL/api/v1/subscribe/confirm/{token}, переход по этому path подтвердил подписку. Полный backend pytest — 38 passed; ./init.sh вне sandbox — 38 passed."
+      }
     },
     {
       "id": "F06",
@@ -203,12 +208,17 @@
         "systemctl status mps-backend mps-digest.timer mps-backup.timer -> active"
       ],
       "evidence": "2026-08-18: python -m pytest tests/test_seo.py tests/test_management.py -q --basetemp .pytest-f10-target -> 4 passed; sitemap/robots, bot OG+JSON-LD and normal frontend fallback, create/promote admin + missing identity covered. deploy/smoke.sh реально выполнен против краткоживущего localhost staging-double с HTTP 200, HSTS, sitemap, robots и Googlebot OG -> [OK] smoke passed: http://127.0.0.1:18765. bash -n deploy/backup.sh and deploy/smoke.sh -> success. python -m pytest tests -q --basetemp .pytest-f10-full -> 37 passed in 8.61s. npm run build -> 46 modules transformed, built in 759ms. ./init.sh вне sandbox -> No broken requirements found; 37 passed in 7.83s; [OK].",
-      "notes": "Nginx HSTS намеренно закомментирован до первого успешного certbot/HTTPS. SEO использует backend bot-prerender: /posts/{slug} отдаёт OG+JSON-LD боту и SPA обычному browser. После audit-remediation React читает pathname, загружает detail по slug/id и поддерживает history pushState/popstate для всех sitemap URL. Иришка запускается в FastAPI lifespan; production использует ровно один backend instance, digest и backup — systemd timers. Реальные VPS curl, DNS, certbot, HSTS, systemd и pg_dump выполняет Павел по DEPLOY.md; Яндекс.Вебмастер/GSC остаются ручными шагами.",
+      "notes": "Nginx HSTS намеренно закомментирован до первого успешного certbot/HTTPS. SEO использует backend bot-prerender: /posts/{slug} отдаёт OG+JSON-LD боту и SPA обычному browser. После audit-remediation React читает pathname, загружает detail по slug/id и поддерживает history pushState/popstate для всех sitemap URL. Backup требует отдельный libpq PG_DUMP_URL без +asyncpg, запускается systemd через /usr/bin/bash, публикует только непустой дамп и хранит 14 дней. Иришка запускается в FastAPI lifespan; production использует ровно один backend instance, digest и backup — systemd timers. Реальные VPS curl, DNS, certbot, HSTS, systemd и pg_dump/pg_restore выполняет Павел по DEPLOY.md; Яндекс.Вебмастер/GSC остаются ручными шагами.",
       "audit_remediation": {
         "issue": "Launch blocker: sitemap URL открывали feed из-за hash-only React-навигации",
         "status": "passing",
         "commit": "fix: launch blocker — client-side routing по pathname вместо hash",
         "evidence": "npm test — 4 files, 20 passed: pathname parser, прямые /posts/{slug} и /countries/{id}, статичные страницы, pushState внутренних кликов, popstate, отдельные 404 и network-error ветки. npm run build — 48 modules. python -m pytest tests/test_seo.py -q — 2 passed; полный backend pytest — 38 passed. Browser missing slug получает SPA, bot missing slug сохраняет 404."
+      },
+      "audit_remediation_c06": {
+        "issue": "C-06: pg_dump получал asyncpg URL, unit требовал executable bit и мог оставлять ложное ощущение backup",
+        "status": "passing",
+        "evidence": "bash -n deploy/backup.sh — OK; negative smoke без PG_DUMP_URL — exit 1 и journal-friendly mps-backup: ERROR; functional smoke с fake pg_dump — непустой .dump.gz, атомарная публикация и удаление файла старше 14 дней. mps-backup.service направляет stdout/stderr в journal и запускает script через /usr/bin/bash. Реальный pg_dump + pg_restore --list остаётся обязательным VPS-шагом по DEPLOY.md."
       }
     }
   ]

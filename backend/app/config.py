@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     """Runtime settings loaded from the backend .env file."""
 
     database_url: str = "postgresql+asyncpg://mps:mps@localhost:5432/mps"
+    pg_dump_url: str = ""
     redis_url: str = "redis://localhost:6379/3"
     jwt_secret: str = ""
     jwt_algorithm: str = "HS256"

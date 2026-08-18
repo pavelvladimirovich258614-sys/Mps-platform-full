@@ -4,6 +4,7 @@ Description=MPS daily PostgreSQL backup
 [Timer]
 OnCalendar=*-*-* 03:15:00
 Persistent=true
+Unit=mps-backup.service
 
 [Install]
 WantedBy=timers.target

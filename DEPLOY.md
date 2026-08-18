@@ -6,7 +6,7 @@
 
 1. Установите пакеты: `sudo apt update && sudo apt install nginx certbot python3-certbot-nginx postgresql-client redis-server`.
 2. Создайте пользователя и каталог: `sudo useradd --system --create-home --shell /usr/sbin/nologin mps`; затем разверните репозиторий в `/opt/mps-platform`, создайте `/opt/mps-platform/venv` и установите `backend/requirements.txt`.
-3. Создайте `/etc/mps-platform/backend.env` с правами `640`, владельцем `root:mps`. Задайте реальные `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, Telegram/Unisender/MiniMax настройки, `BASE_URL=https://YOUR_DOMAIN`, `CORS_ORIGINS=https://YOUR_DOMAIN` и `FRONTEND_DIST_DIR=/opt/mps-platform/frontend/app/dist`.
+3. Создайте `/etc/mps-platform/backend.env` с правами `640`, владельцем `root:mps`. Задайте реальные `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, Telegram/Unisender/MiniMax настройки, `BASE_URL=https://YOUR_DOMAIN`, `CORS_ORIGINS=https://YOUR_DOMAIN` и `FRONTEND_DIST_DIR=/opt/mps-platform/frontend/app/dist`. Для backup обязательно добавьте отдельный `PG_DUMP_URL=postgresql://USER:PASSWORD@HOST:5432/DB`: это libpq URL без драйвера `+asyncpg`, в отличие от application `DATABASE_URL`.
 4. Перед сборкой frontend создайте `/opt/mps-platform/frontend/app/.env.production` и задайте публичные build-time переменные `VITE_API_URL=https://YOUR_DOMAIN/api/v1` и `VITE_TELEGRAM_BOT_USERNAME=REAL_BOT_USERNAME` (username без `@`, не токен бота). Затем выполните `cd /opt/mps-platform/frontend/app && npm ci && npm run build`.
 5. Выполните миграции: `cd /opt/mps-platform/backend && /opt/mps-platform/venv/bin/alembic upgrade head`.
 
@@ -24,9 +24,12 @@
 ## Services, digest и backup
 
 1. Скопируйте `deploy/mps-backend.service`, `mps-digest.service`, `mps-digest.timer`, `mps-backup.service`, `mps-backup.timer` в `/etc/systemd/system/`.
-2. `sudo systemctl daemon-reload && sudo systemctl enable --now mps-backend mps-digest.timer mps-backup.timer`.
-3. Иришка запускается внутри FastAPI lifespan, поэтому отдельный `mps-scheduler.service` намеренно отсутствует. Держите ровно один backend instance, иначе задача продублируется.
-4. Проверьте: `systemctl status mps-backend mps-digest.timer mps-backup.timer`; первый backup можно выполнить `sudo systemctl start mps-backup`.
+2. До запуска timer создайте закрытый writable-каталог: `sudo install -d -o mps -g mps -m 0700 /var/backups/mps`.
+3. Выполните `sudo systemctl daemon-reload && sudo systemctl enable --now mps-backend mps-digest.timer mps-backup.timer`.
+4. Иришка запускается внутри FastAPI lifespan, поэтому отдельный `mps-scheduler.service` намеренно отсутствует. Держите ровно один backend instance, иначе задача продублируется.
+5. Проверьте units: `systemctl status mps-backend mps-digest.timer mps-backup.timer`. Backup запускается через `/usr/bin/bash`, поэтому executable bit у `deploy/backup.sh` не требуется.
+6. Обязательно выполните первый реальный backup: `sudo systemctl start mps-backup.service`, затем `sudo systemctl status --no-pager mps-backup.service` и `sudo journalctl -u mps-backup.service -n 50 --no-pager`. Успех содержит `mps-backup: OK`; при отсутствии `PG_DUMP_URL`, `pg_dump` или прав журнал содержит конкретное `mps-backup: ERROR`, которое нужно исправить до продолжения деплоя.
+7. Убедитесь, что дамп непустой: `sudo find /var/backups/mps -type f -name 'mps-*.dump.gz' -size +0 -print`. Проверьте читаемость последнего файла: `sudo bash -o pipefail -c 'gzip -dc "$(find /var/backups/mps -type f -name "mps-*.dump.gz" | sort | tail -1)" | pg_restore --list >/dev/null'`. Скрипт ежедневно удаляет дампы старше 14 дней (`-mtime +13`).
 
 ## Первый администратор
 

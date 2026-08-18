@@ -5,7 +5,7 @@
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
 - Highest priority unfinished feature: нет — F01–F10 passing
-- Current blocker: нет
+- Current blocker: C-04/C-06 устранены; C-05 остаётся отдельной согласованной security-задачей и в этой сессии не изменялся
 - Frontend: F09a1/F09a2 ЗАВЕРШЕНЫ — Vite+React перенос дизайна в frontend/app; исходный экспорт frontend/mir-pod-solncem.dc.html сохранён. F09b подключает auth/API.
 
 ## Session Record
@@ -144,3 +144,11 @@
 - Verification run: frontend `npm test` — 4 files, 20 passed; `npm run build` — 48 modules; backend full pytest — 38 passed; storage grep — только theme/cookie-consent.
 - Commits: `522a00d` email delivery; `937a6a5` Telegram Widget; текущий `fix: launch blocker — client-side routing по pathname вместо hash`.
 - Result: audit-remediation launch blockers завершены; оставшиеся пункты «Важно»/«Желательно» остаются для отдельной приоритизации перед или после реального VPS deploy.
+
+### Session 15 — 2026-08-18 (Codex, C-04/C-06 remediation)
+- Goal: исправить confirm URL подписки и сделать PostgreSQL backup unit готовым к первому VPS-запуску без затрагивания C-05 и остальных audit-задач.
+- Completed: confirm-письмо ведёт на `BASE_URL/api/v1/subscribe/confirm/{token}`; тест переходит по ссылке из реального HTML payload. Backup использует отдельный `PG_DUMP_URL`, проверяет pg_dump/права/непустой результат, атомарно публикует архив и удаляет файлы старше 14 дней. Systemd пишет понятные `mps-backup: ERROR/OK` в journal и запускает script через `/usr/bin/bash`.
+- Verification run: targeted subscribe — 2 passed; `bash -n deploy/backup.sh` — OK; missing-env smoke — явный exit 1; functional backup smoke — непустой файл и rotation OK; full backend pytest — 38 passed; финальный `./init.sh` вне sandbox — pip check + 38 passed.
+- Evidence recorded: feature_list.json → F05 C-04 и F10 C-06 audit remediation; DEPLOY.md содержит обязательные VPS `PG_DUMP_URL`, каталог, journal и реальный pg_dump/pg_restore steps.
+- Known risks: реальный PostgreSQL/pg_dump/systemd отсутствует в локальной Windows-среде и проверяется Павлом на VPS; C-05 не изменялся.
+- Next best action: выполнить DEPLOY.md на VPS и не включать backup timer в доверенный operational state до первого `mps-backup: OK` и успешного `pg_restore --list`.

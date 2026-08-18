@@ -1,5 +1,7 @@
 from datetime import UTC, datetime, timedelta
 import json
+import re
+from urllib.parse import urlparse
 
 import httpx
 import pytest
@@ -30,7 +32,12 @@ async def test_double_opt_in_and_unsubscribe(client, test_app):
     async with test_app.state.database.session_factory() as session:
         subscription = await session.scalar(select(Subscription).where(Subscription.email == "tourist@example.com"))
         confirm_token, unsub_token = subscription.confirm_token, subscription.unsub_token
-    assert (await client.get(f"/api/v1/subscribe/confirm/{confirm_token}")).status_code == 200
+    html = request_json["message"]["body"]["html"]
+    match = re.search(r'href="([^"]+)"', html)
+    assert match is not None
+    confirm_url = match.group(1)
+    assert confirm_url == f"{test_app.state.settings.base_url.rstrip('/')}/api/v1/subscribe/confirm/{confirm_token}"
+    assert (await client.get(urlparse(confirm_url).path)).status_code == 200
     assert (await client.get(f"/api/v1/subscribe/unsub/{unsub_token}")).status_code == 200
     async with test_app.state.database.session_factory() as session:
         assert await session.scalar(select(Subscription).where(Subscription.email == "tourist@example.com")) is None

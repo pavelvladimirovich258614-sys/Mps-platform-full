@@ -22,7 +22,7 @@ async def send_code(settings,email,code):
  """Send a ten-minute login code through the configured Unisender transport."""
  html=f"<p>Код для входа в «Мир под солнцем»:</p><p><strong>{code}</strong></p><p>Код действует 10 минут.</p>"
  return await send_email(settings,email,"Код для входа в «Мир под солнцем»",html)
-async def send_confirm(settings,email,token): return await send_email(settings,email,"Подтвердите подписку",f'<a href="{settings.base_url}/subscribe/confirm/{token}">confirm</a>')
+async def send_confirm(settings,email,token): return await send_email(settings,email,"Подтвердите подписку",f'<a href="{settings.base_url.rstrip("/")}/api/v1/subscribe/confirm/{token}">confirm</a>')
 async def build_digest(session_factory,days=7):
  """Build digest HTML from posts published during the requested trailing day range."""
  async with session_factory() as s: posts=(await s.scalars(select(Post).where(Post.status==PostStatus.PUBLISHED,Post.published_at>=datetime.now(UTC)-timedelta(days=days)))).all()
