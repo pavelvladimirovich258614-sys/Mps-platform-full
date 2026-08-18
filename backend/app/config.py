@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     minimax_model: str = ""
     base_url: str = "https://mps-platform.local"
     cors_origins: str = "https://mps-platform.local"
+    media_dir: str = "media"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
