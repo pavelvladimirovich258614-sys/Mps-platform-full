@@ -91,15 +91,15 @@
       "area": "forum",
       "title": "Форум по странам: страны, темы, сообщения, поиск, лимит",
       "user_visible_behavior": "Читатель открывает страну, ищет тему, создаёт тему (максимум 3), пишет сообщения; счётчики тем/сообщений корректны.",
-      "status": "not_started",
+      "status": "passing",
       "verification": [
         "pytest tests/test_forum.py -q",
         "4-я тема от reader -> 403 с русским текстом ошибки; editor -> без лимита",
         "search=симка находит тему по подстроке без учёта регистра",
         "POST message -> topic.messages_count+1 и last_message_at обновлён"
       ],
-      "evidence": "",
-      "notes": "Сидер стран: ОАЭ, Турция, Вьетнам, Таиланд, Китай, Египет, Мальдивы, Россия."
+      "evidence": "2026-08-18: Alembic fresh SQLite -> 20260818_0006; pytest tests/test_forum.py -q — 1 passed; full pytest — 21 passed; ./init.sh outside sandbox — [OK], 21 passed. Reader/premium fourth topic -> 403, editor unlimited; Cyrillic search simka finds SIMku; message updates count/time and notification only for other author.",
+      "notes": "Countries seeded: ОАЭ, Турция, Вьетнам, Таиланд, Китай, Египет, Мальдивы, Россия. MVP search uses casefold and a short common prefix; not morphology, replace with PostgreSQL full-text search at scale."
     },
     {
       "id": "F07",

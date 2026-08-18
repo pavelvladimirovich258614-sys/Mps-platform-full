@@ -1,7 +1,12 @@
-# Session handoff — после F05
+# Session handoff — после F06
 
 ## Verified state
-- F01–F05 passing; Alembic head `20260818_0005`; full pytest and `./init.sh`: 20 passed. Next: F06; frontend не менять до F09.
+- F01–F06 passing; Alembic head `20260818_0006`; full pytest and `./init.sh`: 21 passed. Next: F07; frontend не менять до F09.
+
+## F06 contracts
+- `GET /countries`, `GET /countries/{id}/topics?search=`, `POST /countries/{id}/topics`, `GET/POST /topics/{id}/messages` are ready. Reader and premium share FORUM_TOPIC_LIMIT=3; only editor/admin unlimited.
+- Search uses casefold plus short common prefix for MVP Cyrillic endings; not full morphology.
+- New message increments messages_count, updates last_message_at and notifies topic author only when another user posts.
 
 ## F05 contracts
 - `POST /subscribe {email}` creates/reuses a pending subscription and sends confirmation. `GET /subscribe/confirm/{token}` confirms; `GET /subscribe/unsub/{token}` deletes. Unisender errors log only and never change confirm/unsub state.

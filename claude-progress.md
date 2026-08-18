@@ -4,7 +4,7 @@
 - Repository root directory: mps-platform/
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
-- Highest priority unfinished feature: F06 (форум по странам)
+- Highest priority unfinished feature: F07 (Иришка — ИИ-ответы форума)
 - Current blocker: нет
 - Frontend: M1 ЗАВЕРШЁН — финальный экспорт лежит в frontend/mir-pod-solncem.dc.html (см. frontend/README.md); до F09 работает на локальных данных — это ожидаемо, не баг.
 
@@ -65,3 +65,12 @@
 - Commits: F05: подписки и вопросы [passing].
 - Known risks: systemd units не установлены на VPS; aiogram router должен быть подключён Павлом в существующем боте.
 - Next best action: F06.
+
+### Session 6 — 2026-08-18 (Codex, F06)
+- Goal: форум по странам, темы, сообщения и лимиты.
+- Completed: forum_topics/forum_messages, migration 0006, countries/topics/messages API, reader/premium limit 3, editor/admin unlimited, notification автору темы.
+- Verification run: fresh Alembic -> 0006; F06 test 1 passed; full pytest 21 passed; init.sh 21 passed.
+- Evidence recorded: feature_list.json F06.
+- Commits: F06: форум [passing].
+- Known risks: prefix search is MVP only; replace with PostgreSQL full-text at scale.
+- Next best action: F07.
