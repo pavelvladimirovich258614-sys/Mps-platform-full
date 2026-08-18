@@ -15,7 +15,7 @@ from app.rate_limit import limiter
 async def test_app(tmp_path) -> AsyncIterator[FastAPI]:
     limiter.reset()
     database_path = tmp_path / "test.sqlite3"
-    settings = Settings(database_url=f"sqlite+aiosqlite:///{database_path}", jwt_secret="test-secret-key-with-32-characters", bot_token="test-bot-token", media_dir=str(tmp_path / "media"))
+    settings = Settings(database_url=f"sqlite+aiosqlite:///{database_path}", jwt_secret="test-secret-key-with-32-characters", bot_token="test-bot-token", bot_bridge_secret="bridge-secret", media_dir=str(tmp_path / "media"))
     application = create_app(settings)
     application.state.redis = fakeredis.aioredis.FakeRedis(decode_responses=False)
     engine: AsyncEngine = application.state.database.engine

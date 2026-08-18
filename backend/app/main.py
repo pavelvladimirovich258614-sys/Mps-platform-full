@@ -15,6 +15,8 @@ from app.api.health import router as health_router
 from app.api.profile import router as profile_router
 from app.api.posts import router as posts_router
 from app.api.media import router as media_router
+from app.api.comments import router as comments_router
+from app.api.reviews import reviews_router, router as internal_router
 from app.config import Settings, get_settings
 from app.db import Database
 from app.models.user import User
@@ -70,6 +72,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(profile_router, prefix="/api/v1")
     app.include_router(posts_router, prefix="/api/v1")
     app.include_router(media_router, prefix="/api/v1")
+    app.include_router(comments_router, prefix="/api/v1")
+    app.include_router(reviews_router, prefix="/api/v1")
+    app.include_router(internal_router, prefix="/api/v1")
     return app
 
 

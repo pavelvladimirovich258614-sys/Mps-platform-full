@@ -57,7 +57,7 @@
       "area": "moderation",
       "title": "Отзывы и комментарии с премодерацией, реакции",
       "user_visible_behavior": "Отзыв/комментарий уходит в статус pending и не виден публично; редактор одобряет/отклоняет; на одобренный комментарий можно поставить реакцию-эмодзи; ответ на комментарий 1 уровня.",
-      "status": "not_started",
+      "status": "passing",
       "verification": [
         "pytest tests/test_reviews.py tests/test_comments.py -q",
         "pending-отзыв отсутствует в GET /reviews?status=approved",
@@ -65,8 +65,8 @@
         "реакция: повторная с другим эмодзи заменяет прежнюю",
         "POST /reviews/by-token с валидным bot-токеном -> 201 без авторизации"
       ],
-      "evidence": "",
-      "notes": "Санитизация body (nh3). Источник отзыва site|bot."
+      "evidence": "2026-08-18: cd backend && python -m pytest tests/test_reviews.py tests/test_comments.py -q --basetemp .pytest-f04-target — 4 passed in 1.30s; pending review отсутствует в GET /reviews?status=approved; reader moderation -> 403, editor approve -> 200 и public list содержит review, reject -> отсутствует; comment pending не виден, approve -> виден, reply на reply -> 422; повторная реакция заменяет emoji; POST /reviews/by-token с валидным токеном -> 201 без авторизации, повтор -> 404, expired -> 410; approve review/comment создает notification, moderation response содержит pending_count. DATABASE_URL=sqlite+aiosqlite:///:memory: alembic upgrade head — upgrade 20260818_0003 -> 20260818_0004; python -m pytest tests -q --basetemp .pytest-f04-full — 16 passed in 3.24s; ./init.sh через Git Bash — [OK] Верификация прошла, 16 passed in 3.27s.",
+      "notes": "Санитизация body (nh3). Источник отзыва site|bot. Внутренний POST /internal/review-tokens принимает {tg_id} с X-Bot-Bridge-Secret; одноразовый review token имеет TTL 7 дней, после использования удаляется, просроченный возвращает 410."
     },
     {
       "id": "F05",
