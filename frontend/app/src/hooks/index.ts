@@ -14,6 +14,7 @@ export type Topic = { id: number; title: string; messages_count: number };
 export type ForumMessage = { id: number; body: string; author: { id: number; name: string; avatar_url: string | null }; is_ai: boolean };
 export type Notification = { id: number; type: string; payload: Record<string, unknown>; is_read: boolean; created_at: string };
 export type OnlineUser = { id: number; name: string; avatar_url: string | null };
+export type TelegramLoginPayload = { id: number; first_name: string; last_name?: string; username?: string; photo_url?: string; auth_date: number; hash: string };
 
 function useResource<T>(load: () => Promise<T>, deps: unknown[] = []) {
   const [value, setValue] = useState<T | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState("");
@@ -28,8 +29,9 @@ export function useAuth() {
   useEffect(() => { void loadMe(); }, [loadMe]);
   const requestCode = async (email: string) => apiJson<void>("/auth/email/request", "POST", { email });
   const verifyCode = async (email: string, code: string) => { setError(""); try { const token = await apiJson<{ access_token: string }>("/auth/email/verify", "POST", { email, code }); setAccessToken(token.access_token); return await loadMe(); } catch (cause) { const message = cause instanceof Error ? cause.message : "Не удалось войти"; setError(message); throw cause; } };
+  const loginTelegram = async (payload: TelegramLoginPayload) => { setError(""); try { const token = await apiJson<{ access_token: string }>("/auth/telegram", "POST", payload); setAccessToken(token.access_token); return await loadMe(); } catch (cause) { const message = cause instanceof Error ? cause.message : "Не удалось войти через Telegram"; setError(message); throw cause; } };
   const update = async (changes: Partial<Pick<User, "name" | "bio" | "avatar_url" | "is_anonymous">>) => { const updated = await apiJson<User>("/me", "PATCH", changes); setUser(updated); return updated; };
-  return { user, loading, error, requestCode, verifyCode, update, reload: loadMe };
+  return { user, loading, error, requestCode, verifyCode, loginTelegram, update, reload: loadMe };
 }
 
 export const usePosts = () => useResource(() => api<ApiPost[]>("/posts"), []);
