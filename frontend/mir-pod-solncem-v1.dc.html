@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0A1526; --surface:#0E1B2E; --text:#F2E9DA; --body:#DCD2C2; --soft:#C6BCAC;
+    --muted:#93917F; --border:rgba(201,162,74,.30); --line:rgba(201,162,74,.16); --chip:#132135;
+    --header:#08101E; --onhead:#F2E9DA; --onhead-dim:rgba(242,233,218,.5);
+    --accent:#C9A24A; --accent-hi:#E4C67F; --accent-2:#D9B45F; --ok:#7FA98A;
+    --panel:#0C1728; --onpanel:#F2E9DA; --onpanel-dim:rgba(242,233,218,.68);
+  }
+  html[data-theme="light"] {
+    --bg:#F7F2E8; --surface:#FFFDF8; --text:#0A1526; --body:#23303F; --soft:#3C4655;
+    --muted:#7A7364; --border:rgba(10,21,38,.16); --line:rgba(10,21,38,.08); --chip:#EFE7D6;
+    --header:#0A1526; --onhead:#F2E9DA; --onhead-dim:rgba(242,233,218,.5);
+    --accent:#B8912F; --accent-hi:#D9B45F; --accent-2:#9C7A22; --ok:#2F6B4F;
+    --panel:#0A1526; --onpanel:#F2E9DA; --onpanel-dim:rgba(242,233,218,.68);
+  }
+  html, body { margin:0; padding:0; background:var(--bg); }
+  * { box-sizing:border-box; }
+  a { color:var(--text); text-decoration:none; }
+  a:hover { color:var(--accent-2); }
+  input, textarea { color:var(--text); }
+  input::placeholder, textarea::placeholder { color:var(--muted); }
+  ::selection { background:var(--accent-hi); color:#0A1526; }
+</style>
+</helmet>
+<div style="min-height:100vh;background:var(--bg);font-family:Manrope,system-ui,sans-serif;color:var(--text)">
+
+  <header style="position:sticky;top:0;z-index:20;background:var(--header);color:var(--onhead)">
+    <div style="max-width:1120px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div onClick="{{ goFeed }}" style="display:flex;align-items:center;gap:12px;cursor:pointer;min-width:0">
+        <svg width="34" height="34" viewBox="0 0 40 40" fill="none" stroke="var(--accent)" stroke-width="1.4" stroke-linecap="round" style="flex:none">
+          <circle cx="20" cy="17" r="5.4"></circle>
+          <path d="M20 6.5v-3M28.5 9.5l2-2M11.5 9.5l-2-2M31 17h3M6 17h3"></path>
+          <path d="M9 26.5c2.6 0 2.6-1.6 5.2-1.6s2.6 1.6 5.2 1.6 2.6-1.6 5.2-1.6 2.6 1.6 5.2 1.6"></path>
+          <path d="M9 31.5c2.6 0 2.6-1.6 5.2-1.6s2.6 1.6 5.2 1.6 2.6-1.6 5.2-1.6 2.6 1.6 5.2 1.6"></path>
+        </svg>
+        <div style="min-width:0">
+          <div style="font-family:'Playfair Display',Georgia,serif;font-size:19px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Мир под солнцем</div>
+          <div style="font-size:9px;letter-spacing:.32em;text-transform:uppercase;color:var(--accent);margin-top:3px;white-space:nowrap">журнал о путешествиях</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div onClick="{{ toggleTheme }}" title="Тема" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--onhead);user-select:none" style-hover="border-color:var(--accent)">{{ themeIcon }}</div>
+        <div onClick="{{ toggleAdmin }}" title="Режим редактора" style="height:36px;padding:0 14px;border-radius:2px;border:1px solid var(--border);display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:600;color:var(--onhead);user-select:none;white-space:nowrap" style-hover="border-color:var(--accent)">
+          <span style="width:7px;height:7px;border-radius:50%;background:{{ adminDot }};display:inline-block"></span>{{ adminLabel }}
+        </div>
+      </div>
+    </div>
+    <nav style="border-top:1px solid var(--border)">
+      <div style="max-width:1120px;margin:0 auto;padding:0 8px;display:flex;gap:2px;overflow-x:auto">
+        <div onClick="{{ tabFeed }}" style="padding:14px 16px;font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;white-space:nowrap;border-bottom:1px solid transparent;color:{{ cFeed }};border-bottom-color:{{ bFeed }}">Лента</div>
+        <div onClick="{{ tabTips }}" style="padding:14px 16px;font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;white-space:nowrap;border-bottom:1px solid transparent;color:{{ cTips }};border-bottom-color:{{ bTips }}">Фишки</div>
+        <div onClick="{{ tabRev }}" style="padding:14px 16px;font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;white-space:nowrap;border-bottom:1px solid transparent;color:{{ cRev }};border-bottom-color:{{ bRev }}">Отзывы</div>
+        <div onClick="{{ tabSub }}" style="padding:14px 16px;font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;white-space:nowrap;border-bottom:1px solid transparent;color:{{ cSub }};border-bottom-color:{{ bSub }}">Подписка</div>
+      </div>
+    </nav>
+  </header>
+
+  <sc-if value="{{ isFeed }}" hint-placeholder-val="{{ true }}">
+  <main style="max-width:1120px;margin:0 auto;padding:28px 20px 120px">
+    <div style="max-width:680px;margin:0 auto">
+
+      <div style="padding:14px 0 30px;border-bottom:1px solid var(--line)">
+        <div style="font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--accent)">туристическое агентство «под солнцем»</div>
+        <div style="font-family:'Playfair Display',Georgia,serif;font-size:44px;line-height:1.06;font-weight:400;text-wrap:pretty;margin-top:16px">Журнал о путешествиях</div>
+        <div style="font-family:'Playfair Display',Georgia,serif;font-size:44px;line-height:1.06;font-weight:600;letter-spacing:.02em;color:var(--accent);text-transform:uppercase">без прикрас</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:20px">
+          <div style="height:1px;flex:1;background:var(--border);max-width:64px"></div>
+          <div style="color:var(--accent);font-size:9px">◆</div>
+          <div style="height:1px;flex:1;background:var(--border)"></div>
+        </div>
+        <div style="margin-top:18px;color:var(--soft);font-size:15px;line-height:1.7;max-width:520px">Короткие фишки, проверенные отзывы и большие разборы направлений — от менеджеров, которые сами там были.</div>
+      </div>
+
+      <sc-if value="{{ admin }}">
+        <div style="margin-top:22px;border:1px dashed var(--accent);border-radius:3px;padding:20px;background:var(--surface)">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <div style="font-family:'Playfair Display',Georgia,serif;font-size:20px;font-weight:600">Новая публикация</div>
+            <div style="font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent-2);font-weight:700">только для редакции</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:16px">
+            <div onClick="{{ npSetLong }}" style="padding:8px 16px;border-radius:2px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:{{ npLongBg }};color:{{ npLongFg }}">Большая публикация</div>
+            <div onClick="{{ npSetTip }}" style="padding:8px 16px;border-radius:2px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:{{ npTipBg }};color:{{ npTipFg }}">Короткая фишка</div>
+          </div>
+          <div style="display:grid;gap:10px;margin-top:14px">
+            <input value="{{ npTag }}" onChange="{{ onNpTag }}" placeholder="Рубрика — например, Направление · 8 мин чтения" style="padding:13px 15px;border-radius:2px;border:1px solid var(--border);background:var(--bg);font-family:Manrope,sans-serif;font-size:14px;outline:none" />
+            <input value="{{ npTitle }}" onChange="{{ onNpTitle }}" placeholder="Заголовок" style="padding:13px 15px;border-radius:2px;border:1px solid var(--border);background:var(--bg);font-family:Manrope,sans-serif;font-size:15px;font-weight:600;outline:none" />
+            <textarea value="{{ npText }}" onChange="{{ onNpText }}" placeholder="Текст публикации" style="min-height:96px;resize:vertical;padding:13px 15px;border-radius:2px;border:1px solid var(--border);background:var(--bg);font-family:Manrope,sans-serif;font-size:15px;line-height:1.6;outline:none"></textarea>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;flex-wrap:wrap">
+            <div onClick="{{ toggleNpMedia }}" style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:14px;color:var(--muted);user-select:none">
+              <span style="width:18px;height:18px;border-radius:5px;border:1px solid var(--border);background:{{ npMediaBg }};display:flex;align-items:center;justify-content:center;color:#0A1526;font-size:12px">{{ npMediaMark }}</span>
+              Обложка сверху
+            </div>
+            <button onClick="{{ addPost }}" style="padding:12px 24px;border-radius:2px;border:none;background:var(--accent);color:#0A1526;font-family:Manrope,sans-serif;font-size:14px;font-weight:700;cursor:pointer">Опубликовать в ленту</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-for list="{{ posts }}" as="p" hint-placeholder-count="4">
+        <article style="padding:26px 0;border-bottom:1px solid var(--border)">
+          <sc-if value="{{ p.isLong }}" hint-placeholder-val="{{ true }}">
+            <div style="width:100%;aspect-ratio:16/9;border-radius:3px;background:{{ p.cover }};display:flex;align-items:flex-end;padding:14px">
+              <span style="font-size:12px;color:rgba(242,233,218,.85);letter-spacing:.06em">{{ p.coverLabel }}</span>
+            </div>
+            <div style="font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent-2);font-weight:700;margin-top:16px">{{ p.tag }}</div>
+            <div onClick="{{ p.open }}" style="font-family:'Playfair Display',Georgia,serif;font-size:28px;font-weight:700;margin-top:8px;line-height:1.2;text-wrap:pretty;cursor:pointer">{{ p.title }}</div>
+            <div style="margin-top:10px;color:var(--soft);font-size:16px;line-height:1.65">{{ p.text }}</div>
+          </sc-if>
+          <sc-if value="{{ p.isTip }}">
+            <div style="display:flex;gap:14px;align-items:flex-start">
+              <div style="width:64px;height:64px;flex:none;border-radius:2px;background:{{ p.cover }};display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',Georgia,serif;font-size:20px;color:#0A1526">{{ p.mark }}</div>
+              <div style="min-width:0">
+                <div style="font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent-2);font-weight:700">{{ p.tag }}</div>
+                <div onClick="{{ p.open }}" style="font-family:'Playfair Display',Georgia,serif;font-size:21px;font-weight:600;margin-top:6px;line-height:1.25;cursor:pointer">{{ p.title }}</div>
+                <div style="margin-top:6px;color:var(--soft);font-size:15px;line-height:1.6">{{ p.text }}</div>
+              </div>
+            </div>
+          </sc-if>
+          <div style="margin-top:14px;display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+            <div onClick="{{ p.open }}" style="font-size:14px;font-weight:600;color:var(--accent-2);cursor:pointer">Читать дальше →</div>
+            <div onClick="{{ p.like }}" style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:14px;font-weight:600;color:{{ p.likeColor }};user-select:none"><span style="font-size:17px;line-height:1">{{ p.heart }}</span>{{ p.likeLabel }}</div>
+            <div onClick="{{ p.open }}" style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted)" style-hover="color:var(--accent-2)"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 7.5c0 2.9-2.7 5.2-6 5.2-.8 0-1.6-.1-2.3-.4L2 13.5l1.1-2.6C2.4 10 2 8.8 2 7.5 2 4.6 4.7 2.3 8 2.3s6 2.3 6 5.2Z"/></svg>{{ p.commentLabel }}</div>
+            <sc-if value="{{ admin }}">
+              <div onClick="{{ p.remove }}" style="margin-left:auto;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer" style-hover="color:var(--accent-2)">Удалить</div>
+            </sc-if>
+          </div>
+        </article>
+      </sc-for>
+
+      <div style="margin:32px 0;padding:28px;border-radius:3px;background:var(--panel);color:var(--onpanel);display:flex;flex-wrap:wrap;gap:18px;align-items:center;justify-content:space-between;border:1px solid var(--border)">
+        <div style="max-width:380px">
+          <div style="font-family:'Playfair Display',Georgia,serif;font-size:24px;font-weight:600">Подберём тур под ваш бюджет</div>
+          <div style="margin-top:8px;font-size:15px;line-height:1.55;color:var(--onpanel-dim)">Ответьте на пять вопросов в боте — менеджер пришлёт три варианта с ценами.</div>
+        </div>
+        <a href="https://t.me/pod_solncem_travel_bot" target="_blank" style="background:var(--accent);color:#0A1526;padding:14px 24px;border-radius:2px;font-weight:700;font-size:15px" style-hover="background:var(--accent-hi)">Подобрать тур →</a>
+      </div>
+    </div>
+  </main>
+  </sc-if>
+
+  <sc-if value="{{ isTips }}">
+  <main style="max-width:1120px;margin:0 auto;padding:34px 20px 120px">
+    <div style="font-family:'Playfair Display',Georgia,serif;font-size:34px;font-weight:700">Фишки</div>
+    <div style="color:var(--muted);font-size:15px;margin-top:8px;max-width:560px;line-height:1.6">Короткие заметки, которые экономят деньги и нервы. Пополняются редакцией.</div>
+
+    <sc-if value="{{ admin }}">
+      <div style="margin-top:22px;border:1px dashed var(--accent);border-radius:3px;padding:20px;background:var(--surface);max-width:680px">
+        <div style="font-family:'Playfair Display',Georgia,serif;font-size:20px;font-weight:600">Новая фишка</div>
+        <div style="display:grid;gap:10px;margin-top:14px">
+          <input value="{{ ntTag }}" onChange="{{ onNtTag }}" placeholder="Рубрика — Перелёт, Отели, Деньги…" style="padding:12px 15px;border-radius:2px;border:1px solid var(--border);background:var(--bg);font-family:Manrope,sans-serif;font-size:14px;outline:none" />
+          <input value="{{ ntTitle }}" onChange="{{ onNtTitle }}" placeholder="Заголовок фишки" style="padding:12px 15px;border-radius:2px;border:1px solid var(--border);background:var(--bg);font-family:Manrope,sans-serif;font-size:15px;font-weight:600;outline:none" />
+          <textarea value="{{ ntText }}" onChange="{{ onNtText }}" placeholder="1–2 предложения по сути" style="min-height:70px;resize:vertical;padding:12px 15px;border-radius:2px;border:1px solid var(--border);background:var(--bg);font-family:Manrope,sans-serif;font-size:15px;line-height:1.6;outline:none"></textarea>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:12px">
+          <button onClick="{{ addTip }}" style="padding:12px 24px;border-radius:2px;border:none;background:var(--accent);color:#0A1526;font-family:Manrope,sans-serif;font-size:14px;font-weight:700;cursor:pointer">Добавить фишку</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:24px">
+      <sc-for list="{{ tips }}" as="t" hint-placeholder-count="9">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:20px;display:flex;flex-direction:column;gap:8px" style-hover="border-color:var(--accent)">
+          <div style="font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent-2);font-weight:700">{{ t.tag }}</div>
+          <div style="font-family:'Playfair Display',Georgia,serif;font-size:19px;font-weight:600;line-height:1.3">{{ t.title }}</div>
+          <div style="color:var(--soft);font-size:14px;line-height:1.6">{{ t.text }}</div>
+          <div style="display:flex;align-items:center;gap:16px;margin-top:4px">
+            <div onClick="{{ t.like }}" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:600;color:{{ t.likeColor }};user-select:none"><span style="font-size:16px;line-height:1">{{ t.heart }}</span>{{ t.likeLabel }}</div>
+            <sc-if value="{{ admin }}">
+              <div onClick="{{ t.remove }}" style="margin-left:auto;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer" style-hover="color:var(--accent-2)">Удалить</div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </main>
+  </sc-if>
+
+  <sc-if value="{{ isRev }}">
+  <main style="max-width:760px;margin:0 auto;padding:34px 20px 120px">
+    <div style="font-family:'Playfair Display',Georgia,serif;font-size:34px;font-weight:700">Отзывы</div>
+    <div style="color:var(--muted);font-size:15px;margin-top:8px;line-height:1.6">Пишут те, кто ездил с нами. Каждый отзыв читает менеджер перед публикацией.</div>
+
+    <div style="margin-top:24px;border:1px solid var(--border);border-radius:3px;padding:22px;background:var(--surface)">
+      <div style="font-family:'Playfair Display',Georgia,serif;font-size:22px;font-weight:600">Оставить отзыв</div>
+      <div style="color:var(--muted);font-size:13px;margin-top:6px">Опубликуем после проверки менеджером — обычно в течение рабочего дня.</div>
+      <div style="display:grid;gap:10px;margin-top:16px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
+          <input value="{{ nrName }}" onChange="{{ onNrName }}" placeholder="Как вас зовут" style="padding:13px 15px;border-radius:2px;border:1px solid var(--border);background:var(--bg);font-family:Manrope,sans-serif;font-size:15px;outline:none" />
+          <input value="{{ nrPlace }}" onChange="{{ onNrPlace }}" placeholder="Направление и месяц поездки" style="padding:13px 15px;border-radius:2px;border:1px solid var(--border);background:var(--bg);font-family:Manrope,sans-serif;font-size:15px;outline:none" />
+        </div>
+        <textarea value="{{ nrText }}" onChange="{{ onNrText }}" placeholder="Что понравилось, что нет — по-честному" style="min-height:96px;resize:vertical;padding:13px 15px;border-radius:2px;border:1px solid var(--border);background:var(--bg);font-family:Manrope,sans-serif;font-size:15px;line-height:1.6;outline:none"></textarea>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:14px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:13px;color:var(--muted)">Оценка</span>
+          <div style="display:flex;gap:4px;font-size:22px;line-height:1;color:var(--accent);cursor:pointer;user-select:none">
+            <span onClick="{{ setStar1 }}">{{ s1 }}</span><span onClick="{{ setStar2 }}">{{ s2 }}</span><span onClick="{{ setStar3 }}">{{ s3 }}</span><span onClick="{{ setStar4 }}">{{ s4 }}</span><span onClick="{{ setStar5 }}">{{ s5 }}</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <sc-if value="{{ reviewSent }}">
+            <div style="font-size:13px;font-weight:600;color:var(--ok)">Спасибо — отзыв ушёл на проверку</div>
+          </sc-if>
+          <button onClick="{{ addReview }}" style="padding:13px 26px;border-radius:2px;border:none;background:var(--panel);color:var(--onpanel);font-family:Manrope,sans-serif;font-size:14px;font-weight:700;cursor:pointer;border:1px solid var(--border)">Отправить</button>
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{ hasPending }}">
+      <div style="margin-top:26px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-family:'Playfair Display',Georgia,serif;font-size:22px;font-weight:600">На проверке</div>
+          <div style="padding:3px 10px;border-radius:2px;background:var(--chip);font-size:12px;font-weight:700;color:var(--muted)">{{ pendingCount }}</div>
+        </div>
+        <div style="color:var(--muted);font-size:13px;margin-top:6px">{{ pendingHint }}</div>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-top:14px">
+          <sc-for list="{{ pending }}" as="r" hint-placeholder-count="1">
+            <div style="background:var(--surface);border:1px dashed var(--accent);border-radius:3px;padding:20px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="width:42px;height:42px;border-radius:50%;flex:none;background:linear-gradient(140deg,#1A2A44,#C9A24A)"></div>
+                <div style="min-width:0">
+                  <div style="font-weight:700;font-size:15px">{{ r.name }}</div>
+                  <div style="color:var(--muted);font-size:13px">{{ r.place }}</div>
+                </div>
+                <div style="margin-left:auto;color:var(--accent);font-size:14px;letter-spacing:2px">{{ r.stars }}</div>
+              </div>
+              <div style="margin-top:12px;font-size:15px;line-height:1.65;color:var(--soft)">{{ r.text }}</div>
+              <div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                <div style="font-size:12px;font-weight:600;color:var(--muted)">ждёт проверки менеджером</div>
+                <sc-if value="{{ admin }}">
+                  <div style="margin-left:auto;display:flex;gap:8px">
+                    <div onClick="{{ r.approve }}" style="padding:9px 18px;border-radius:2px;background:var(--accent);color:#0A1526;font-size:13px;font-weight:700;cursor:pointer">Одобрить</div>
+                    <div onClick="{{ r.reject }}" style="padding:9px 18px;border-radius:2px;border:1px solid var(--border);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer" style-hover="color:var(--accent-2)">Отклонить</div>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;flex-direction:column;gap:16px;margin-top:26px">
+      <sc-for list="{{ reviews }}" as="r" hint-placeholder-count="2">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:22px">
+          <div style="display:flex;gap:12px;align-items:center">
+            <div style="width:46px;height:46px;border-radius:50%;flex:none;background:linear-gradient(140deg,#1A2A44,#C9A24A)"></div>
+            <div style="min-width:0">
+              <div style="font-weight:700;font-size:15px">{{ r.name }}</div>
+              <div style="color:var(--muted);font-size:13px">{{ r.place }}</div>
+            </div>
+            <div style="margin-left:auto;color:var(--accent);font-size:14px;letter-spacing:2px">{{ r.stars }}</div>
+          </div>
+          <div style="margin-top:14px;font-size:15px;line-height:1.65;color:var(--soft)">{{ r.text }}</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px">
+            <div style="aspect-ratio:1;border-radius:2px;background:linear-gradient(140deg,#132135,#B8912F)"></div>
+            <div style="aspect-ratio:1;border-radius:2px;background:linear-gradient(140deg,#0E1B2E,#4A5B72)"></div>
+            <div style="aspect-ratio:1;border-radius:2px;background:linear-gradient(140deg,#F7C86B,#C4623C)"></div>
+            <div style="aspect-ratio:1;border-radius:2px;background:linear-gradient(140deg,#0A1526,#8A7B52)"></div>
+          </div>
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line);display:flex;align-items:center;gap:6px;color:var(--ok);font-size:12px;font-weight:600">
+            <span style="display:inline-block;width:15px;height:15px;border-radius:50%;background:var(--ok);color:#fff;font-size:10px;line-height:15px;text-align:center">✓</span>
+            проверено агентством
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </main>
+  </sc-if>
+
+  <sc-if value="{{ isSub }}">
+  <main style="max-width:620px;margin:0 auto;padding:56px 20px 140px;text-align:center">
+    <div style="width:56px;height:56px;margin:0 auto;border-radius:50%;background:radial-gradient(circle at 35% 35%,#E4C67F,#C9A24A 65%,#8A6F26)"></div>
+    <div style="font-family:'Playfair Display',Georgia,serif;font-size:36px;font-weight:700;margin-top:22px;line-height:1.15;text-wrap:pretty">Одно письмо в неделю. Ничего лишнего</div>
+    <div style="color:var(--soft);font-size:16px;line-height:1.65;margin-top:14px">Свежие фишки, новые отзывы и разбор одного направления. Без рекламы чужих отелей и без «горящих» рассылок каждый день.</div>
+    <div style="display:flex;gap:10px;margin-top:26px;flex-wrap:wrap;justify-content:center">
+      <input placeholder="ваша почта" style="flex:1;min-width:220px;padding:15px 18px;border-radius:2px;border:1px solid var(--border);background:var(--surface);font-family:Manrope,sans-serif;font-size:15px;outline:none" />
+      <button onClick="{{ subscribe }}" style="padding:15px 26px;border-radius:2px;border:1px solid var(--border);background:var(--panel);color:var(--onpanel);font-family:Manrope,sans-serif;font-size:15px;font-weight:700;cursor:pointer">Подписаться</button>
+    </div>
+    <sc-if value="{{ subscribed }}">
+      <div style="margin-top:14px;color:var(--ok);font-size:14px;font-weight:600">Готово — письмо придёт в четверг.</div>
+    </sc-if>
+    <div style="margin-top:34px;padding-top:28px;border-top:1px solid var(--border);color:var(--muted);font-size:14px">или читайте в Telegram</div>
+    <a href="https://t.me/coral_taganskaya" target="_blank" style="display:inline-block;margin-top:14px;padding:14px 24px;border-radius:2px;background:var(--surface);border:1px solid var(--border);font-weight:600;font-size:15px" style-hover="border-color:var(--accent)">@coral_taganskaya</a>
+    <div style="margin-top:46px;padding:26px;border-radius:3px;background:var(--panel);color:var(--onpanel);text-align:left;border:1px solid var(--border)">
+      <div style="font-family:'Playfair Display',Georgia,serif;font-size:22px;font-weight:600">Нужен тур, а не чтение?</div>
+      <div style="margin-top:8px;font-size:15px;line-height:1.55;color:var(--onpanel-dim)">Напишите менеджеру в Telegram — ответим в течение рабочего дня.</div>
+      <a href="https://t.me/pod_solncem_travel_bot" target="_blank" style="display:inline-block;margin-top:16px;background:var(--accent);color:#0A1526;padding:13px 22px;border-radius:2px;font-weight:700;font-size:15px" style-hover="background:var(--accent-hi)">Написать менеджеру →</a>
+    </div>
+  </main>
+  </sc-if>
+
+  <sc-if value="{{ isArticle }}">
+  <main style="max-width:720px;margin:0 auto;padding:24px 20px 140px">
+    <div onClick="{{ goFeed }}" style="font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;margin-bottom:20px" style-hover="color:var(--accent-2)">← В ленту</div>
+    <sc-if value="{{ artHasCover }}" hint-placeholder-val="{{ true }}">
+      <div style="width:100%;aspect-ratio:16/9;border-radius:3px;background:{{ artCover }};display:flex;align-items:flex-end;padding:16px">
+        <span style="font-size:12px;color:rgba(242,233,218,.85);letter-spacing:.06em">{{ artCoverLabel }}</span>
+      </div>
+    </sc-if>
+    <div style="font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent-2);font-weight:700;margin-top:22px">{{ artTag }}</div>
+    <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:40px;line-height:1.12;font-weight:700;margin:12px 0 0;text-wrap:pretty">{{ artTitle }}</h1>
+    <div style="margin-top:16px;padding-bottom:20px;border-bottom:1px solid var(--border);color:var(--muted);font-size:14px">Материал подготовлен менеджерами агентства «Под солнцем»</div>
+    <div style="font-size:18px;line-height:1.75;color:var(--body);margin-top:24px;white-space:pre-line">{{ artBody }}</div>
+
+    <div style="margin-top:32px;padding:28px;border-radius:3px;background:var(--panel);color:var(--onpanel);border:1px solid var(--border)">
+      <div style="font-family:'Playfair Display',Georgia,serif;font-size:24px;font-weight:600">Хотите так же, но без планирования?</div>
+      <div style="margin-top:8px;font-size:15px;line-height:1.6;color:var(--onpanel-dim)">Расскажите боту про даты и бюджет — менеджер соберёт маршрут и пришлёт цены.</div>
+      <a href="https://t.me/pod_solncem_travel_bot" target="_blank" style="display:inline-block;margin-top:18px;background:var(--accent);color:#0A1526;padding:14px 24px;border-radius:2px;font-weight:700;font-size:15px" style-hover="background:var(--accent-hi)">Подобрать тур в боте →</a>
+    </div>
+
+    <div style="margin-top:36px;padding:18px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:22px">
+      <div onClick="{{ likeArt }}" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:15px;font-weight:700;color:{{ artLikeColor }};user-select:none"><span style="font-size:20px;line-height:1">{{ artHeart }}</span>{{ artLikeLabel }}</div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--muted)"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 7.5c0 2.9-2.7 5.2-6 5.2-.8 0-1.6-.1-2.3-.4L2 13.5l1.1-2.6C2.4 10 2 8.8 2 7.5 2 4.6 4.7 2.3 8 2.3s6 2.3 6 5.2Z"/></svg>{{ artCommentLabel }}</div>
+    </div>
+
+    <div style="margin-top:32px">
+      <div style="font-family:'Playfair Display',Georgia,serif;font-size:24px;font-weight:600">Обсуждение</div>
+      <div style="color:var(--muted);font-size:13px;margin-top:6px">Комментарии публикуются после проверки менеджером.</div>
+      <div style="display:flex;gap:12px;margin-top:20px;align-items:flex-start">
+        <div style="width:38px;height:38px;border-radius:50%;flex:none;background:linear-gradient(140deg,#1A2A44,#8A7B52)"></div>
+        <div style="flex:1;min-width:0">
+          <textarea value="{{ draft }}" onChange="{{ onDraft }}" placeholder="Спросить у менеджера или поделиться опытом…" style="width:100%;min-height:74px;resize:vertical;padding:13px 15px;border-radius:2px;border:1px solid var(--border);background:var(--surface);font-family:Manrope,sans-serif;font-size:15px;line-height:1.5;outline:none"></textarea>
+          <div style="display:flex;justify-content:flex-end;margin-top:8px">
+            <button onClick="{{ addComment }}" style="padding:11px 22px;border-radius:2px;border:1px solid var(--border);background:var(--panel);color:var(--onpanel);font-family:Manrope,sans-serif;font-size:14px;font-weight:700;cursor:pointer">Отправить</button>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ noComments }}" hint-placeholder-val="{{ true }}">
+        <div style="margin-top:20px;padding:22px;border-radius:3px;border:1px dashed var(--border);text-align:center;color:var(--muted);font-size:14px">Комментариев пока нет — будьте первым.</div>
+      </sc-if>
+      <div style="display:flex;flex-direction:column;gap:18px;margin-top:24px">
+        <sc-for list="{{ comments }}" as="c" hint-placeholder-count="0">
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:38px;height:38px;border-radius:50%;flex:none;background:linear-gradient(140deg,#F7C86B,#C4623C)"></div>
+            <div style="min-width:0">
+              <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+                <div style="font-weight:700;font-size:14px">{{ c.name }}</div>
+                <div style="color:var(--muted);font-size:12px">{{ c.when }}</div>
+                <div style="font-size:11px;font-weight:700;color:{{ c.statusColor }}">{{ c.status }}</div>
+              </div>
+              <div style="margin-top:5px;font-size:15px;line-height:1.6;color:var(--soft)">{{ c.text }}</div>
+              <sc-if value="{{ admin }}">
+                <div style="margin-top:8px;display:flex;gap:10px">
+                  <div onClick="{{ c.approve }}" style="font-size:12px;font-weight:700;color:var(--accent-2);cursor:pointer">Одобрить</div>
+                  <div onClick="{{ c.remove }}" style="font-size:12px;font-weight:600;color:var(--muted);cursor:pointer" style-hover="color:var(--accent-2)">Удалить</div>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </main>
+  </sc-if>
+
+  <sc-if value="{{ showFab }}" hint-placeholder-val="{{ true }}">
+    <a href="https://t.me/pod_solncem_travel_bot" target="_blank" style="position:fixed;right:18px;bottom:18px;z-index:30;background:var(--accent);color:#0A1526;padding:15px 22px;border-radius:2px;font-weight:700;font-size:15px;box-shadow:0 10px 26px rgba(0,0,0,.28);display:flex;align-items:center;gap:8px" style-hover="background:var(--accent-hi)">
+      <span style="width:8px;height:8px;border-radius:50%;background:#0A1526;display:inline-block"></span>
+      Подобрать тур
+    </a>
+  </sc-if>
+
+  <footer style="background:var(--header);color:var(--onhead-dim);padding:44px 20px 34px;font-size:13px;border-top:1px solid var(--border)">
+    <div style="max-width:1120px;margin:0 auto">
+      <div style="border:1px solid var(--border);padding:22px 26px;display:flex;flex-wrap:wrap;gap:22px;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:14px">
+          <svg width="34" height="34" viewBox="0 0 40 40" fill="none" stroke="var(--accent)" stroke-width="1.4" stroke-linecap="round" style="flex:none">
+            <circle cx="20" cy="17" r="5.4"></circle>
+            <path d="M20 6.5v-3M28.5 9.5l2-2M11.5 9.5l-2-2M31 17h3M6 17h3"></path>
+            <path d="M9 26.5c2.6 0 2.6-1.6 5.2-1.6s2.6 1.6 5.2 1.6 2.6-1.6 5.2-1.6 2.6 1.6 5.2 1.6"></path>
+            <path d="M9 31.5c2.6 0 2.6-1.6 5.2-1.6s2.6 1.6 5.2 1.6 2.6-1.6 5.2-1.6 2.6 1.6 5.2 1.6"></path>
+          </svg>
+          <div>
+            <div style="font-family:'Playfair Display',Georgia,serif;font-size:17px;letter-spacing:.18em;text-transform:uppercase;color:var(--onhead)">Под солнцем</div>
+            <div style="font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);margin-top:3px">premium travel</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:26px;font-size:11px;letter-spacing:.16em;text-transform:uppercase">
+          <a href="https://t.me/coral_taganskaya" target="_blank" style="color:var(--onhead-dim)" style-hover="color:var(--accent)">Telegram-канал</a>
+          <a href="https://t.me/pod_solncem_travel_bot" target="_blank" style="color:var(--onhead-dim)" style-hover="color:var(--accent)">Бот подбора туров</a>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-top:26px;color:var(--accent);font-size:10px;letter-spacing:.3em;text-transform:uppercase">
+        <span>◆</span><span>ваше путешествие начинается с доверия</span><span>◆</span>
+      </div>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showFloatingCta&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Поведение&quot;}}">
+const COVERS = [
+  'linear-gradient(150deg,#08101E 0%,#132135 55%,#C9A24A 145%)',
+  'linear-gradient(150deg,#0A1526 0%,#3A3A2E 50%,#C9A24A 135%)',
+  'linear-gradient(150deg,#0C1728 0%,#1F3049 55%,#E4C67F 150%)'
+];
+const TIP_TILES = [
+  'linear-gradient(140deg,#132135,#C9A24A)',
+  'linear-gradient(140deg,#0E1B2E,#4A5B72)',
+  'linear-gradient(140deg,#1A2A44,#C9A24A)'
+];
+
+class Component extends DCLogic {
+  state = {
+    tab: 'feed', theme: 'dark', admin: false, subscribed: false,
+    openId: 'p1', draft: '', reviewSent: false,
+    likes: {}, liked: {},
+    comments: [],
+    np: { kind: 'long', tag: '', title: '', text: '', media: true },
+    nt: { tag: '', title: '', text: '' },
+    nr: { name: '', place: '', text: '', stars: 5 },
+    posts: [
+      { id: 'p1', kind: 'long', tag: 'Направление · 8 мин чтения', title: 'Ликийское побережье осенью: куда ехать, когда все уже уехали',
+        text: 'Сентябрь и октябрь на юге Турции — та же вода 26 градусов, но вдвое меньше людей и цены как в мае. Разбираем шесть городков от Каша до Олимпоса.',
+        coverLabel: 'ФОТО · закат в Каше',
+        body: 'Главная ошибка планирования отпуска в Турции — считать, что сезон заканчивается вместе с августом. Вода на юге держит 25–26 градусов до конца октября, а загрузка отелей падает почти вдвое уже к десятому сентября.\n\nМы разобрали шесть точек на побережье между Кашем и Олимпосом. Для каждой — что там с пляжем, сколько стоит ночь в сентябре и октябре и стоит ли брать машину.\n\nКаш подойдёт тем, кто не любит большие отельные комплексы: маленькие гостиницы на склоне и набережная с рыбными ресторанами. Пляж галечный, вход в воду с платформ. Ночь в приличном бутик-отеле в октябре — от 4 500 рублей.\n\nВечером у моря заметно свежеет: лёгкая ветровка обязательна. Дожди редкие, но короткие и сильные. И обувь с закрытым носком, если планируете хотя бы часть Ликийской тропы.' },
+      { id: 'p2', kind: 'tip', tag: 'Фишка · Турция', title: 'Трансфер из Антальи дешевле брать не в аэропорту',
+        text: 'Стойки внутри терминала берут наценку до 40%. Тот же перевозчик на выходе из зоны прилёта стоит в полтора раза меньше.',
+        body: 'Стойки трансфера внутри терминала работают по повышенному тарифу — аренда места в аэропорту закладывается в цену.\n\nВыйдите из зоны прилёта к парковке: те же машины и те же водители едут в Кемер или Сиде в полтора раза дешевле. Цену фиксируйте до посадки и просите назвать сумму на весь автомобиль, а не с человека.' },
+      { id: 'p3', kind: 'long', tag: 'Отель · мнение менеджера', title: 'Пять «пятёрок» в Хургаде, куда мы отправляем своих',
+        text: 'Ездили сами, смотрели номера, ели в ресторанах а-ля карт. Честно про пляж, риф и шум стройки по соседству.',
+        coverLabel: 'ВИДЕО · обзор отеля, 2:40',
+        body: 'В Хургаде «пять звёзд» означает слишком разное. Мы отобрали пять отелей, где сами жили или проводили инспекцию в этом году.\n\nСмотрели на три вещи: вход в воду и наличие живого рифа, качество еды к концу недели, а не в первый день, и реальную удалённость от стройплощадок.\n\nПодробные заметки по каждому отелю — с фотографиями номеров и пляжа в разное время дня.' },
+      { id: 'p4', kind: 'tip', tag: 'Фишка · Документы', title: 'Страховку проверяют по сумме покрытия, а не по логотипу',
+        text: 'В Шенген нужно минимум 30 000 евро. Полис за 900 рублей на две недели закрывает это требование полностью.',
+        body: 'Консульства смотрят на сумму покрытия, срок действия и территорию — бренд страховой роли не играет.\n\nМинимум для Шенгена — 30 000 евро, полис должен покрывать весь срок поездки и все страны маршрута. Дорогие пакеты имеют смысл только если планируете горные лыжи, дайвинг или едете с хроническим заболеванием.' }
+    ],
+    tips: [
+      { id: 't1', tag: 'Перелёт', title: 'Ручная кладь у чартеров считается строже', text: 'Замеряют рамкой на выходе. 55×40×20 — не рекомендация, а предел.' },
+      { id: 't2', tag: 'Деньги', title: 'Меняйте валюту в городе, а не в отеле', text: 'Курс на ресепшене хуже обменника в 3–4 минутах ходьбы примерно на 7%.' },
+      { id: 't3', tag: 'Отели', title: 'Номер с видом на море бывает «боковым»', text: 'Уточняйте формулировку в ваучере: side sea view — это угол балкона.' },
+      { id: 't4', tag: 'Документы', title: 'Загранпаспорт должен жить ещё полгода', text: 'Большинство стран считают срок от даты возвращения, а не вылета.' },
+      { id: 't5', tag: 'С детьми', title: 'Детская кроватка — по запросу, а не по умолчанию', text: 'Запрашивайте при бронировании: в высокий сезон их физически не хватает.' },
+      { id: 't6', tag: 'Отели', title: 'А-ля карт бесплатный, но по записи', text: 'Записывайтесь в день заезда — к середине недели свободных слотов нет.' },
+      { id: 't7', tag: 'Деньги', title: 'Депозит в отеле блокируют, а не списывают', text: 'Возврат приходит до 14 дней. Не пугайтесь минуса на карте в первый день.' },
+      { id: 't8', tag: 'Документы', title: 'Копия брони нужна на границе', text: 'Пограничник вправе спросить подтверждение проживания. Скачайте PDF офлайн.' }
+    ],
+    reviews: [
+      { id: 'r1', name: 'Марина К.', place: 'Мальдивы · Мале, июль 2026', stars: '★★★★★', text: 'Просили тихий остров без анимации и детей — попали ровно туда. Менеджер честно отговорил от варианта дешевле на 30 тысяч, объяснив, что там стройка рядом. Оказался прав.' },
+      { id: 'r2', name: 'Дмитрий и Аня', place: 'Турция · Каш, сентябрь 2026', stars: '★★★★★', text: 'Первый раз брали тур не пакетом, а по частям. Всё состыковалось, трансфер ждал с табличкой. Отдельное спасибо за список кафе в заметке — половину обошли.' }
+    ],
+    pending: []
+  };
+
+  componentDidMount() {
+    const saved = localStorage.getItem('mps-theme2');
+    if (saved === 'dark' || saved === 'light') this.setState({ theme: saved });
+    else this.applyTheme('dark');
+    if (saved) this.applyTheme(saved);
+  }
+  applyTheme(t) { document.documentElement.setAttribute('data-theme', t); }
+  toggleTheme = () => {
+    const t = this.state.theme === 'dark' ? 'light' : 'dark';
+    this.applyTheme(t);
+    localStorage.setItem('mps-theme2', t);
+    this.setState({ theme: t });
+  };
+  set(tab) { this.setState({ tab }); window.scrollTo(0, 0); }
+  like(id) {
+    this.setState(s => {
+      const on = !s.liked[id];
+      return { liked: { ...s.liked, [id]: on }, likes: { ...s.likes, [id]: (s.likes[id] || 0) + (on ? 1 : -1) } };
+    });
+  }
+  field(group, key) {
+    return e => this.setState(s => ({ [group]: { ...s[group], [key]: e.target.value } }));
+  }
+  uid() { return 'x' + Math.random().toString(36).slice(2, 8); }
+
+  renderVals() {
+    const s = this.state, t = s.tab;
+    const on = 'var(--onhead)', off = 'var(--onhead-dim)', acc = 'var(--accent)';
+    const likeLabel = id => (s.likes[id] ? String(s.likes[id]) : '');
+    const decorate = (p, i) => ({
+      ...p,
+      isLong: p.kind === 'long', isTip: p.kind === 'tip',
+      cover: p.kind === 'long' ? COVERS[i % COVERS.length] : TIP_TILES[i % TIP_TILES.length],
+      coverLabel: p.coverLabel || 'ФОТО · обложка публикации',
+      mark: '№' + (i + 1),
+      heart: s.liked[p.id] ? '♥' : '♡',
+      likeColor: s.liked[p.id] ? 'var(--accent-2)' : 'var(--muted)',
+      likeLabel: likeLabel(p.id),
+      commentLabel: p.id === s.openId && s.comments.length ? String(s.comments.length) : '',
+      like: () => this.like(p.id),
+      open: () => { this.setState({ openId: p.id, tab: 'article' }); window.scrollTo(0, 0); },
+      remove: () => this.setState(st => ({ posts: st.posts.filter(x => x.id !== p.id) }))
+    });
+    const art = s.posts.find(p => p.id === s.openId) || s.posts[0] || {};
+    const npIsLong = s.np.kind === 'long';
+
+    return {
+      isFeed: t === 'feed', isTips: t === 'tips', isRev: t === 'rev', isSub: t === 'sub', isArticle: t === 'article',
+      showFab: (this.props.showFloatingCta ?? true) && t !== 'sub',
+      admin: s.admin,
+      adminLabel: s.admin ? 'Редактор' : 'Читатель',
+      adminDot: s.admin ? 'var(--accent)' : 'var(--muted)',
+      toggleAdmin: () => this.setState({ admin: !s.admin }),
+      themeIcon: s.theme === 'dark' ? '☀' : '☾',
+      toggleTheme: this.toggleTheme,
+      cFeed: t === 'feed' || t === 'article' ? on : off, cTips: t === 'tips' ? on : off,
+      cRev: t === 'rev' ? on : off, cSub: t === 'sub' ? on : off,
+      bFeed: t === 'feed' || t === 'article' ? acc : 'transparent',
+      bTips: t === 'tips' ? acc : 'transparent',
+      bRev: t === 'rev' ? acc : 'transparent',
+      bSub: t === 'sub' ? acc : 'transparent',
+      tabFeed: () => this.set('feed'), tabTips: () => this.set('tips'),
+      tabRev: () => this.set('rev'), tabSub: () => this.set('sub'), goFeed: () => this.set('feed'),
+
+      posts: s.posts.map(decorate),
+      tips: s.tips.map(tip => ({
+        ...tip,
+        heart: s.liked[tip.id] ? '♥' : '♡',
+        likeColor: s.liked[tip.id] ? 'var(--accent-2)' : 'var(--muted)',
+        likeLabel: likeLabel(tip.id),
+        like: () => this.like(tip.id),
+        remove: () => this.setState(st => ({ tips: st.tips.filter(x => x.id !== tip.id) }))
+      })),
+
+      npTag: s.np.tag, npTitle: s.np.title, npText: s.np.text,
+      onNpTag: this.field('np', 'tag'), onNpTitle: this.field('np', 'title'), onNpText: this.field('np', 'text'),
+      npSetLong: () => this.setState({ np: { ...s.np, kind: 'long' } }),
+      npSetTip: () => this.setState({ np: { ...s.np, kind: 'tip' } }),
+      npLongBg: npIsLong ? 'var(--accent)' : 'transparent',
+      npLongFg: npIsLong ? '#0A1526' : 'var(--muted)',
+      npTipBg: !npIsLong ? 'var(--accent)' : 'transparent',
+      npTipFg: !npIsLong ? '#0A1526' : 'var(--muted)',
+      toggleNpMedia: () => this.setState({ np: { ...s.np, media: !s.np.media } }),
+      npMediaBg: s.np.media ? 'var(--accent)' : 'transparent',
+      npMediaMark: s.np.media ? '✓' : '',
+      addPost: () => {
+        const n = s.np;
+        if (!n.title.trim()) return;
+        const post = {
+          id: this.uid(), kind: n.kind,
+          tag: n.tag.trim() || (n.kind === 'tip' ? 'Фишка' : 'Публикация'),
+          title: n.title.trim(), text: n.text.trim(),
+          coverLabel: n.media ? 'ФОТО · обложка публикации' : null,
+          body: n.text.trim()
+        };
+        if (n.kind === 'long' && !n.media) post.kind = 'long';
+        this.setState(st => ({ posts: [post, ...st.posts], np: { kind: n.kind, tag: '', title: '', text: '', media: true } }));
+      },
+
+      ntTag: s.nt.tag, ntTitle: s.nt.title, ntText: s.nt.text,
+      onNtTag: this.field('nt', 'tag'), onNtTitle: this.field('nt', 'title'), onNtText: this.field('nt', 'text'),
+      addTip: () => {
+        const n = s.nt;
+        if (!n.title.trim()) return;
+        const tip = { id: this.uid(), tag: n.tag.trim() || 'Фишка', title: n.title.trim(), text: n.text.trim() };
+        this.setState(st => ({ tips: [tip, ...st.tips], nt: { tag: '', title: '', text: '' } }));
+      },
+
+      nrName: s.nr.name, nrPlace: s.nr.place, nrText: s.nr.text,
+      onNrName: this.field('nr', 'name'), onNrPlace: this.field('nr', 'place'), onNrText: this.field('nr', 'text'),
+      s1: s.nr.stars >= 1 ? '★' : '☆', s2: s.nr.stars >= 2 ? '★' : '☆', s3: s.nr.stars >= 3 ? '★' : '☆',
+      s4: s.nr.stars >= 4 ? '★' : '☆', s5: s.nr.stars >= 5 ? '★' : '☆',
+      setStar1: () => this.setState({ nr: { ...s.nr, stars: 1 } }),
+      setStar2: () => this.setState({ nr: { ...s.nr, stars: 2 } }),
+      setStar3: () => this.setState({ nr: { ...s.nr, stars: 3 } }),
+      setStar4: () => this.setState({ nr: { ...s.nr, stars: 4 } }),
+      setStar5: () => this.setState({ nr: { ...s.nr, stars: 5 } }),
+      reviewSent: s.reviewSent,
+      addReview: () => {
+        const n = s.nr;
+        if (!n.text.trim()) return;
+        const rev = {
+          id: this.uid(), name: n.name.trim() || 'Аноним', place: n.place.trim() || 'Направление не указано',
+          stars: '★★★★★'.slice(0, n.stars) + '☆☆☆☆☆'.slice(0, 5 - n.stars), text: n.text.trim()
+        };
+        this.setState(st => ({ pending: [rev, ...st.pending], nr: { name: '', place: '', text: '', stars: 5 }, reviewSent: true }));
+      },
+      reviews: s.reviews,
+      pending: s.pending.map(r => ({
+        ...r,
+        approve: () => this.setState(st => ({ pending: st.pending.filter(x => x.id !== r.id), reviews: [r, ...st.reviews] })),
+        reject: () => this.setState(st => ({ pending: st.pending.filter(x => x.id !== r.id) }))
+      })),
+      hasPending: s.pending.length > 0,
+      pendingCount: String(s.pending.length),
+      pendingHint: s.admin ? 'Одобренные отзывы сразу появятся на сайте.' : 'Видно только вам и менеджеру до одобрения.',
+
+      artTitle: art.title, artTag: art.tag, artBody: art.body || art.text,
+      artHasCover: !!art.coverLabel, artCoverLabel: art.coverLabel,
+      artCover: COVERS[Math.max(0, s.posts.findIndex(p => p.id === art.id)) % COVERS.length],
+      artHeart: s.liked[art.id] ? '♥' : '♡',
+      artLikeColor: s.liked[art.id] ? 'var(--accent-2)' : 'var(--muted)',
+      artLikeLabel: likeLabel(art.id) || 'Нравится',
+      likeArt: () => this.like(art.id),
+      artCommentLabel: s.comments.length ? String(s.comments.length) : '0',
+      noComments: s.comments.length === 0,
+      comments: s.comments.map(c => ({
+        ...c,
+        status: c.approved ? '' : 'на проверке',
+        statusColor: c.approved ? 'transparent' : 'var(--muted)',
+        approve: () => this.setState(st => ({ comments: st.comments.map(x => x.id === c.id ? { ...x, approved: true } : x) })),
+        remove: () => this.setState(st => ({ comments: st.comments.filter(x => x.id !== c.id) }))
+      })),
+      draft: s.draft,
+      onDraft: e => this.setState({ draft: e.target.value }),
+      addComment: () => {
+        const text = s.draft.trim();
+        if (!text) return;
+        this.setState(st => ({ draft: '', comments: [...st.comments, { id: this.uid(), name: 'Вы', when: 'только что', text, approved: false }] }));
+      },
+
+      subscribed: s.subscribed,
+      subscribe: () => this.setState({ subscribed: true })
+    };
+  }
+}
+</script>
+</body>
+</html>
