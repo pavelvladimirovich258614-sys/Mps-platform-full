@@ -20,6 +20,7 @@ from app.api.reviews import reviews_router, router as internal_router
 from app.api.subscribe import router as subscribe_router
 from app.api.qa import router as qa_router
 from app.api.forum import router as forum_router
+from app.api.admin import router as admin_router
 from app.config import Settings, get_settings
 from app.db import Database
 from app.models.user import User
@@ -85,6 +86,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(subscribe_router, prefix="/api/v1")
     app.include_router(qa_router, prefix="/api/v1")
     app.include_router(forum_router, prefix="/api/v1")
+    app.include_router(admin_router, prefix="/api/v1")
     return app
 
 

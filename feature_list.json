@@ -124,15 +124,15 @@
       "area": "admin",
       "title": "Админка, статистика, уведомления, онлайн-панель",
       "user_visible_behavior": "Админ видит статистику (пользователи, активные 30д, новые 7/30д, подписчики, вопросы, топ постов) и очередь модерации; пользователь видит звоночек с уведомлениями; панель онлайн показывает активных за 2 минуты без анонимов.",
-      "status": "not_started",
+      "status": "passing",
       "verification": [
         "pytest tests/test_admin.py tests/test_presence.py -q",
         "GET /admin/stats под reader -> 403, под admin -> все поля из ТЗ F-I",
         "GET /online не содержит is_anonymous=true и last_seen старше 120с",
         "PATCH /notifications/read -> is_read=true"
       ],
-      "evidence": "",
-      "notes": ""
+      "evidence": "2026-08-18: python -m pytest tests/test_admin.py tests/test_presence.py -q --basetemp .pytest-f08-target -> 4 passed in 0.89s; reader GET /admin/stats -> 403; admin stats returned users_total, active/new 30d, new 7d, confirmed subscribers, open/answered questions, pending reviews and top_posts sorted by views DESC (100,75,60,50,25). Presence tests proved anonymous and >120s users excluded, notifications pagination, own-ID/all read and foreign ID unchanged. python -m pytest tests -q --basetemp .pytest-f08-full -> 30 passed in 6.87s. ./init.sh -> 30 passed in 6.70s, [OK] Верификация прошла.",
+      "notes": "Premium не имеет специальных привилегий в F08; административные маршруты требуют только role=admin."
     },
     {
       "id": "F09",
