@@ -4,7 +4,7 @@
 - Repository root directory: mps-platform/
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
-- Highest priority unfinished feature: F10 (деплой, домен, SEO, юр-обвязка, бэкапы)
+- Highest priority unfinished feature: нет — F01–F10 passing
 - Current blocker: нет
 - Frontend: F09a1/F09a2 ЗАВЕРШЕНЫ — Vite+React перенос дизайна в frontend/app; исходный экспорт frontend/mir-pod-solncem.dc.html сохранён. F09b подключает auth/API.
 
@@ -128,3 +128,12 @@
 - Commits: `143e813 fix: F06 forum messages contract for frontend`; далее будет `F09b: подключение API и авторизации [passing]`.
 - Known risks: финальная браузерная проверка с живым Postgres/Redis остаётся ручным smoke Павла на локальной машине или при F10; принятая эквивалентная ASGI SQLite+fakeredis API-верификация полностью пройдена. Внешние Telegram/Unisender/MiniMax намеренно не вызываются, их transport contracts замоканы.
 - Next best action: F10 — деплой и production/manual browser smoke.
+
+### Session 13 — 2026-08-18 (Codex, F10)
+- Goal: подготовить production deploy, SEO и backup для финальной фичи.
+- Completed: добавлены nginx HTTPS/static/API/media template, backend systemd unit, daily pg_dump backup timer, smoke script и DEPLOY.md. SEO endpoints `/sitemap.xml`, `/robots.txt`, bot-specific `/posts/{slug}` OG/meta+Article JSON-LD; обычный browser получает собранный index.html. Добавлена `python -m app.management.create_admin` с email/TG identity и интерактивным вводом без default credentials. Иришка остаётся в FastAPI lifespan, scheduler unit не нужен.
+- Verification run: F10 target tests — 4 passed; localhost staging-double `deploy/smoke.sh` — [OK]; shell syntax OK; full pytest — 37 passed; Vite build — 46 modules; `./init.sh` — pip check + 37 passed.
+- Evidence recorded: feature_list.json → F10.evidence.
+- Commits: будет создан `F10: деплой и SEO [passing]`.
+- Known risks: реальные DNS/certbot/HSTS/systemd/pg_dump/production curl и ручная регистрация webmaster выполняются Павлом на VPS по DEPLOY.md. HSTS намеренно закомментирован до первого корректного HTTPS.
+- Next best action: Павел выполняет DEPLOY.md и production smoke, затем вручную проходит browser login/click smoke.

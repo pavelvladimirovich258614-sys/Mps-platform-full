@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     base_url: str = "https://mps-platform.local"
     cors_origins: str = "https://mps-platform.local"
     media_dir: str = "media"
+    frontend_dist_dir: str = "frontend/app/dist"
     forum_topic_limit: int = 3
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")

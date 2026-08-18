@@ -1,0 +1,15 @@
+[Unit]
+Description=MPS FastAPI backend
+After=network.target postgresql.service redis-server.service
+
+[Service]
+User=mps
+Group=mps
+WorkingDirectory=/opt/mps-platform/backend
+EnvironmentFile=/etc/mps-platform/backend.env
+ExecStart=/opt/mps-platform/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --proxy-headers
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

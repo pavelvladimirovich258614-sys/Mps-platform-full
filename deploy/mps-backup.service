@@ -1,0 +1,9 @@
+[Unit]
+Description=MPS PostgreSQL backup
+
+[Service]
+Type=oneshot
+User=mps
+Group=mps
+EnvironmentFile=/etc/mps-platform/backend.env
+ExecStart=/opt/mps-platform/deploy/backup.sh
