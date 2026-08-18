@@ -52,10 +52,24 @@ async def telegram_login(payload: TelegramLoginRequest, request: Request, respon
 @router.post("/email/request", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("5/minute")
 async def email_request(payload: EmailRequest, request: Request) -> None:
+    """Issue a login code, removing its Redis value unless email delivery is accepted."""
+
     code = f"{secrets.randbelow(1_000_000):06d}"
     redis: Redis = request.app.state.redis
-    await redis.set(f"email-code:{payload.email.lower()}", code, ex=600)
-    await mailer.send_code(payload.email.lower(), code)
+    email = payload.email.lower()
+    redis_key = f"email-code:{email}"
+    await redis.set(redis_key, code, ex=600)
+    try:
+        delivered = await mailer.send_code(request.app.state.settings, email, code)
+    except Exception:
+        await redis.delete(redis_key)
+        raise
+    if not delivered:
+        await redis.delete(redis_key)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Не удалось отправить код. Попробуйте ещё раз позже",
+        )
 
 
 @router.post("/email/verify", response_model=TokenResponse)

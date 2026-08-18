@@ -1,9 +1,11 @@
 import hashlib
 import hmac
+import json
 import time
 
 import httpx
 import pytest
+import respx
 from fastapi import Depends
 from sqlalchemy import select
 
@@ -33,17 +35,43 @@ async def test_telegram_valid_and_tampered_hash(client):
     assert (await client.post("/api/v1/auth/telegram", json=payload)).status_code == 401
 
 
-async def test_email_code_is_stored_verified_and_rejected_when_wrong(client, test_app, monkeypatch):
-    sent: list[str] = []
-    async def capture(email, code): sent.append(code)
-    monkeypatch.setattr("app.api.auth.mailer.send_code", capture)
+@respx.mock
+async def test_email_code_is_sent_stored_verified_and_rejected_when_wrong(client, test_app):
+    delivery = respx.post("https://go1.unisender.ru/ru/transactional/api/v1/email/send.json").mock(
+        return_value=httpx.Response(200, json={"result": {"id": "login-code-mail"}})
+    )
     assert (await client.post("/api/v1/auth/email/request", json={"email": "a@example.com"})).status_code == 204
+    stored = await test_app.state.redis.get("email-code:a@example.com")
+    code = stored.decode() if isinstance(stored, bytes) else stored
+    request_json = json.loads(delivery.calls.last.request.content)
+    assert request_json["message"]["recipients"] == [{"email": "a@example.com"}]
+    assert request_json["message"]["subject"] == "Код для входа в «Мир под солнцем»"
+    assert code in request_json["message"]["body"]["html"]
     assert 0 < await test_app.state.redis.ttl("email-code:a@example.com") <= 600
     assert (await client.post("/api/v1/auth/email/verify", json={"email": "a@example.com", "code": "000000"})).status_code == 400
-    assert (await client.post("/api/v1/auth/email/verify", json={"email": "a@example.com", "code": sent[0]})).status_code == 200
+    assert (await client.post("/api/v1/auth/email/verify", json={"email": "a@example.com", "code": code})).status_code == 200
     await test_app.state.redis.set("email-code:expired@example.com", "123456", ex=1)
     await test_app.state.redis.delete("email-code:expired@example.com")
     assert (await client.post("/api/v1/auth/email/verify", json={"email": "expired@example.com", "code": "123456"})).status_code == 400
+
+
+@respx.mock
+async def test_email_delivery_failure_removes_undelivered_code(client, test_app):
+    delivery = respx.post("https://go1.unisender.ru/ru/transactional/api/v1/email/send.json").mock(
+        return_value=httpx.Response(503, json={"message": "temporarily unavailable"})
+    )
+
+    response = await client.post("/api/v1/auth/email/request", json={"email": "offline@example.com"})
+
+    assert delivery.called
+    assert response.status_code == 502
+    assert response.json()["detail"] == "Не удалось отправить код. Попробуйте ещё раз позже"
+    assert await test_app.state.redis.get("email-code:offline@example.com") is None
+    verify = await client.post(
+        "/api/v1/auth/email/verify",
+        json={"email": "offline@example.com", "code": "123456"},
+    )
+    assert verify.status_code == 400
 
 
 async def test_me_requires_and_accepts_access_token(client):

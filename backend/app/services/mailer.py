@@ -18,7 +18,10 @@ async def send_email(settings,email,subject,html):
    response=await client.post(f"{settings.unisender_go_base_url.rstrip('/')}/email/send.json",headers={"Authorization":f"Bearer {settings.unisender_go_api_key}"},json=payload);response.raise_for_status()
   return True
  except httpx.HTTPError: logger.exception("Unisender delivery failed for %s",email);return False
-async def send_code(email,code): logger.info("Запрошена отправка кода подтверждения на %s",email)
+async def send_code(settings,email,code):
+ """Send a ten-minute login code through the configured Unisender transport."""
+ html=f"<p>Код для входа в «Мир под солнцем»:</p><p><strong>{code}</strong></p><p>Код действует 10 минут.</p>"
+ return await send_email(settings,email,"Код для входа в «Мир под солнцем»",html)
 async def send_confirm(settings,email,token): return await send_email(settings,email,"Подтвердите подписку",f'<a href="{settings.base_url}/subscribe/confirm/{token}">confirm</a>')
 async def build_digest(session_factory,days=7):
  """Build digest HTML from posts published during the requested trailing day range."""
