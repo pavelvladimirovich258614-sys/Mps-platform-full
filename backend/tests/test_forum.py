@@ -2,7 +2,7 @@ import httpx,pytest
 from sqlalchemy import select
 from app.models.post import Country
 from app.models.user import User,Role
-from app.models.forum import ForumTopic
+from app.models.forum import ForumMessage,ForumTopic
 from app.models.notification import Notification
 from app.services.tokens import create_access_token
 @pytest.fixture
@@ -31,3 +31,13 @@ async def test_forum_limit_search_messages_and_notifications(client,test_app):
   t=await s.get(ForumTopic,ids[0]);assert t.messages_count==1 and t.last_message_at is not None;assert len((await s.scalars(select(Notification))).all())==1
  assert (await client.post(f"/api/v1/topics/{ids[0]}/messages",headers=rh,json={"body":"Сам"})).status_code==201
  async with test_app.state.database.session_factory() as s:assert len((await s.scalars(select(Notification))).all())==1
+
+
+async def test_forum_messages_include_author_and_ai_marker(client, test_app):
+ c=await country(test_app);author=await user(test_app,"author@x.ru");irishka=await user(test_app,"irishka@system.local")
+ topic=(await client.post(f"/api/v1/countries/{c.id}/topics",headers=hdr(test_app,author),json={"title":"Нужен совет"})).json()
+ async with test_app.state.database.session_factory() as s:
+  s.add(ForumMessage(topic_id=topic["id"],author_id=irishka.id,body="Совет от Иришки",is_ai=True));await s.commit()
+ response=await client.get(f"/api/v1/topics/{topic['id']}/messages")
+ assert response.status_code==200
+ assert response.json()==[{"id":1,"body":"Совет от Иришки","author":{"id":irishka.id,"name":"irishka@system.local","avatar_url":None},"is_ai":True}]

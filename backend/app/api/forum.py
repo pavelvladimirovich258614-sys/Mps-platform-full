@@ -86,11 +86,28 @@ async def create_topic(
 
 @router.get("/topics/{topic_id}/messages")
 async def messages(topic_id: int, session: AsyncSession = Depends(get_db)):
-    """Возвращает сообщения темы в хронологическом порядке без побочных эффектов."""
-    rows = (await session.scalars(
-        select(ForumMessage).where(ForumMessage.topic_id == topic_id).order_by(ForumMessage.id)
-    )).all()
-    return [{"id": message.id, "body": message.body} for message in rows]
+    """Возвращает сообщения темы с автором и признаком ответа Иришки без побочных эффектов."""
+    rows = (
+        await session.execute(
+            select(ForumMessage, User)
+            .join(User, User.id == ForumMessage.author_id)
+            .where(ForumMessage.topic_id == topic_id)
+            .order_by(ForumMessage.id)
+        )
+    ).all()
+    return [
+        {
+            "id": message.id,
+            "body": message.body,
+            "author": {
+                "id": author.id,
+                "name": author.name,
+                "avatar_url": author.avatar_url,
+            },
+            "is_ai": message.is_ai,
+        }
+        for message, author in rows
+    ]
 
 
 @router.post("/topics/{topic_id}/messages", status_code=201)
