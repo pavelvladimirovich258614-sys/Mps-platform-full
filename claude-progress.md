@@ -4,9 +4,9 @@
 - Repository root directory: mps-platform/
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
-- Highest priority unfinished feature: F09 (интеграция фронтенда с API)
+- Highest priority unfinished feature: F09a2 (остальные разделы Claude Design)
 - Current blocker: нет
-- Frontend: M1 ЗАВЕРШЁН — финальный экспорт лежит в frontend/mir-pod-solncem.dc.html (см. frontend/README.md); до F09 работает на локальных данных — это ожидаемо, не баг.
+- Frontend: F09a1 ЗАВЕРШЁН — Vite+React каркас и основной журнал в frontend/app; исходный экспорт frontend/mir-pod-solncem.dc.html сохранён. F09a2 переносит остальные разделы, F09b подключает auth/API.
 
 ## Session Record
 
@@ -101,3 +101,12 @@
 - Commits: будет создан `fix: M3 review — maintainability + dependency/network guardrails`.
 - Known risks: strict respx fixture защищает HTTPX-клиенты; при добавлении другого HTTP-клиента ему потребуется собственный no-network guard.
 - Next best action: F09 — подключить утверждённый frontend к готовому API, не меняя Claude Design-разметку.
+
+### Session 10 — 2026-08-18 (Codex, F09a1)
+- Goal: перенести в Vite+React каркас Claude Design, основной журнал, форум и article/comments до API/auth-этапа.
+- Completed: создан frontend/app (Vite + React + TypeScript) с компонентами Layout, Feed, Forum и ArticleComments. Сохранены dark/light themes, анимации, desktop sidebar/presence, mobile sheet/nav, feed cards для article/tip/video, страны/тема и Иришка. Комментарии используют F04 API-contract `author`, aggregate `reactions`, `my_reaction` и POST toggle.
+- Verification run: `cd frontend/app && npm install && npm run build` — Vite production build (36 modules) зелёный вне sandbox; визуальная сверка с dc-референсом Layout/Feed/Forum/article-comments в обеих темах и на 375px; `python -m pytest backend/tests/test_comments.py -q --basetemp .pytest-f09a1-comments` — 2 passed; полный `python -m pytest backend/tests -q --basetemp .pytest-f09a1-full` — 31 passed; `./init.sh` вне sandbox — pip check и 31 passed.
+- Evidence recorded: feature_list.json → F09a1.evidence.
+- Commits: будет создан `F09a1: каркас и журнал [passing]`; в push также войдёт уже готовый `75090d8 fix: F04 comment reactions contract for frontend`.
+- Known risks: email/Telegram login, общий API client/hooks, реальные данные Reviews/Subscribe/QA/Profile/Notifications/About и сквозной сценарий перенесены в F09a2/F09b по утверждённой разбивке. В F09a1 login button — элемент дизайна, не auth-flow.
+- Next best action: представить план F09a2 и ждать подтверждения пользователя.

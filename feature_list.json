@@ -135,20 +135,46 @@
       "notes": "Premium не имеет специальных привилегий в F08; административные маршруты требуют только role=admin."
     },
     {
-      "id": "F09",
+      "id": "F09a1",
       "priority": 9,
       "area": "frontend",
-      "title": "Перенос дизайна в Vite+React и пересадка на API",
-      "user_visible_behavior": "frontend/app — Vite+React приложение, дизайн 1:1 с frontend/mir-pod-solncem.dc.html; все разделы работают на реальном API; localStorage только для темы и куки-баннера.",
-      "status": "not_started",
+      "title": "Каркас и основной журнал Vite+React",
+      "user_visible_behavior": "Vite+React каркас переносит Layout, Feed, Forum и article/comments из Claude Design с обеими темами и mobile-навигацией. Реакции комментариев используют исправленный F04 контракт author/counts/my_reaction/toggle.",
+      "status": "passing",
       "verification": [
         "cd frontend/app && npm install && npm run build — без ошибок",
-        "визуальная сверка каждого раздела с mir-pod-solncem.dc.html (обе темы, 375px), скринлог в evidence",
-        "ручной сквозной прогон критериев приёмки 1-6 из docs/TZ.md §7 на dev-стенде",
+        "визуальная сверка Layout, Feed, Forum и article/comments с mir-pod-solncem.dc.html: обе темы и 375px",
+        "проверка реакций комментариев: author, counts, my_reaction и toggle используют F04 API contract",
+        "grep -r localStorage frontend/app/src — только theme и cookie-consent"
+      ],
+      "evidence": "2026-08-18: cd frontend/app && npm install -> up to date, audited 69 packages; npm run build -> tsc -b && vite build, 36 modules transformed, built in 2.14s (в sandbox esbuild ожидаемо дал spawn EPERM, повтор вне sandbox зелёный). Визуальная сверка с mir-pod-solncem.dc.html на локальном Vite :5173: Layout — dark/light/375px соответствует референсным токенам, sticky header, desktop sidebar и mobile sheet/nav; Feed — dark/light/375px соответствует (включая article/tip/video cards, filters, CTA и animations); Forum — dark/light/375px соответствует countries/topic и золотой Иришка-card; article/comments — dark/light/375px соответствует article layout, skeleton, avatars и reaction chips. Headless Chrome desktop и 375px контрольные рендеры просмотрены. F04 contract: frontend/api/comments.ts reads author, reactions, my_reaction and POST toggle result; backend/tests/test_comments.py -> 2 passed in 0.91s proves author/counts/current reaction, same-emoji removal and replacement. python -m pytest backend/tests -q --basetemp .pytest-f09a1-full -> 31 passed in 8.73s. ./init.sh вне sandbox -> pip check: No broken requirements found; 31 passed in 8.01s; [OK]. rg -n localStorage frontend/app/src -> only theme key mps-theme2.",
+      "notes": "Исходный dc.html сохранён. F09a2 переносит Reviews/Subscribe/QA/Profile/Notifications/About, F09b подключает общий API и auth."
+    },
+    {
+      "id": "F09a2",
+      "priority": 9,
+      "area": "frontend",
+      "title": "Остальные разделы дизайна",
+      "user_visible_behavior": "Reviews, Subscribe, QA, Profile, Notifications, About, legal/cookie/footer и mobile sheet перенесены 1:1 из Claude Design.",
+      "status": "not_started",
+      "verification": [
+        "npm run build — без ошибок",
+        "визуальная сверка остальных разделов с mir-pod-solncem.dc.html: обе темы и 375px",
         "grep -r localStorage frontend/app/src — только theme и cookie-consent"
       ],
       "evidence": "",
-      "notes": "Двухшаговый план в frontend/README.md. Экспорт dc.html не удалять — это эталон. Добавить реакции на комментарии по P00_FULL §6 (в экспорт не попали). Разрешено разбить на 2 сессии: F09a перенос, F09b API — тогда завести обе записи в feature_list."
+      "notes": "F09b подключает API/auth после полного переноса дизайна."
+    },
+    {
+      "id": "F09b",
+      "priority": 9,
+      "area": "frontend",
+      "title": "API-слой и авторизация фронтенда",
+      "user_visible_behavior": "Компоненты F09a работают на REST API через fetch-клиент и hooks; email-вход работает локально, Telegram Login Widget доступен из интерфейса, access JWT хранится только в памяти, refresh использует httpOnly cookie.",
+      "status": "not_started",
+      "verification": ["npm run build — без ошибок", "сквозной прогон критериев 1-6 docs/TZ.md §7 на backend :8000/frontend :5173 с email-входом", "проверка refresh после 401 и русских toast-ошибок", "grep -r localStorage frontend/app/src — только theme и cookie-consent"],
+      "evidence": "",
+      "notes": "Telegram Login Widget отображается и кликабелен; реальный Telegram/Unisender/MiniMax прогон фиксируется как граница dev-стенда и проверяется при деплое или вручную."
     },
     {
       "id": "F10",
