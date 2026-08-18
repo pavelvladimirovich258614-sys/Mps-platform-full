@@ -1,24 +1,16 @@
-# session-handoff.md — передача между сессиями
+# Session handoff — после F05
 
-## Currently verified
-- F01–F05 passing; Alembic `20260818_0005`; full pytest and init.sh: 20 passed.
-- F01–F04 passing. Alembic применяет `20260818_0004` с reviews, comments, comment_reactions, review_tokens и notifications.
-- `python -m pytest tests -q --basetemp .pytest-f04-full` — `16 passed in 3.24s`; `./init.sh` через Git Bash — `[OK]`, `16 passed in 3.27s`.
+## Verified state
+- F01–F05 passing; Alembic head `20260818_0005`; full pytest and `./init.sh`: 20 passed. Next: F06; frontend не менять до F09.
 
-## Changes this session
-- Отзывы и комментарии получают статус pending; публичные списки показывают только approved.
-- Editor approve/reject возвращает pending_count; approve сохраняет notification автору.
-- Reaction по `(comment_id, user_id)` заменяет прежний emoji. Ответы на ответы отклоняются с 422.
-- `/internal/review-tokens` под `X-Bot-Bridge-Secret` выпускает одноразовый token на 7 дней; by-token создаёт bot review без авторизации, expired -> 410.
-
-## Still broken or unverified
-- Production PostgreSQL/Redis/nginx не проверялись. Доставка review-token пользователю Telegram-ботом будет в F05; чтение notifications API — F08.
-
-## Next best action
-- Выполнить F06: форум по странам. Не менять frontend до F09.
+## F05 contracts
+- `POST /subscribe {email}` creates/reuses a pending subscription and sends confirmation. `GET /subscribe/confirm/{token}` confirms; `GET /subscribe/unsub/{token}` deletes. Unisender errors log only and never change confirm/unsub state.
+- `POST /qa {target: manager|lawyer, body}` requires JWT, creates open question, sends Telegram `#Q{id}`, and stores `tg_message_id`. `GET /qa/my` returns caller questions and answers.
+- `POST /internal/qa-answer` takes `{question_id, answer, answered_by_name}` plus `X-Bot-Bridge-Secret`; 401 bad secret, 404 unknown question, success marks answered and creates `qa_answered` notification.
+- `tg_relay.send()` routes manager to `MANAGERS_CHAT_ID`, lawyer to `LAWYER_TG_ID`; secrets stay in env. `python -m app.jobs.send_digest` emails confirmed subscriptions with a 7-day published-post digest.
+- Deploy timer: copy `deploy/mps-digest.service` and `.timer`, then run `systemctl daemon-reload && systemctl enable --now mps-digest.timer` on VPS.
+- Optional bot integration: install `bot_bridge/requirements.txt`, call `build_router(backend_url, BOT_BRIDGE_SECRET, managers_chat_id)`, then `dp.include_router(router)` in the existing bot.
 
 ## Commands
-- Старт: `& 'C:\Program Files\Git\bin\bash.exe' ./init.sh`
-- Верификация: `cd backend && python -m pytest tests -q`
-- Dev-сервер: `uvicorn app.main:app --reload --port 8000 --app-dir backend`
-- Миграции: `cd backend && alembic upgrade head`
+- Start/verify: `& 'C:\Program Files\Git\bin\bash.exe' ./init.sh`
+- Tests: `cd backend && python -m pytest tests -q`; migrations: `cd backend && alembic upgrade head`

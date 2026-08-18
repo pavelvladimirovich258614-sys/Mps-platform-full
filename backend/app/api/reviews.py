@@ -120,6 +120,12 @@ async def create_review_token(
     x_bot_bridge_secret: str | None = Header(default=None),
     session: AsyncSession = Depends(get_db),
 ):
+    """Issue a seven-day, single-use bot review token.
+
+    Accepts {tg_id} and X-Bot-Bridge-Secret; returns token and expiry (201).
+    Bad secret is 401; consumption returns 404 after use and 410 after expiry.
+    Issuing itself creates no notification.
+    """
     configured_secret = request.app.state.settings.bot_bridge_secret
     if not configured_secret or x_bot_bridge_secret is None or not hmac.compare_digest(x_bot_bridge_secret, configured_secret):
         raise HTTPException(401, "Недействительный внутренний секрет")

@@ -18,6 +18,11 @@ async def create(payload:QuestionIn,request:Request,session:AsyncSession=Depends
 async def mine(session:AsyncSession=Depends(get_db),user:User=Depends(get_current_user)): return [dto(q) for q in (await session.scalars(select(Question).where(Question.user_id==user.id))).all()]
 @router.post("/internal/qa-answer")
 async def answer(payload:AnswerIn,request:Request,x_bot_bridge_secret:str|None=Header(None),session:AsyncSession=Depends(get_db)):
+ """Persist a bot-bridge answer and create one author notification.
+
+ Requires X-Bot-Bridge-Secret and {question_id, answer, answered_by_name}; returns
+ 200 with the question, 401 for bad secret, 404 for unknown question. No Telegram call.
+ """
  if not x_bot_bridge_secret or not hmac.compare_digest(x_bot_bridge_secret,request.app.state.settings.bot_bridge_secret): raise HTTPException(401,"Недействительный внутренний секрет")
  q=await session.get(Question,payload.question_id)
  if q is None: raise HTTPException(404,"Вопрос не найден")

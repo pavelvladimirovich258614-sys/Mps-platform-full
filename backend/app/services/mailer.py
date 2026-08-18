@@ -5,6 +5,12 @@ from sqlalchemy import select
 from app.models.post import Post, PostStatus
 logger=logging.getLogger(__name__)
 async def send_email(settings,email,subject,html):
+ """Send transactional JSON to Unisender Go and return delivery acceptance.
+
+ Uses Authorization from UNISENDER_GO_API_KEY and POST /email/send.json. Transport
+ 4xx/5xx is logged and returns False, leaving subscription confirm/unsubscribe state
+ unchanged because mail delivery and those state transitions are separate operations.
+ """
  if not settings.unisender_go_api_key: logger.error("Unisender key is not configured"); return False
  payload={"message":{"recipients":[{"email":email}],"body":{"html":html},"subject":subject,"from_email":settings.unisender_from_email}}
  try:
@@ -15,5 +21,6 @@ async def send_email(settings,email,subject,html):
 async def send_code(email,code): logger.info("Запрошена отправка кода подтверждения на %s",email)
 async def send_confirm(settings,email,token): return await send_email(settings,email,"Подтвердите подписку",f'<a href="{settings.base_url}/subscribe/confirm/{token}">confirm</a>')
 async def build_digest(session_factory,days=7):
+ """Build digest HTML from posts published during the requested trailing day range."""
  async with session_factory() as s: posts=(await s.scalars(select(Post).where(Post.status==PostStatus.PUBLISHED,Post.published_at>=datetime.now(UTC)-timedelta(days=days)))).all()
  return "<h1>Новые публикации</h1>"+"".join(f"<h2>{p.title}</h2><p>{p.excerpt}</p>" for p in posts)
