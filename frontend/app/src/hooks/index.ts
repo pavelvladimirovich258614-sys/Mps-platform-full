@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { api, apiJson, setAccessToken } from "../api/client";
+import { api, ApiError, apiJson, setAccessToken } from "../api/client";
 import type { Comment, ReactionResult } from "../api/comments";
 
 export type { Comment } from "../api/comments";
@@ -35,6 +35,47 @@ export function useAuth() {
 }
 
 export const usePosts = () => useResource(() => api<ApiPost[]>("/posts"), []);
+export function usePost(slug?: string) {
+  const [value, setValue] = useState<ApiPost | null>(null);
+  const [loading, setLoading] = useState(Boolean(slug));
+  const [error, setError] = useState("");
+  const [notFound, setNotFound] = useState(false);
+  const requestVersion = useRef(0);
+  const reload = useCallback(async () => {
+    const version = ++requestVersion.current;
+    if (!slug) {
+      setValue(null);
+      setLoading(false);
+      setError("");
+      setNotFound(false);
+      return;
+    }
+    setLoading(true);
+    setError("");
+    setNotFound(false);
+    setValue(null);
+    try {
+      const post = await api<ApiPost>(`/posts/${encodeURIComponent(slug)}`);
+      if (version === requestVersion.current) setValue(post);
+    } catch (cause) {
+      if (version !== requestVersion.current) return;
+      if (cause instanceof ApiError && cause.status === 404) {
+        setNotFound(true);
+      } else if (cause instanceof ApiError) {
+        setError(cause.message);
+      } else {
+        setError("Не удалось загрузить публикацию");
+      }
+    } finally {
+      if (version === requestVersion.current) setLoading(false);
+    }
+  }, [slug]);
+  useEffect(() => {
+    void reload();
+    return () => { requestVersion.current += 1; };
+  }, [reload]);
+  return { value, loading, error, notFound, reload };
+}
 export const useReviews = () => { const resource = useResource(() => api<Review[]>("/reviews"), []); const create = async (body: Omit<Review, "id" | "status" | "photo_url">) => apiJson<Review>("/reviews", "POST", body); return { ...resource, create }; };
 export const useSubscribe = () => ({ subscribe: (email: string) => apiJson<{ email: string; confirmed: boolean }>("/subscribe", "POST", { email }) });
 export const useQA = () => { const resource = useResource(() => api<Question[]>("/qa/my"), []); const create = async (target: Question["target"], body: string) => { const item = await apiJson<Question>("/qa", "POST", { target, body }); resource.setValue((current) => [...(current ?? []), item]); return item; }; return { ...resource, create }; };

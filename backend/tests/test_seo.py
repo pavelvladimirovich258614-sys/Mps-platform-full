@@ -31,6 +31,13 @@ async def test_sitemap_robots_and_bot_post_metadata(client, test_app, tmp_path):
     assert (await client.get("/posts/test-post", headers={"User-Agent": "Mozilla/5.0"})).text == "<div id='root'></div>"
 
 
-async def test_unknown_post_is_not_prerendered(client):
-    response = await client.get("/posts/missing", headers={"User-Agent": "Googlebot"})
-    assert response.status_code == 404
+async def test_unknown_post_loads_spa_for_browser_but_is_not_prerendered(client, test_app, tmp_path):
+    test_app.state.settings.frontend_dist_dir = str(tmp_path)
+    (tmp_path / "index.html").write_text("<div id='root'></div>", encoding="utf-8")
+
+    browser = await client.get("/posts/missing", headers={"User-Agent": "Mozilla/5.0"})
+    assert browser.status_code == 200
+    assert browser.text == "<div id='root'></div>"
+
+    bot = await client.get("/posts/missing", headers={"User-Agent": "Googlebot"})
+    assert bot.status_code == 404

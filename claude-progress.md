@@ -137,3 +137,10 @@
 - Commits: будет создан `F10: деплой и SEO [passing]`.
 - Known risks: реальные DNS/certbot/HSTS/systemd/pg_dump/production curl и ручная регистрация webmaster выполняются Павлом на VPS по DEPLOY.md. HSTS намеренно закомментирован до первого корректного HTTPS.
 - Next best action: Павел выполняет DEPLOY.md и production smoke, затем вручную проходит browser login/click smoke.
+
+### Session 14 — 2026-08-18 (Codex, audit remediation)
+- Goal: закрыть три launch blocker из `docs/AUDIT_REPORT.md` до production deploy.
+- Completed: F02 email-код теперь реально отправляется через Unisender с атомарной очисткой Redis при отказе; F09b использует официальный Telegram Login Widget и `/auth/telegram`; F10 frontend переведён с hash на pathname/history routing с прямыми статьями и странами, отдельными 404/API-error состояниями.
+- Verification run: frontend `npm test` — 4 files, 20 passed; `npm run build` — 48 modules; backend full pytest — 38 passed; storage grep — только theme/cookie-consent.
+- Commits: `522a00d` email delivery; `937a6a5` Telegram Widget; текущий `fix: launch blocker — client-side routing по pathname вместо hash`.
+- Result: audit-remediation launch blockers завершены; оставшиеся пункты «Важно»/«Желательно» остаются для отдельной приоритизации перед или после реального VPS deploy.

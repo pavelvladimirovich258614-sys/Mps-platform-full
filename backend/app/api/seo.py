@@ -46,14 +46,14 @@ async def sitemap(request: Request, session: AsyncSession = Depends(get_db)) -> 
 
 @router.get("/posts/{slug}", include_in_schema=False)
 async def post_page(slug: str, request: Request, session: AsyncSession = Depends(get_db)) -> Response:
-    post = await session.scalar(select(Post).where(Post.slug == slug, Post.status == PostStatus.PUBLISHED))
-    if post is None:
-        raise HTTPException(404, "Публикация не найдена")
     if not is_bot(request):
         index = Path(request.app.state.settings.frontend_dist_dir) / "index.html"
         if index.is_file():
             return FileResponse(index)
         raise HTTPException(503, "Фронтенд ещё не собран")
+    post = await session.scalar(select(Post).where(Post.slug == slug, Post.status == PostStatus.PUBLISHED))
+    if post is None:
+        raise HTTPException(404, "Публикация не найдена")
     base_url = request.app.state.settings.base_url.rstrip("/")
     canonical = public_url(base_url, f"/posts/{post.slug}")
     description = (post.excerpt or post.body)[:300]

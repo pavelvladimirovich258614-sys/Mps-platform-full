@@ -32,7 +32,13 @@
         "require_role(editor) для reader -> 403"
       ],
       "evidence": "2026-08-18: cd backend && DATABASE_URL=sqlite+aiosqlite:///:memory: python -m alembic upgrade head — Running upgrade 20260818_0001 -> 20260818_0002, Create users; python -m pytest backend/tests -q — 5 passed in 0.37s; ./init.sh — [OK] Верификация прошла, 5 passed in 0.55s. Auth tests: valid Telegram hash -> 200 + access token/cookie; tampered hash -> 401; wrong/expired email code -> 400; reader editor dependency -> 403.",
-      "notes": "BACKEND_SPEC §2 users, §3 auth, §5 безопасность. HMAC-проверка строго по алгоритму Telegram. Redis-server отсутствовал; в тестах используется fakeredis с реальным SET/TTL/GET/DELETE API. mailer.send_code логирует факт отправки без кода; реальный Unisender transport — F05."
+      "notes": "BACKEND_SPEC §2 users, §3 auth, §5 безопасность. HMAC-проверка строго по алгоритму Telegram. Redis-server отсутствовал; в тестах используется fakeredis с реальным SET/TTL/GET/DELETE API. После audit-remediation email-код отправляется реальным Unisender-клиентом F05; при ошибке транспорта Redis-ключ удаляется и endpoint возвращает 502.",
+      "audit_remediation": {
+        "issue": "Launch blocker: email-код сохранялся, но не отправлялся пользователю",
+        "status": "passing",
+        "commit": "522a00d",
+        "evidence": "python -m pytest tests/test_auth.py -q — 5 passed: respx подтверждает реальный Unisender send, TTL Redis 600 секунд; недоступный transport -> 502, ключ удалён, последующий verify -> 400. Полный backend pytest — 38 passed."
+      }
     },
     {
       "id": "F03",
@@ -174,7 +180,13 @@
       "status": "passing",
       "verification": ["npm run build — без ошибок", "сквозной прогон критериев 1-6 docs/TZ.md §7 на backend :8000/frontend :5173 с email-входом", "проверка refresh после 401 и русских toast-ошибок", "grep -r localStorage frontend/app/src — только theme и cookie-consent"],
       "evidence": "2026-08-18: F06 contract-fix 143e813: python -m pytest tests/test_forum.py -q --basetemp .pytest-f06-contract-green -> 2 passed; GET /topics/{id}/messages отдаёт author{id,name,avatar_url} и is_ai. Backend API-контракты критериев TZ §7.1–6 подтверждены скриптово через SQLite+fakeredis ASGI-стенд (эквивалент tests/conftest.py): python -m pytest tests/test_f09b_api_flow.py -q --basetemp .pytest-f09b-flow-final -> 1 passed in 0.59s; public posts, subscribe 201 + confirm, email request 204 + code from fakeredis, wrong code 400 с русским detail, verify 200 JWT, /me role=reader, refresh 200, like, pending review, comment, QA с respx Telegram mock, forum topic/message. python -m pytest tests -q --basetemp .pytest-f09b-full-final -> 33 passed in 9.64s. ./init.sh вне sandbox -> No broken requirements found; 33 passed in 8.59s; [OK]. cd frontend/app && npm run dev -- --host 127.0.0.1 -> VITE ready, Local http://127.0.0.1:5173/. npm run build -> 46 modules transformed, built in 1.11s. rg -n 'sessionStorage|localStorage' src -> только localStorage mps-theme2 и mps-cookie-consent; sessionStorage отсутствует.",
-      "notes": "Реализованы fetch client с memory-only access JWT, refresh cookie и повтором 401, hooks и привязка компонентов. Telegram Login Widget отображается как UI с VITE_TELEGRAM_BOT_USERNAME; реальные Telegram/Unisender/MiniMax остаются границей dev-стенда, но их HTTP-контракты явно замоканы в API-flow. Финальная ручная browser-проверка Павлом: поднять Postgres+Redis, backend :8000 и frontend :5173, пройти email login и click-flow; это deployment/manual smoke, не блокирует passing. Статический country name->emoji справочник добавлен во frontend; отзывы не отображают декоративное направление, которого нет в API-контракте."
+      "notes": "Реализованы fetch client с memory-only access JWT, refresh cookie и повтором 401, hooks и привязка компонентов. После audit-remediation официальный Telegram Login Widget загружается с VITE_TELEGRAM_BOT_USERNAME, подписанный callback отправляется в /auth/telegram; реальный вход через конкретного бота остаётся ручной deploy-проверкой после настройки домена в BotFather. Финальная browser-проверка с Postgres/Redis также остаётся deployment smoke. Статический country name->emoji справочник добавлен во frontend; отзывы не отображают декоративное направление, которого нет в API-контракте.",
+      "audit_remediation": {
+        "issue": "Launch blocker: Telegram-кнопка была декоративной и не вызывала /auth/telegram",
+        "status": "passing",
+        "commit": "937a6a5",
+        "evidence": "npm test — 2 files, 3 passed: официальный widget script/callback и POST /auth/telegram -> memory-only JWT -> GET /me; npm run build — 47 modules; полный backend pytest — 38 passed; grep storage — только theme/cookie-consent, token не сохраняется."
+      }
     },
     {
       "id": "F10",
@@ -191,7 +203,13 @@
         "systemctl status mps-backend mps-digest.timer mps-backup.timer -> active"
       ],
       "evidence": "2026-08-18: python -m pytest tests/test_seo.py tests/test_management.py -q --basetemp .pytest-f10-target -> 4 passed; sitemap/robots, bot OG+JSON-LD and normal frontend fallback, create/promote admin + missing identity covered. deploy/smoke.sh реально выполнен против краткоживущего localhost staging-double с HTTP 200, HSTS, sitemap, robots и Googlebot OG -> [OK] smoke passed: http://127.0.0.1:18765. bash -n deploy/backup.sh and deploy/smoke.sh -> success. python -m pytest tests -q --basetemp .pytest-f10-full -> 37 passed in 8.61s. npm run build -> 46 modules transformed, built in 759ms. ./init.sh вне sandbox -> No broken requirements found; 37 passed in 7.83s; [OK].",
-      "notes": "Nginx HSTS намеренно закомментирован до первого успешного certbot/HTTPS. SEO выбрано как backend bot-prerender: /posts/{slug} отдаёт реальный OG+JSON-LD боту, index.html обычному browser; Vite plugin не добавлялся. Иришка уже запускается в FastAPI lifespan, поэтому отдельного mps-scheduler.service нет: production запускает ровно один mps-backend instance; digest и backup используют systemd timers. Локально проверены конфиги, SEO/API tests и staging-double smoke. Реальные VPS curl, DNS, certbot, HSTS, systemd и pg_dump выполняет Павел по DEPLOY.md после развёртывания; Яндекс.Вебмастер/GSC остаются ручными шагами."
+      "notes": "Nginx HSTS намеренно закомментирован до первого успешного certbot/HTTPS. SEO использует backend bot-prerender: /posts/{slug} отдаёт OG+JSON-LD боту и SPA обычному browser. После audit-remediation React читает pathname, загружает detail по slug/id и поддерживает history pushState/popstate для всех sitemap URL. Иришка запускается в FastAPI lifespan; production использует ровно один backend instance, digest и backup — systemd timers. Реальные VPS curl, DNS, certbot, HSTS, systemd и pg_dump выполняет Павел по DEPLOY.md; Яндекс.Вебмастер/GSC остаются ручными шагами.",
+      "audit_remediation": {
+        "issue": "Launch blocker: sitemap URL открывали feed из-за hash-only React-навигации",
+        "status": "passing",
+        "commit": "fix: launch blocker — client-side routing по pathname вместо hash",
+        "evidence": "npm test — 4 files, 20 passed: pathname parser, прямые /posts/{slug} и /countries/{id}, статичные страницы, pushState внутренних кликов, popstate, отдельные 404 и network-error ветки. npm run build — 48 modules. python -m pytest tests/test_seo.py -q — 2 passed; полный backend pytest — 38 passed. Browser missing slug получает SPA, bot missing slug сохраняет 404."
+      }
     }
   ]
 }
