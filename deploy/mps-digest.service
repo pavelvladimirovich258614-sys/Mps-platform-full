@@ -1,0 +1,6 @@
+[Unit]
+Description=MPS weekly digest
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/mps-platform/backend
+ExecStart=/opt/mps-platform/venv/bin/python -m app.jobs.send_digest

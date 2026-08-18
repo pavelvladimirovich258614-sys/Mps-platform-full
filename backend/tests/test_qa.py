@@ -1,0 +1,46 @@
+import hashlib
+import hmac
+import json
+import time
+
+import httpx
+import pytest
+import respx
+
+
+def telegram_payload():
+    payload = {"id": 501, "first_name": "Клиент", "auth_date": int(time.time())}
+    check = "\n".join(f"{key}={payload[key]}" for key in sorted(payload))
+    payload["hash"] = hmac.new(hashlib.sha256(b"test-bot-token").digest(), check.encode(), hashlib.sha256).hexdigest()
+    return payload
+
+
+@pytest.fixture
+async def client(test_app):
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=test_app), base_url="http://test") as async_client:
+        yield async_client
+
+
+async def headers(client):
+    response = await client.post("/api/v1/auth/telegram", json=telegram_payload())
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
+@respx.mock
+async def test_qa_relay_answer_and_notification(client):
+    route = respx.post("https://api.telegram.org/bottest-bot-token/sendMessage").mock(return_value=httpx.Response(200, json={"ok": True, "result": {"message_id": 88}}))
+    created = await client.post("/api/v1/qa", headers=await headers(client), json={"target": "manager", "body": "Нужна помощь"})
+    assert created.status_code == 201
+    question_id = created.json()["id"]
+    assert route.called and f"#Q{question_id}" in json.loads(route.calls[0].request.content)["text"]
+    mine = await client.get("/api/v1/qa/my", headers=await headers(client))
+    assert mine.json()[0]["tg_message_id"] == 88
+    answered = await client.post("/api/v1/internal/qa-answer", headers={"X-Bot-Bridge-Secret": "bridge-secret"}, json={"question_id": question_id, "answer": "Ответ", "answered_by_name": "Менеджер"})
+    assert answered.status_code == 200
+    assert answered.json()["status"] == "answered"
+    assert (await client.get("/api/v1/qa/my", headers=await headers(client))).json()[0]["answer"] == "Ответ"
+
+
+async def test_qa_rejects_invalid_target_and_secret(client):
+    assert (await client.post("/api/v1/qa", headers=await headers(client), json={"target": "other", "body": "x"})).status_code == 422
+    assert (await client.post("/api/v1/internal/qa-answer", json={"question_id": 1, "answer": "x", "answered_by_name": "x"})).status_code == 401

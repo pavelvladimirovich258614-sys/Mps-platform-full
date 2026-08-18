@@ -4,7 +4,7 @@
 - Repository root directory: mps-platform/
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
-- Highest priority unfinished feature: F05 (подписка, дайджест и Telegram-релей вопросов)
+- Highest priority unfinished feature: F06 (форум по странам)
 - Current blocker: нет
 - Frontend: M1 ЗАВЕРШЁН — финальный экспорт лежит в frontend/mir-pod-solncem.dc.html (см. frontend/README.md); до F09 работает на локальных данных — это ожидаемо, не баг.
 
@@ -56,3 +56,12 @@
 - Commits: локальный `F04: модерация [passing]`.
 - Known risks: review token пока возвращается внутреннему bot bridge без deep-link сборки; её доставка клиенту — интеграционный поток F05. Уведомления сохраняются, API чтения будет F08.
 - Next best action: F05 — email double opt-in, дайджест и Telegram-релей вопросов.
+
+### Session 5 — 2026-08-18 (Codex, F05)
+- Goal: подписки, дайджест и вопросы Telegram.
+- Completed: subscriptions/questions, Alembic 0005, Unisender Go client, digest job/timer, Q&A relay, bot bridge router.
+- Verification run: target 4 passed; Alembic 0005; full pytest 20 passed; init.sh 20 passed.
+- Evidence recorded: feature_list.json F05.
+- Commits: F05: подписки и вопросы [passing].
+- Known risks: systemd units не установлены на VPS; aiogram router должен быть подключён Павлом в существующем боте.
+- Next best action: F06.

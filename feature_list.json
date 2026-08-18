@@ -74,7 +74,7 @@
       "area": "subscribe-qa",
       "title": "Email-подписка (double opt-in, дайджест) + Вопрос-ответ с Telegram-релеем",
       "user_visible_behavior": "Подписка: email -> письмо-подтверждение -> confirmed; отписка по ссылке. Вопрос менеджеру/юристу падает в Telegram с #Q{id}; reply в Telegram возвращает ответ на платформу + уведомление.",
-      "status": "not_started",
+      "status": "passing",
       "verification": [
         "pytest tests/test_subscribe.py tests/test_qa.py -q (Unisender и Telegram замокать на уровне httpx-транспорта)",
         "confirm по токену -> confirmed=true; unsub -> запись удалена/деактивирована",
@@ -82,8 +82,8 @@
         "входящий reply с #Q{id} через bot_bridge -> status=answered + notification создан",
         "функция сборки дайджеста возвращает посты за 7 дней"
       ],
-      "evidence": "",
-      "notes": "BACKEND_SPEC §4 tg_relay/mailer. Cron дайджеста — systemd timer в deploy/, в тестах — прямой вызов функции."
+      "evidence": "2026-08-18: pytest tests/test_subscribe.py tests/test_qa.py -q — 4 passed; POST /subscribe -> 201 и Unisender JSON request, confirm/unsub -> 200; build_digest(7) включает только свежий published post; POST /qa -> 201, Telegram #Q{id}, tg_message_id=88; internal answer -> 200 + notification. Alembic -> 20260818_0005; full pytest — 20 passed; init.sh — [OK], 20 passed.",
+      "notes": "Unisender Go: UNISENDER_GO_BASE_URL default go1, Authorization header, POST /email/send.json JSON message. Ошибка отправки логируется и не меняет confirm/unsub. Timer deploy/mps-digest.timer: установить systemctl daemon-reload && systemctl enable --now mps-digest.timer."
     },
     {
       "id": "F06",

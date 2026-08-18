@@ -1,0 +1,7 @@
+[Unit]
+Description=MPS digest every Thursday 10:00 Moscow
+[Timer]
+OnCalendar=Thu *-*-* 10:00:00 Europe/Moscow
+Persistent=true
+[Install]
+WantedBy=timers.target

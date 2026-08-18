@@ -1,6 +1,6 @@
 # clean-state-checklist.md — пройти перед закрытием каждой сессии
 
-- [x] `./init.sh` проходит через Git Bash (установка + 16 тестов зелёные)
+- [x] `./init.sh` проходит через Git Bash (установка + 20 тестов зелёные)
 - [x] `python -m pytest tests -q` зелёный целиком, не только тесты F04
 - [x] `claude-progress.md`: добавлена Session Record F04, Current Verified State указывает F05
 - [x] `feature_list.json`: F04 passing с evidence, единственной in_progress нет

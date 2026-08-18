@@ -1,6 +1,7 @@
 # session-handoff.md — передача между сессиями
 
 ## Currently verified
+- F01–F05 passing; Alembic `20260818_0005`; full pytest and init.sh: 20 passed.
 - F01–F04 passing. Alembic применяет `20260818_0004` с reviews, comments, comment_reactions, review_tokens и notifications.
 - `python -m pytest tests -q --basetemp .pytest-f04-full` — `16 passed in 3.24s`; `./init.sh` через Git Bash — `[OK]`, `16 passed in 3.27s`.
 
@@ -14,7 +15,7 @@
 - Production PostgreSQL/Redis/nginx не проверялись. Доставка review-token пользователю Telegram-ботом будет в F05; чтение notifications API — F08.
 
 ## Next best action
-- Выполнить F05: email double opt-in, дайджест и Telegram-релей вопросов. Не менять frontend до F09.
+- Выполнить F06: форум по странам. Не менять frontend до F09.
 
 ## Commands
 - Старт: `& 'C:\Program Files\Git\bin\bash.exe' ./init.sh`
