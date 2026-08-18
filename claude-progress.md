@@ -4,9 +4,10 @@
 - Repository root directory: mps-platform/
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
-- Highest priority unfinished feature: нет — F01–F10 passing
-- Current blocker: C-04/C-06 устранены; C-05 остаётся отдельной согласованной security-задачей и в этой сессии не изменялся
-- Frontend: F09a1/F09a2 ЗАВЕРШЕНЫ — Vite+React перенос дизайна в frontend/app; исходный экспорт frontend/mir-pod-solncem.dc.html сохранён. F09b подключает auth/API.
+- Feature state: F01–F10 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; записей `in_progress` нет.
+- Deploy readiness: backend и frontend готовы к развёртыванию по `DEPLOY.md`; все согласованные launch blocker'ы C-01–C-04 и C-06 устранены.
+- Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; прочий неблокирующий технический долг находится в категориях «Важно»/«Желательно» `docs/AUDIT_REPORT.md`.
+- Next best action: deploy на VPS по `DEPLOY.md` либо выбранная Павлом доработка пунктов аудита.
 
 ## Session Record
 
@@ -152,3 +153,33 @@
 - Evidence recorded: feature_list.json → F05 C-04 и F10 C-06 audit remediation; DEPLOY.md содержит обязательные VPS `PG_DUMP_URL`, каталог, journal и реальный pg_dump/pg_restore steps.
 - Known risks: реальный PostgreSQL/pg_dump/systemd отсутствует в локальной Windows-среде и проверяется Павлом на VPS; C-05 не изменялся.
 - Next best action: выполнить DEPLOY.md на VPS и не включать backup timer в доверенный operational state до первого `mps-backup: OK` и успешного `pg_restore --list`.
+
+### Session 16 — 2026-08-18 (Codex, финальная контрольная точка)
+- Goal: зафиксировать итоговое состояние проекта перед VPS deploy без изменения логики.
+- Completed: F01–F10 и F09a1/F09a2/F09b подтверждены как passing; launch blocker'ы email-кода, Telegram Widget, pathname routing, C-04 и C-06 закрыты; handoff и clean-state checklist приведены к финальному состоянию.
+- Commits за день:
+  - `784a8d6` F01: каркас бекенда [passing]
+  - `840321f` F02: авторизация и роли [passing]
+  - `01df04f` F03: публикации [passing]
+  - `f108a43` F04: модерация [passing]
+  - `1217779` F05: подписки и вопросы [passing]
+  - `627cca8` fix: M2 review — bot_bridge deps, docstrings, handoff
+  - `bcbbf53` F06: форум [passing]
+  - `2f682bd` F07: Иришка [passing]
+  - `4d5d8c6` F08: админка и статистика [passing]
+  - `ace749f` fix: M3 review — maintainability + dependency/network guardrails
+  - `75090d8` fix: F04 comment reactions contract for frontend
+  - `d0d8f84` F09a1: каркас и журнал [passing]
+  - `0ce03ad` F09a2: остальные разделы дизайна [passing]
+  - `143e813` fix: F06 forum messages contract for frontend
+  - `12786f3` F09b: подключение API и авторизации [in_progress]
+  - `cca76bd` F09b: подключение API и авторизации [passing]
+  - `eaa8d4f` F10: деплой и SEO [passing]
+  - `3aac1fa`, `ad69967` docs: аудит проекта после F01-F10
+  - `522a00d` fix: launch blocker — email-код реально отправляется через Unisender
+  - `937a6a5` fix: launch blocker — реальная интеграция Telegram Login Widget
+  - `d1fcd5d` fix: launch blocker — client-side routing по pathname вместо hash
+  - `a981a5a` fix: launch blockers C-04, C-06 — subscribe link и pg backup
+- Verification run: `python -m pytest --basetemp .pytest-final-outside` — 38 passed in 12.23s; `./init.sh` вне sandbox — `No broken requirements found`, 38 passed in 11.90s, `[OK] Верификация прошла`; `feature_list.json` — 12 passing, 0 in_progress.
+- Known boundary: C-05 остаётся отдельной security-задачей по ранее утверждённому scope; реальные DNS/certbot/systemd/PostgreSQL backup проверяются при deploy по `DEPLOY.md`.
+- Next best action: VPS deploy по `DEPLOY.md` либо выбранная Павлом доработка пунктов «Важно»/«Желательно» и C-05 из `docs/AUDIT_REPORT.md`.

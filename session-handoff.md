@@ -1,32 +1,34 @@
-# Session handoff — после audit remediation C-04/C-06
+# Session handoff — финальное состояние перед deploy
 
-## Verified state
-- F01–F10 passing; Alembic head `20260818_0007`; full pytest and `./init.sh`: 38 passed. C-01–C-04 и C-06 устранены; C-05 остаётся отдельной security-задачей.
-- `frontend/app` — Vite + React + TypeScript перенос дизайна. Источник истины остаётся `frontend/mir-pod-solncem.dc.html`; не удалять и сохранять семантику 1:1. F09a1/F09a2 содержат Layout, Feed, Forum, ArticleComments, Reviews, Subscribe, QA, Profile, Notifications, About, Legal, CookieBanner, обе темы и mobile sheet/nav.
-- `frontend/app/src/api/comments.ts` — узкий адаптер исправленного F04 контракта. `GET /posts/{id}/comments` возвращает `author`, `reactions`, `my_reaction`; `POST /comments/{id}/react` toggles текущий emoji и возвращает новые `reactions`/`my_reaction`. Access token хранится только в памяти; refresh использует httpOnly cookie.
-- F09b: `frontend/app/src/api/client.ts` хранит access JWT только в памяти, POST `/auth/refresh` использует httpOnly cookie и один retry исходного 401. Hooks лежат в `src/hooks/index.ts`; `api/comments.ts` больше не использует sessionStorage. В UI подключены posts/reviews/comments/subscribe/QA/forum/notifications/online/profile; `countryFlags.ts` содержит только фиксированный seed name->emoji. В отзывах не показывается направление: API его не выдаёт.
-- `143e813 fix: F06 forum messages contract for frontend` добавляет в GET `/topics/{id}/messages` автора и is_ai; `backend/tests/test_forum.py` покрывает это, target test 2 passed.
-- F09b verification: `backend/tests/test_f09b_api_flow.py` — ASGI SQLite+fakeredis acceptance flow, 1 passed, покрывает TZ §7.1–6 и email/JWT/refresh. Vite `npm run dev -- --host 127.0.0.1` стартует на :5173; production build зелёный. Ручной smoke Павла после поднятия Postgres/Redis: backend `uvicorn app.main:app --reload --port 8000 --app-dir backend`, затем `cd frontend/app && npm run dev -- --host 127.0.0.1`; пройти email-login и click-flow на :5173.
+## Готовность проекта
+- Backend и frontend полностью готовы к развёртыванию: F01–F10, включая последовательные этапы F09a1/F09a2/F09b, имеют статус `passing`; записей `in_progress` нет.
+- Финальная локальная проверка 2026-08-18: полный backend pytest — 38 passed; `./init.sh` вне sandbox — `pip check` без конфликтов и 38 passed.
+- Все согласованные launch blocker'ы устранены: реальная отправка email-кода через Unisender, официальный Telegram Login Widget, pathname/history routing, корректная subscribe confirm-ссылка и готовый к VPS-запуску PostgreSQL backup.
+- Access JWT во frontend хранится только в памяти; refresh использует httpOnly cookie. В storage остаются только тема и cookie consent.
+- Исходный Claude Design `frontend/mir-pod-solncem.dc.html` сохранён; production frontend собирается из `frontend/app`.
 
-## F10 deploy handoff
-- Следовать `DEPLOY.md` буквально по порядку, подставляя реальные домен, email/TG ID и секреты; примеры не являются credentials. Создать admin: `python -m app.management.create_admin --email REAL_EMAIL --name "Павел"`.
-- nginx HSTS в `deploy/nginx.conf` закомментирован намеренно. Раскомментировать только после успешного certbot и проверки HTTPS.
-- `deploy/mps-backend.service` — единственный backend instance, поскольку Иришка живёт в lifespan. Включить `mps-digest.timer` и `mps-backup.timer`; scheduler.service отсутствует намеренно.
-- В `/etc/mps-platform/backend.env` обязательно задать отдельный `PG_DUMP_URL=postgresql://...` без `+asyncpg`; создать `sudo install -d -o mps -g mps -m 0700 /var/backups/mps`. Первый запуск проверить через `systemctl status` и `journalctl -u mps-backup.service`: нужен `mps-backup: OK`, затем реальный `pg_restore --list` по инструкции.
-- После deploy: `BASE_URL=https://REAL_DOMAIN POST_SLUG=REAL_POST_SLUG deploy/smoke.sh`, проверить backup, systemd status, DNS/certbot и зарегистрировать sitemap в Яндекс.Вебмастер/GSC.
+## Следующий шаг: VPS deploy
+1. Выполнить `DEPLOY.md` по порядку, подставив реальные домен, email/TG ID и секреты. Не использовать значения из примеров как credentials.
+2. Создать первого администратора командой `python -m app.management.create_admin` с реальными аргументами или интерактивным вводом.
+3. Выпустить сертификат и проверить HTTPS; только после этого раскомментировать HSTS в `deploy/nginx.conf`.
+4. В `/etc/mps-platform/backend.env` задать `PG_DUMP_URL` без `+asyncpg`, создать `/var/backups/mps` с владельцем `mps:mps` и правами `0700`.
+5. До признания backup рабочим получить `mps-backup: OK` в journal и выполнить реальный `pg_restore --list` по инструкции.
+6. Запустить production smoke: `BASE_URL=https://REAL_DOMAIN POST_SLUG=REAL_POST_SLUG deploy/smoke.sh`, затем вручную пройти browser login/navigation flow.
 
-## F08 contracts
-- `/api/v1/admin/stats`, `/admin/moderation/queue`, `/admin/users`, `/admin/users/{id}`, `/admin/settings` доступны только `role=admin`. Premium не имеет особых прав.
-- Stats возвращает `users_total`, `users_active_30d`, `users_new_7d`, `users_new_30d`, `subscribers_confirmed`, `questions_open`, `questions_answered`, `reviews_pending` и до пяти `top_posts`, отсортированных по views DESC.
-- `PATCH /admin/settings` принимает `cta_bot_url`, `cta_manager_url`, `irishka_enabled`, `irishka_delay_min`; значения хранятся в key-value settings. Иришка читает их при очередном запуске задачи.
-- `GET /online` не требует авторизации и возвращает до 12 неанонимных пользователей с last_seen не старше 120 секунд, только `id`, `name`, `avatar_url`. Авторизованный запрос обновляет last_seen middleware.
-- `GET /notifications?page=&page_size=` отдаёт только собственные уведомления. `PATCH /notifications/read` с `{}` помечает все непрочитанные собственные, а с `{ "ids": [...] }` — только перечисленные собственные; чужие ID не меняются.
+## Архитектурные решения для эксплуатации
+- Иришка работает в FastAPI lifespan; отдельный scheduler service не нужен. Не запускать несколько scheduler-инстансов без отдельной координации.
+- nginx отдаёт `frontend/app/dist`, проксирует `/api`, обслуживает `/media`; HSTS намеренно выключен до подтверждённого HTTPS.
+- `mps-digest.timer` и `mps-backup.timer` включаются на VPS после заполнения окружения и первого успешного ручного запуска.
+- Реальные Telegram/Unisender/MiniMax, DNS, certbot, systemd и PostgreSQL backup требуют production credentials и проверяются на VPS.
 
-## M3 guardrails
-- `init.sh` запускает `python -m pip check` после установки зависимостей и до pytest; несовместимые или отсутствующие пакеты прерывают проверку.
-- `backend/tests/conftest.py` использует strict `respx` для каждого теста: любой HTTPX-вызов без явного мока завершается `AllMockedAssertionError` до сетевого соединения. ASGI transport не затрагивается; F07 использует явный `respx` mock MiniMax.
+## Оставшийся технический долг
+- Неблокирующие замечания находятся в категориях «Важно» и «Желательно» `docs/AUDIT_REPORT.md`; они не препятствуют первому запуску.
+- C-05 исторически остаётся в разделе «Критично», но по явному решению Павла вынесен в отдельную security-задачу и не входил в последние launch-blocker фиксы.
+- Дальнейшая работа начинается только по выбранному Павлом пункту аудита либо с deploy по `DEPLOY.md`.
 
-## Commands
-- Start/verify: `& 'C:\Program Files\Git\bin\bash.exe' ./init.sh`
-- Tests: `cd backend && python -m pytest tests -q`; migrations: `cd backend && alembic upgrade head`
-- Frontend: `cd frontend/app && npm install && npm run build`; local preview: `npm run dev -- --host 127.0.0.1`.
+## Основные команды
+- Полная backend-проверка: `cd backend && python -m pytest`
+- Стандартная проверка: `./init.sh`
+- Frontend: `cd frontend/app && npm install && npm test && npm run build`
+- Dev backend: `uvicorn app.main:app --reload --port 8000 --app-dir backend`
+- Dev frontend: `cd frontend/app && npm run dev -- --host 127.0.0.1`
