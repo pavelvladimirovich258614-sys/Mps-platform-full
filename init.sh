@@ -18,6 +18,14 @@ fi
 echo "== Установка зависимостей =="
 $INSTALL_CMD
 
+echo "== Pre-flight зависимостей =="
+if (cd backend && python -m pip check); then
+  echo "[OK] Зависимости согласованы."
+else
+  echo "[FAIL] Обнаружены отсутствующие или несовместимые зависимости."
+  exit 1
+fi
+
 echo "== Верификация =="
 if (cd backend && $VERIFY_CMD); then
   echo "[OK] Верификация прошла."

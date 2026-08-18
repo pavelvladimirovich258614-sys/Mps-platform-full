@@ -1,14 +1,24 @@
 from collections.abc import AsyncIterator
 
+import pytest
 import pytest_asyncio
 import fakeredis.aioredis
 from fastapi import FastAPI
+import respx
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.config import Settings
 from app.db import Base
 from app.main import create_app
 from app.rate_limit import limiter
+
+
+@pytest.fixture(autouse=True)
+def require_mocked_httpx_requests():
+    """Любой HTTPX-запрос без respx-мока завершается до сетевого подключения."""
+
+    with respx.mock(assert_all_mocked=True):
+        yield
 
 
 @pytest_asyncio.fixture

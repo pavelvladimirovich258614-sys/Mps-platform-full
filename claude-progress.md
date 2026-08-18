@@ -92,3 +92,12 @@
 - Commits: будет создан `F08: админка и статистика [passing]`.
 - Known risks: top_posts учитывает все публикации по текущей спецификации, включая draft; если продукту нужна только опубликованная выборка, это отдельное уточнение.
 - Next best action: F09 — подключить утверждённый frontend к готовому API, не меняя Claude Design-разметку.
+
+### Session 9 — 2026-08-18 (Codex, M3 review hardening)
+- Goal: устранить замечание M3 Maintainability и добавить pre-flight dependency/network guardrails перед M4.
+- Completed: F06 forum endpoints и F07 `irishka.run()` отформатированы и снабжены контрактными docstrings без изменения поведения. `init.sh` теперь запускает `python -m pip check` перед pytest. Глобальный strict `respx` fixture блокирует незамоканный HTTPX до сетевого соединения; отдельный тест фиксирует этот контракт, а F07 MiniMax mocks остаются рабочими.
+- Verification run: `python -m pytest tests/test_network_guard.py tests/test_forum.py tests/test_irishka.py -q --basetemp .pytest-m3-guard-target` — 7 passed; `python -m pytest tests -q --basetemp .pytest-m3-review-full` — 31 passed; `./init.sh` — `No broken requirements found`, 31 passed.
+- Evidence recorded: evaluator-rubric.md → M3 Maintainability re-evaluation.
+- Commits: будет создан `fix: M3 review — maintainability + dependency/network guardrails`.
+- Known risks: strict respx fixture защищает HTTPX-клиенты; при добавлении другого HTTP-клиента ему потребуется собственный no-network guard.
+- Next best action: F09 — подключить утверждённый frontend к готовому API, не меняя Claude Design-разметку.
