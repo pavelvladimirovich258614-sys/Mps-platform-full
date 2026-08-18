@@ -1,9 +1,9 @@
 import nh3
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.deps import get_current_user, get_db, require_role
+from app.deps import get_current_user, get_db, get_optional_current_user, require_role
 from app.models.comment import Comment, comment_reactions
 from app.models.notification import Notification
 from app.models.post import Post
@@ -12,15 +12,43 @@ from app.models.user import Role, User
 from app.schemas.moderation import CommentCreate, ModerateRequest, ModerationAction, ReactionCreate
 
 router = APIRouter(tags=["comments"])
+REACTION_EMOJI = ("👍", "❤️", "🔥", "😂")
 
 
-def comment_dto(comment: Comment) -> dict:
+async def reaction_state(session: AsyncSession, comment_id: int, user_id: int | None) -> tuple[dict[str, int], str | None]:
+    """Returns aggregate counts for supported emoji and the viewer's current reaction."""
+    counts = dict.fromkeys(REACTION_EMOJI, 0)
+    rows = await session.execute(
+        select(comment_reactions.c.emoji, func.count())
+        .where(comment_reactions.c.comment_id == comment_id)
+        .group_by(comment_reactions.c.emoji)
+    )
+    for emoji, count in rows:
+        if emoji in counts:
+            counts[emoji] = count
+    current = None
+    if user_id is not None:
+        current = await session.scalar(
+            select(comment_reactions.c.emoji).where(
+                comment_reactions.c.comment_id == comment_id,
+                comment_reactions.c.user_id == user_id,
+            )
+        )
+    return counts, current
+
+
+async def comment_dto(session: AsyncSession, comment: Comment, viewer_id: int | None = None) -> dict:
+    author = await session.get(User, comment.user_id)
+    reactions, my_reaction = await reaction_state(session, comment.id, viewer_id)
     return {
         "id": comment.id,
         "post_id": comment.post_id,
         "parent_id": comment.parent_id,
         "body": comment.body,
         "status": comment.status.value,
+        "author": {"id": author.id, "name": author.name, "avatar_url": author.avatar_url},
+        "reactions": reactions,
+        "my_reaction": my_reaction,
     }
 
 
@@ -29,13 +57,17 @@ async def pending_comments_count(session: AsyncSession) -> int:
 
 
 @router.get("/posts/{post_id}/comments")
-async def list_comments(post_id: int, session: AsyncSession = Depends(get_db)):
+async def list_comments(
+    post_id: int,
+    session: AsyncSession = Depends(get_db),
+    user: User | None = Depends(get_optional_current_user),
+):
     comments = (await session.scalars(
         select(Comment)
         .where(Comment.post_id == post_id, Comment.status == ModerationStatus.APPROVED)
         .order_by(Comment.id)
     )).all()
-    return [comment_dto(comment) for comment in comments]
+    return [await comment_dto(session, comment, user.id if user is not None else None) for comment in comments]
 
 
 @router.post("/posts/{post_id}/comments", status_code=201)
@@ -57,7 +89,7 @@ async def create_comment(
     session.add(comment)
     await session.commit()
     await session.refresh(comment)
-    return comment_dto(comment)
+    return await comment_dto(session, comment, user.id)
 
 
 @router.post("/comments/{comment_id}/react")
@@ -72,14 +104,23 @@ async def react_to_comment(
         raise HTTPException(404, "Комментарий не найден")
     if comment.status != ModerationStatus.APPROVED:
         raise HTTPException(422, "Реакцию можно поставить только на одобренный комментарий")
-    exists = await session.scalar(
-        select(comment_reactions.c.comment_id).where(
+    if payload.emoji not in REACTION_EMOJI:
+        raise HTTPException(422, "Поддерживаются реакции: 👍 ❤️ 🔥 😂")
+    existing = await session.scalar(
+        select(comment_reactions.c.emoji).where(
             comment_reactions.c.comment_id == comment_id,
             comment_reactions.c.user_id == user.id,
         )
     )
-    if exists is None:
+    if existing is None:
         await session.execute(comment_reactions.insert().values(comment_id=comment_id, user_id=user.id, emoji=payload.emoji))
+    elif existing == payload.emoji:
+        await session.execute(
+            delete(comment_reactions).where(
+                comment_reactions.c.comment_id == comment_id,
+                comment_reactions.c.user_id == user.id,
+            )
+        )
     else:
         await session.execute(
             update(comment_reactions)
@@ -87,7 +128,8 @@ async def react_to_comment(
             .values(emoji=payload.emoji)
         )
     await session.commit()
-    return {"comment_id": comment_id, "emoji": payload.emoji}
+    reactions, my_reaction = await reaction_state(session, comment_id, user.id)
+    return {"comment_id": comment_id, "my_reaction": my_reaction, "reactions": reactions}
 
 
 @router.patch("/comments/{comment_id}/moderate")
@@ -105,4 +147,4 @@ async def moderate_comment(
         session.add(Notification(user_id=comment.user_id, type="comment_approved", payload={"comment_id": comment.id}))
     await session.commit()
     await session.refresh(comment)
-    return {"comment": comment_dto(comment), "pending_count": await pending_comments_count(session)}
+    return {"comment": await comment_dto(session, comment), "pending_count": await pending_comments_count(session)}

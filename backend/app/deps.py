@@ -41,6 +41,25 @@ async def get_current_user(
     return user
 
 
+async def get_optional_current_user(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    session: AsyncSession = Depends(get_db),
+) -> User | None:
+    """Returns the authenticated user when present, otherwise keeps public routes anonymous."""
+    if credentials is None:
+        return None
+    settings: Settings = request.app.state.settings
+    try:
+        payload = jwt.decode(credentials.credentials, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        if payload.get("type") != "access":
+            raise jwt.InvalidTokenError
+        user = await session.get(User, int(payload["sub"]))
+    except (jwt.PyJWTError, KeyError, ValueError):
+        return None
+    return user if user is not None and not user.is_banned else None
+
+
 def require_role(role: Role):
     async def dependency(user: User = Depends(get_current_user)) -> User:
         if user.role not in (role, Role.ADMIN):
