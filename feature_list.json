@@ -156,14 +156,14 @@
       "area": "frontend",
       "title": "Остальные разделы дизайна",
       "user_visible_behavior": "Reviews, Subscribe, QA, Profile, Notifications, About, legal/cookie/footer и mobile sheet перенесены 1:1 из Claude Design.",
-      "status": "not_started",
+      "status": "passing",
       "verification": [
         "npm run build — без ошибок",
         "визуальная сверка остальных разделов с mir-pod-solncem.dc.html: обе темы и 375px",
         "grep -r localStorage frontend/app/src — только theme и cookie-consent"
       ],
-      "evidence": "",
-      "notes": "F09b подключает API/auth после полного переноса дизайна."
+      "evidence": "2026-08-18: cd frontend/app && npm run build -> tsc -b && vite build, 44 modules transformed, built in 928ms. Visual verification against frontend/mir-pod-solncem.dc.html on Vite :5173: Reviews, Subscribe, QA, Profile, Notifications, About, Privacy/Terms, footer, cookie banner and extended mobile sheet were checked in dark/light design tokens and at 375px; temporary headless Edge control renders cover Reviews/Subscribe/About/Privacy plus F09a1 Feed/Countries/Topic/Article in desktop and 375px. F09a1-разделы после интеграции навигации: без регрессий — feed, countries/forum, topic and article/comments/reactions routes all open through the same Layout. rg -n localStorage frontend/app/src -> only mps-theme2 and mps-cookie-consent. python -m pytest backend/tests -q --basetemp .pytest-f09a2-full -> 31 passed in 6.77s. ./init.sh вне sandbox -> pip check: No broken requirements found; 31 passed; [OK].",
+      "notes": "Presentation-state для reviews/subscribe/QA/profile/notifications преднамеренно локальный; F09b заменяет его API client, hooks и реальным auth."
     },
     {
       "id": "F09b",

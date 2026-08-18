@@ -1,0 +1,1 @@
+export function CookieBanner({ onAccept, onPrivacy }: { onAccept: () => void; onPrivacy: () => void }) { return <aside className="cookie-banner"><p>Мы используем cookies для работы сайта. Продолжая, вы соглашаетесь с <button onClick={onPrivacy}>политикой обработки данных</button></p><button className="primary-button" onClick={onAccept}>Хорошо</button></aside>; }

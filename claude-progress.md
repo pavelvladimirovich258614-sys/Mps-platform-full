@@ -4,9 +4,9 @@
 - Repository root directory: mps-platform/
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
-- Highest priority unfinished feature: F09a2 (остальные разделы Claude Design)
+- Highest priority unfinished feature: F09b (API-слой и авторизация фронтенда)
 - Current blocker: нет
-- Frontend: F09a1 ЗАВЕРШЁН — Vite+React каркас и основной журнал в frontend/app; исходный экспорт frontend/mir-pod-solncem.dc.html сохранён. F09a2 переносит остальные разделы, F09b подключает auth/API.
+- Frontend: F09a1/F09a2 ЗАВЕРШЕНЫ — Vite+React перенос дизайна в frontend/app; исходный экспорт frontend/mir-pod-solncem.dc.html сохранён. F09b подключает auth/API.
 
 ## Session Record
 
@@ -110,3 +110,12 @@
 - Commits: будет создан `F09a1: каркас и журнал [passing]`; в push также войдёт уже готовый `75090d8 fix: F04 comment reactions contract for frontend`.
 - Known risks: email/Telegram login, общий API client/hooks, реальные данные Reviews/Subscribe/QA/Profile/Notifications/About и сквозной сценарий перенесены в F09a2/F09b по утверждённой разбивке. В F09a1 login button — элемент дизайна, не auth-flow.
 - Next best action: представить план F09a2 и ждать подтверждения пользователя.
+
+### Session 11 — 2026-08-18 (Codex, F09a2)
+- Goal: перенести оставшиеся Claude Design разделы и расширить навигацию, не заходя в API/auth F09b.
+- Completed: добавлены Reviews, Subscribe, QA, Profile, Notifications, About, Legal и CookieBanner; Layout получил полный desktop/mobile navigation, notifications popover, profile/Q&A modal, юридический footer и QR-announce. Добавлена hash-навигация для воспроизводимой проверки экранов. В storage остаются только `mps-theme2` и `mps-cookie-consent`; reviews/subscribe/QA/profile/notifications используют только локальный presentation-state до F09b.
+- Verification run: `cd frontend/app && npm run build` — 44 Vite modules, 928ms; визуальная сверка новых разделов и F09a1 regression на Vite :5173 в обеих темах и 375px; `rg -n localStorage frontend/app/src` — только theme/cookie keys; `python -m pytest backend/tests -q --basetemp .pytest-f09a2-full` — 31 passed in 6.77s; `./init.sh` вне sandbox — pip check и 31 passed.
+- Evidence recorded: feature_list.json → F09a2.evidence.
+- Commits: будет создан `F09a2: остальные разделы дизайна [passing]`.
+- Known risks: реальные profile/notifications/reviews/subscribe/QA данные, email/Telegram login, JWT refresh и общие hooks не реализованы намеренно — это отдельная F09b.
+- Next best action: представить план F09b и ждать подтверждения пользователя.
