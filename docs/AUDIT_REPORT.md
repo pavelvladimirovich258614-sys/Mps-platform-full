@@ -190,6 +190,8 @@
 
 ### I-18. Deployment bootstrap и digest unit неполны
 
+**Статус: закрыто в репозитории 2026-08-20.** Добавлен `deploy/nginx.pre-cert.conf`: HTTP-only шаблон с ACME challenge и `YOUR_DOMAIN`, без certificate files. `DEPLOY.md` теперь задаёт последовательность bootstrap → `certbot certonly --webroot` → production HTTPS config. Digest unit запускается от `mps`, читает `/etc/mps-platform/backend.env`; контракт покрыт локальным тестом. Реальная проверка `nginx -t`, certbot и systemd остаётся ручным шагом владельца на VPS.
+
 **Где:** `deploy/nginx.conf:1-19`, `DEPLOY.md:13-20`, `deploy/mps-digest.service:1-6`, `deploy/mps-backend.service:8-10`.
 **Проблема:** единственный nginx template уже ссылается на ещё не существующие certificate files, хотя инструкция предлагает сначала установить HTTP-конфигурацию и выполнить `nginx -t`. Отдельного bootstrap HTTP template нет. Digest service, в отличие от backend/backup, не подключает `/etc/mps-platform/backend.env`, поэтому использует defaults/.env из working directory и может не видеть production DB/Unisender.
 **Предлагаемый фикс:** отдельный pre-cert HTTP config или пошаговая генерация; добавить EnvironmentFile/User/Group в digest unit и unit verification на VPS.

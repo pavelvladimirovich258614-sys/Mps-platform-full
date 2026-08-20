@@ -15,9 +15,10 @@
 ## Домен и HTTPS
 
 1. У старого сайта замените A-запись домена и `www` на IP VPS. Дождитесь распространения DNS.
-2. Сначала установите HTTP-конфигурацию nginx и проверьте challenge: `sudo nginx -t && sudo systemctl reload nginx`.
-3. Выпустите сертификат: `sudo certbot --nginx -d YOUR_DOMAIN -d www.YOUR_DOMAIN`.
-4. Проверьте `https://YOUR_DOMAIN` в браузере и `curl -sI https://YOUR_DOMAIN`.
+2. Установите bootstrap-конфигурацию **до** получения сертификата: создайте challenge-каталог `sudo install -d -m 0755 /var/www/certbot`, скопируйте `deploy/nginx.pre-cert.conf` в nginx site, подставьте в нём ваш домен вместо каждого `YOUR_DOMAIN`, включите site и выполните `sudo nginx -t && sudo systemctl reload nginx`. Этот шаблон обслуживает только HTTP и ACME challenge; в нём нет ссылок на certificate files.
+3. Выпустите сертификат через webroot: `sudo certbot certonly --webroot -w /var/www/certbot -d YOUR_DOMAIN -d www.YOUR_DOMAIN`.
+4. Только после успешного certbot замените bootstrap site на `deploy/nginx.conf`, подставьте ваш домен вместо каждого `YOUR_DOMAIN`, затем выполните `sudo nginx -t && sudo systemctl reload nginx`.
+5. Проверьте `https://YOUR_DOMAIN` в браузере и `curl -sI https://YOUR_DOMAIN`.
 
 > **ВНИМАНИЕ: не включайте `Strict-Transport-Security` до первого успешного certbot и проверки HTTPS.** HSTS заставляет браузер требовать HTTPS; при ошибочном сертификате нельзя будет безопасно вернуться на HTTP. В шаблоне nginx директива намеренно закомментирована. Раскомментируйте её только после успешной проверки, затем `sudo nginx -t && sudo systemctl reload nginx`.
 

@@ -1,12 +1,12 @@
-# clean-state-checklist.md — контрольная точка audit I-01/I-06a/I-13/I-15/I-16 2026-08-20
+# clean-state-checklist.md — контрольная точка audit I-18 2026-08-20
 
-- [x] Frontend `npm run test:quiet` — 5 files, 21 passed; `npm run build` — 48 modules, успешно
-- [x] Полный `python -m pytest tests -q --basetemp .pytest-i13-full` вне sandbox — 44 passed in 9.64s
-- [x] Финальный `./init.sh` через Git Bash вне sandbox — `No broken requirements found`, 44 passed, `[OK] Верификация прошла`
-- [x] `feature_list.json` проверен: F01–F10 и F09a1/F09a2/F09b — 12 записей `passing`, записей `in_progress` нет
-- [x] `claude-progress.md` содержит Session 17–21 с RED/green evidence I-01/I-06a/I-13/I-15/I-16
-- [x] `session-handoff.md` отражает закрытие I-01/I-06a/I-13/I-15/I-16 и открытую границу I-06b
-- [x] `docs/AUDIT_REPORT.md` фиксирует I-01/I-06a/I-13/I-15/I-16 как закрытые, а I-06b — как открытый follow-up; C-05 и остальные категории «Важно»/«Желательно» не изменялись
+- [x] RED `python -m pytest tests/test_deploy_bootstrap.py -q --basetemp .pytest-i18-red` — 2 failed: отсутствовал pre-cert template; digest не содержал User/Group/EnvironmentFile
+- [x] Targeted `python -m pytest tests/test_deploy_bootstrap.py -q --basetemp .pytest-i18-target-final` — 2 passed
+- [x] Полный `python -m pytest tests -q --basetemp .pytest-i18-full-final` вне sandbox — 46 passed
+- [x] Финальный `./init.sh` через Git Bash вне sandbox — `No broken requirements found`, 46 passed, `[OK] Верификация прошла`
+- [x] `deploy/nginx.pre-cert.conf` содержит только HTTP/ACME; production `nginx.conf` и DEPLOY.md используют `YOUR_DOMAIN`, без `mir.pod-solncem.ru`
+- [x] `mps-digest.service` запускается как `mps:mps` и читает `/etc/mps-platform/backend.env`
+- [x] `docs/AUDIT_REPORT.md`, `claude-progress.md` и `session-handoff.md` фиксируют I-18; ручные VPS проверки явно отделены
+- [x] В staging добавляются только файлы I-18 и относящиеся документы
 - [x] Временные pytest-каталоги удалены перед коммитом
-- [x] В staging добавляются только файлы I-13: Profile component/test и относящиеся документы
-- [x] Финальная Git-проверка включает `git fetch origin main`, совпадение local `main` с `origin/main` и чистое рабочее дерево после push
+- [ ] Финальная Git-проверка: local `main` совпадает с `origin/main`, рабочее дерево чисто после push

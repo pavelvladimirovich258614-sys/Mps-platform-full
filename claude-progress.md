@@ -6,10 +6,19 @@
 - Standard verification path: `python -m pytest backend/tests -q`
 - Feature state: F01–F10 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; записей `in_progress` нет.
 - Deploy readiness: backend и frontend готовы к развёртыванию по `DEPLOY.md`; все согласованные launch blocker'ы C-01–C-04 и C-06 устранены.
-- Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15 и I-16 закрыты 2026-08-20. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
-- Next best action: deploy на VPS по `DEPLOY.md` либо отдельное согласование I-06b.
+- Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15, I-16 и I-18 закрыты 2026-08-20. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
+- Next best action: отдельный план I-20 (публичные настраиваемые реквизиты) либо ручной VPS deploy по `DEPLOY.md`.
 
 ## Session Record
+
+### Session 22 — 2026-08-20 (Codex, audit I-18)
+- Goal: сделать первый nginx/certbot bootstrap воспроизводимым и дать digest service production environment до VPS deploy.
+- Completed: добавлен HTTP-only `deploy/nginx.pre-cert.conf` с ACME challenge и `YOUR_DOMAIN`; `DEPLOY.md` задаёт порядок bootstrap → `certbot certonly --webroot` → HTTPS config. `mps-digest.service` запускается как `mps:mps` и читает `/etc/mps-platform/backend.env`.
+- Verification run: baseline `./init.sh` вне sandbox — `pip check` без конфликтов, 44 passed; RED `python -m pytest tests/test_deploy_bootstrap.py -q --basetemp .pytest-i18-red` — 2 failed: отсутствовал pre-cert template, digest не содержал User/Group/EnvironmentFile; targeted `--basetemp .pytest-i18-target-final` — 2 passed; final `python -m pytest tests -q --basetemp .pytest-i18-full-final` — 46 passed; final `./init.sh` вне sandbox — `pip check` без конфликтов, 46 passed.
+- Evidence recorded: `docs/AUDIT_REPORT.md` I-18; тест фиксирует HTTP-only template без SSL/certificate paths и production service account/environment для digest.
+- Commits: будет создан `fix: audit I-18 — deploy bootstrap (nginx pre-cert, digest unit)`.
+- Known risks: реальный `nginx -t`, certbot и запуск digest требуют VPS и credentials; они намеренно не выполнялись локально.
+- Next best action: отдельный план I-20; не начинать его без нового подтверждения.
 
 ### Session 21 — 2026-08-20 (Codex, audit I-13)
 - Goal: синхронизировать локальный state Profile с существующим пользователем после login без перезаписи draft на том же user ID.
