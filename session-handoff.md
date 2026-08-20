@@ -31,7 +31,7 @@
 - I-16 закрыт: одинаковые retry moderation/QA не создают duplicate notifications; противоречащие final state/QA-payload получают `409`, а QA сравнивается только по точному тексту и автору.
 - I-18 закрыт в репозитории: pre-cert nginx template не требует certificate files, а digest запускается от `mps:mps` с `/etc/mps-platform/backend.env`. Реальные `nginx`, certbot и systemd остаются ручной VPS-проверкой.
 - I-20 закрыт: миграция `20260820_0008_public_legal_settings` при `alembic upgrade head` создаёт на чистой VPS БД шесть официальных публичных settings, включая ОГРН; admin API может обновлять их позже. Whitelist `GET /api/v1/settings/public` не раскрывает CTA/Irishka. Footer/About и privacy page используют settings, без фиктивных fallback.
-- I-21 открыт: UI-чекбоксы и policy links есть у подписки, отзывов и Q&A, но нет серверного доказательства consent, а CookieBanner не блокирует стартовые API-запросы до выбора.
+- I-21 отложен до pre-launch юридической проверки: накопленных пользовательских данных, аналитики, рекламы и tracking cookies нет; policy, реквизиты оператора и UI-согласие уже есть. Перед публичным запуском после консультации с юристом предпочесть backend-хранение `consent_given_at`/`consent_version` и определить policy для стартовых API-запросов и cookies.
 - C-05 исторически остаётся в разделе «Критично», но по явному решению Павла вынесен в отдельную security-задачу и не входил в последние launch-blocker фиксы.
 - Deploy по `DEPLOY.md` по-прежнему можно начать вручную на VPS. После создания администратора задать публичные реквизиты через защищённый admin API; не передавать их через Codex. Следующая согласованная audit-задача — I-19a (email validation); I-19b и I-06b требуют отдельных продуктовых решений перед кодом.
 
