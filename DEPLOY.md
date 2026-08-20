@@ -25,6 +25,7 @@
 ## Services, digest и backup
 
 1. Скопируйте `deploy/mps-backend.service`, `mps-digest.service`, `mps-digest.timer`, `mps-backup.service`, `mps-backup.timer` в `/etc/systemd/system/`.
+   Backend unit слушает только `127.0.0.1:8001`; nginx из `deploy/nginx.conf` проксирует к тому же порту. Не занимайте этот порт другим сервисом.
 2. До запуска timer создайте закрытый writable-каталог: `sudo install -d -o mps -g mps -m 0700 /var/backups/mps`.
 3. Выполните `sudo systemctl daemon-reload && sudo systemctl enable --now mps-backend mps-digest.timer mps-backup.timer`.
 4. Иришка запускается внутри FastAPI lifespan, поэтому отдельный `mps-scheduler.service` намеренно отсутствует. Держите ровно один backend instance, иначе задача продублируется.
