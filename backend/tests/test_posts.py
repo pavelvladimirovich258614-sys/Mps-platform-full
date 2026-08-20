@@ -5,7 +5,7 @@ from app.api.posts import slugify
 from app.models.user import Role,User
 
 def tg(user_id=99):
- d={"id":user_id,"first_name":"Editor","auth_date":int(time.time())};d["hash"]=hmac.new(hashlib.sha256(b"test-bot-token").digest(),"\n".join(f"{k}={d[k]}" for k in sorted(d)).encode(),hashlib.sha256).hexdigest();return d
+ d={"id":user_id,"first_name":"Editor","auth_date":int(time.time())};d["hash"]=hmac.new(hashlib.sha256(b"test-auth-bot-token").digest(),"\n".join(f"{k}={d[k]}" for k in sorted(d)).encode(),hashlib.sha256).hexdigest();return d
 @pytest.fixture
 async def client(test_app):
  async with httpx.AsyncClient(transport=httpx.ASGITransport(app=test_app),base_url="http://x") as c:yield c

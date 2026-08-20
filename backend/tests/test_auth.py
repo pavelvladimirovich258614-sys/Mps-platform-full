@@ -16,7 +16,7 @@ from app.models.user import Role, User
 def telegram_payload() -> dict:
     data = {"id": 42, "first_name": "Павел", "auth_date": int(time.time())}
     check = "\n".join(f"{key}={data[key]}" for key in sorted(data))
-    data["hash"] = hmac.new(hashlib.sha256(b"test-bot-token").digest(), check.encode(), hashlib.sha256).hexdigest()
+    data["hash"] = hmac.new(hashlib.sha256(b"test-auth-bot-token").digest(), check.encode(), hashlib.sha256).hexdigest()
     return data
 
 

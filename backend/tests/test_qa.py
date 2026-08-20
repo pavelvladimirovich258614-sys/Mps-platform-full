@@ -15,7 +15,7 @@ from app.models.question import Question
 def telegram_payload():
     payload = {"id": 501, "first_name": "Клиент", "auth_date": int(time.time())}
     check = "\n".join(f"{key}={payload[key]}" for key in sorted(payload))
-    payload["hash"] = hmac.new(hashlib.sha256(b"test-bot-token").digest(), check.encode(), hashlib.sha256).hexdigest()
+    payload["hash"] = hmac.new(hashlib.sha256(b"test-auth-bot-token").digest(), check.encode(), hashlib.sha256).hexdigest()
     return payload
 
 
@@ -32,7 +32,7 @@ async def headers(client):
 
 @respx.mock
 async def test_qa_relay_answer_and_notification(client):
-    route = respx.post("https://api.telegram.org/bottest-bot-token/sendMessage").mock(return_value=httpx.Response(200, json={"ok": True, "result": {"message_id": 88}}))
+    route = respx.post("https://api.telegram.org/bottest-relay-bot-token/sendMessage").mock(return_value=httpx.Response(200, json={"ok": True, "result": {"message_id": 88}}))
     created = await client.post("/api/v1/qa", headers=await headers(client), json={"target": "manager", "body": "Нужна помощь"})
     assert created.status_code == 201
     question_id = created.json()["id"]
@@ -52,7 +52,7 @@ async def test_qa_rejects_invalid_target_and_secret(client):
 
 @respx.mock
 async def test_qa_answer_is_idempotent_only_for_exactly_matching_payload(client, test_app):
-    respx.post("https://api.telegram.org/bottest-bot-token/sendMessage").mock(
+    respx.post("https://api.telegram.org/bottest-relay-bot-token/sendMessage").mock(
         return_value=httpx.Response(200, json={"ok": True, "result": {"message_id": 89}})
     )
     created = await client.post("/api/v1/qa", headers=await headers(client), json={"target": "manager", "body": "Нужна помощь"})

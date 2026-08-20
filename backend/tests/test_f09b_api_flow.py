@@ -78,7 +78,7 @@ async def test_f09b_api_acceptance_flow_with_email_auth(client, test_app):
     assert review.status_code == 201 and review.json()["status"] == "pending"
 
     # TZ 7.5: the relay call is explicitly mocked; no real Telegram request is possible.
-    respx.post("https://api.telegram.org/bottest-bot-token/sendMessage").mock(return_value=httpx.Response(200, json={"result": {"message_id": 77}}))
+    respx.post("https://api.telegram.org/bottest-relay-bot-token/sendMessage").mock(return_value=httpx.Response(200, json={"result": {"message_id": 77}}))
     question = await client.post("/api/v1/qa", headers=headers, json={"target": "manager", "body": "Нужен совет"})
     assert question.status_code == 201 and question.json()["tg_message_id"] == 77
 

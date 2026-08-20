@@ -14,7 +14,7 @@ def telegram_payload(user_id: int) -> dict[str, int | str]:
     payload: dict[str, int | str] = {"id": user_id, "first_name": "Пользователь", "auth_date": int(time.time())}
     check = "\n".join(f"{key}={payload[key]}" for key in sorted(payload))
     payload["hash"] = hmac.new(
-        hashlib.sha256(b"test-bot-token").digest(), check.encode(), hashlib.sha256
+        hashlib.sha256(b"test-auth-bot-token").digest(), check.encode(), hashlib.sha256
     ).hexdigest()
     return payload
 

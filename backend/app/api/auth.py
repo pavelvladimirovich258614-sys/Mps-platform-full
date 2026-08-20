@@ -37,7 +37,7 @@ def tokens_response(user: User, request: Request, response: Response) -> TokenRe
 @limiter.limit("5/minute")
 async def telegram_login(payload: TelegramLoginRequest, request: Request, response: Response) -> TokenResponse:
     settings = request.app.state.settings
-    if not settings.bot_token or payload.auth_date < time.time() - 86400 or not telegram_hash_is_valid(payload, settings.bot_token):
+    if not settings.auth_bot_token or payload.auth_date < time.time() - 86400 or not telegram_hash_is_valid(payload, settings.auth_bot_token):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Недействительные данные Telegram")
     session: AsyncSession = request.state.db
     user = await session.scalar(select(User).where(User.tg_id == payload.id))

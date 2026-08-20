@@ -13,7 +13,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_minutes: int = 30
     refresh_token_days: int = 30
-    bot_token: str = ""
+    auth_bot_token: str = ""
+    relay_bot_token: str = ""
+    admin_tg_id: str = ""
     managers_chat_id: str = ""
     lawyer_tg_id: str = ""
     bot_bridge_secret: str = ""
