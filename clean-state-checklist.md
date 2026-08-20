@@ -11,4 +11,4 @@
 - [x] VPS: создан первый admin по server-side `ADMIN_TG_ID`; ID не записан в tracker.
 - [x] VPS: `/usr/bin/bash deploy/smoke.sh` — `[OK] smoke passed: https://mir.pod-solncem.ru`.
 - [x] Незаполненные production env-поля зафиксированы в `session-handoff.md` только именами, без значений.
-- [ ] Финальная Git-проверка: выполнится после commit/push этого documentation checkpoint.
+- [x] Финальная Git-проверка: local `main` совпадает с `origin/main`, рабочее дерево чисто после fetch и push.
