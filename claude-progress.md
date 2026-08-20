@@ -6,10 +6,19 @@
 - Standard verification path: `python -m pytest backend/tests -q`
 - Feature state: F01–F10 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; записей `in_progress` нет.
 - Deploy readiness: backend и frontend готовы к развёртыванию по `DEPLOY.md`; все согласованные launch blocker'ы C-01–C-04 и C-06 устранены.
-- Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-15 и I-16 закрыты 2026-08-20, прочий неблокирующий технический долг находится в категориях «Важно»/«Желательно» `docs/AUDIT_REPORT.md`.
-- Next best action: deploy на VPS по `DEPLOY.md` либо отдельная оценка следующего audit-пункта.
+- Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-15 и I-16 закрыты 2026-08-20. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
+- Next best action: deploy на VPS по `DEPLOY.md` либо отдельное согласование I-06b.
 
 ## Session Record
+
+### Session 20 — 2026-08-20 (Codex, audit I-06a)
+- Goal: устранить возможность закрыть JSON-LD script через данные Article, не расширяя scope до общей sanitization policy.
+- Completed: `json_ld()` сериализует Article через `json.dumps()` и кодирует `<`, `>` и `&` Unicode escapes перед HTML embedding. I-06b оставлен открытым: post.title/excerpt, forum title/body, QA question/answer, profile name/bio и review author name требуют продуктового решения о допустимом содержимом.
+- Verification run: RED `python -m pytest tests/test_seo.py -q --basetemp .pytest-i06a-red` — 1 failed: raw `</script><script>window.__injected…</script>` присутствовал в HTML; targeted `python -m pytest tests/test_seo.py -q --basetemp .pytest-i06a-target` — 3 passed; full `python -m pytest tests -q --basetemp .pytest-i06a-full` — 44 passed; `./init.sh` вне sandbox — `pip check` без конфликтов, 44 passed.
+- Evidence recorded: `docs/AUDIT_REPORT.md` I-06a; `test_json_ld_escapes_html_significant_characters` проверяет отсутствие raw injection, escaped `<`/`>`/`&` и корректный JSON parsing с исходными значениями.
+- Commits: будет создан `fix: audit I-06a — безопасное экранирование JSON-LD`.
+- Known risks: I-06b не реализован намеренно; этот фикс защищает JSON-LD, но не вводит единую policy sanitization для остальных boundary.
+- Next best action: VPS deploy по `DEPLOY.md` либо отдельное согласование I-06b.
 
 ### Session 19 — 2026-08-20 (Codex, audit I-16)
 - Goal: сделать повторную moderation и internal QA-answer идемпотентными до VPS deploy.

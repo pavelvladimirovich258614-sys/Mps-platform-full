@@ -26,6 +26,11 @@ def public_url(base_url: str, path: str) -> str:
     return f"{base_url.rstrip('/')}{path}"
 
 
+def json_ld(value: dict) -> str:
+    """Serialize JSON-LD safely for embedding into an HTML script element."""
+    return json.dumps(value, ensure_ascii=False).replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
+
+
 @router.get("/robots.txt", include_in_schema=False)
 async def robots(request: Request) -> Response:
     base_url = request.app.state.settings.base_url.rstrip("/")
@@ -58,6 +63,6 @@ async def post_page(slug: str, request: Request, session: AsyncSession = Depends
     canonical = public_url(base_url, f"/posts/{post.slug}")
     description = (post.excerpt or post.body)[:300]
     image = post.cover_url or public_url(base_url, "/favicon.ico")
-    article = json.dumps({"@context": "https://schema.org", "@type": "Article", "headline": post.title, "description": description, "mainEntityOfPage": canonical}, ensure_ascii=False)
+    article = json_ld({"@context": "https://schema.org", "@type": "Article", "headline": post.title, "description": description, "mainEntityOfPage": canonical})
     html = f"<!doctype html><html lang=\"ru\"><head><title>{escape(post.title)}</title><link rel=\"canonical\" href=\"{canonical}\"><meta property=\"og:title\" content=\"{escape(post.title, quote=True)}\"><meta property=\"og:description\" content=\"{escape(description, quote=True)}\"><meta property=\"og:url\" content=\"{canonical}\"><meta property=\"og:image\" content=\"{escape(image, quote=True)}\"><meta name=\"description\" content=\"{escape(description, quote=True)}\"><script type=\"application/ld+json\">{article}</script></head><body><h1>{escape(post.title)}</h1><p>{escape(description)}</p></body></html>"
     return Response(html, media_type="text/html")

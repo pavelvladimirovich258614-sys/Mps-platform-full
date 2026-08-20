@@ -1,4 +1,6 @@
 from datetime import UTC, datetime
+import json
+import re
 
 import httpx
 import pytest
@@ -41,3 +43,27 @@ async def test_unknown_post_loads_spa_for_browser_but_is_not_prerendered(client,
 
     bot = await client.get("/posts/missing", headers={"User-Agent": "Googlebot"})
     assert bot.status_code == 404
+
+
+async def test_json_ld_escapes_html_significant_characters(client, test_app):
+    title = "</script><script>window.__injected = true</script> & >"
+    excerpt = "Описание </script><script>window.__injected = true</script> & >"
+    async with test_app.state.database.session_factory() as session:
+        author = User(email="editor@example.test", name="Редактор")
+        session.add(author)
+        await session.flush()
+        session.add(Post(type=PostType.ARTICLE, title=title, slug="unsafe-json-ld", body="Текст", excerpt=excerpt, author_id=author.id, status=PostStatus.PUBLISHED, published_at=datetime.now(UTC)))
+        await session.commit()
+
+    response = await client.get("/posts/unsafe-json-ld", headers={"User-Agent": "Googlebot"})
+
+    assert response.status_code == 200
+    assert "</script><script>window.__injected = true</script>" not in response.text
+    assert r"\u003c/script\u003e" in response.text
+    assert r"\u0026" in response.text
+    assert r"\u003e" in response.text
+    match = re.search(r'<script type="application/ld\+json">(.*?)</script>', response.text)
+    assert match is not None
+    article = json.loads(match.group(1))
+    assert article["headline"] == title
+    assert article["description"] == excerpt

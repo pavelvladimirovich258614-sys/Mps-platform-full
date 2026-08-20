@@ -96,6 +96,10 @@
 
 ### I-06. Пользовательские тексты санитизируются непоследовательно; JSON-LD допускает закрытие script
 
+**I-06a — статус: закрыто 2026-08-20.** JSON-LD Article теперь после `json.dumps()` кодирует `<`, `>` и `&` как Unicode escapes перед вставкой в `<script type="application/ld+json">`. Security regression test подтверждает, что raw `</script><script>…` не попадает в HTML, а извлечённый JSON-LD остаётся валидным и сохраняет исходные значения.
+
+**I-06b — открытый follow-up.** Широкая непоследовательная sanitization остаётся: `post.title/excerpt`, forum title/body, QA question/answer, profile name/bio и review author name требуют продуктового решения о допустимом содержимом до фикса. Это отдельная сессия: нужно определить plain-text/разрешённый HTML для каждого boundary и добавить соответствующие contract tests.
+
 **Где:** `backend/app/api/posts.py:37-39,52-57`, `backend/app/api/comments.py:88`, `backend/app/api/reviews.py:57-62,83-87`, `backend/app/api/forum.py:80,124`, `backend/app/api/qa.py:16,29`, `backend/app/api/seo.py:59-62`.
 **Проблема:** nh3 применяется к post/review/comment body, но не к forum title/body, QA body/answer, profile bio/name или post title/excerpt. React сейчас экранирует большинство значений, однако JSON-LD вставляет `json.dumps()` внутрь `<script>` без экранирования `</script>`. Пользователь с editor-доступом может сохранить строку, завершающую script; bot HTML доступен любому клиенту со spoofed User-Agent.
 **Предлагаемый фикс:** единый boundary sanitization/escaping policy; для JSON-LD заменять `<` на `\u003c` либо использовать безопасный serializer/CSP; security regression test с `</script>`.
