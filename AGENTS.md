@@ -25,7 +25,8 @@
 2. Доказательство записано в поле `evidence`: команда + ключевые строки вывода (код ответа, id созданной записи, результат pytest `N passed`).
 3. `pytest` по всему проекту зелёный, `./init.sh` проходит.
 4. Нет незакоммиченных случайных файлов (`git status` чист после коммита).
-Перед тем как писать `passing`, пройди [verification checklist](.codex/verification-checklist.md).
+Перед тем как писать `passing`, пройди [verification checklist](.codex/verification-checklist.md) и [verification-before-completion](.codex/skills/verification-before-completion/SKILL.md).
+Для исправлений audit-находок следуй [TDD fix workflow](.codex/skills/tdd-fix-workflow/SKILL.md).
 Если хотя бы один пункт не выполнен — статус остаётся `in_progress` или `blocked`. Ложный `passing` — худшее нарушение.
 
 ## Завершение сессии (обязательно, по порядку)
