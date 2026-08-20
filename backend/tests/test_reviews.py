@@ -111,3 +111,30 @@ async def test_review_token_is_protected_single_use_and_expires(client, test_app
         json={"token": "expired", "author_name": "Клиент", "rating": 4, "body": "Спасибо"},
     )
     assert expired.status_code == 410
+
+
+async def test_review_moderation_is_idempotent_after_final_decision(client, test_app):
+    reader_headers = await headers_for(client, test_app, 801)
+    editor_headers = await headers_for(client, test_app, 802, editor=True)
+    created = await client.post(
+        "/api/v1/reviews",
+        headers=reader_headers,
+        json={"author_name": "Анна", "rating": 5, "body": "Отличный отдых"},
+    )
+    review_id = created.json()["id"]
+
+    assert (await client.patch(
+        f"/api/v1/reviews/{review_id}/moderate", headers=editor_headers, json={"action": "approve"}
+    )).status_code == 200
+    repeated = await client.patch(
+        f"/api/v1/reviews/{review_id}/moderate", headers=editor_headers, json={"action": "approve"}
+    )
+    assert repeated.status_code == 200
+    assert repeated.json()["review"]["status"] == "approved"
+    conflicting = await client.patch(
+        f"/api/v1/reviews/{review_id}/moderate", headers=editor_headers, json={"action": "reject"}
+    )
+    assert conflicting.status_code == 409
+    async with test_app.state.database.session_factory() as session:
+        notifications = (await session.scalars(select(Notification))).all()
+        assert len(notifications) == 1

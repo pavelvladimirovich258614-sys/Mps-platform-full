@@ -130,3 +130,29 @@ async def test_comment_moderation_requires_editor(client, test_app):
         json={"action": "reject"},
     )).status_code == 200
     assert (await client.get(f"/api/v1/posts/{post_id}/comments")).json() == []
+
+
+async def test_comment_moderation_is_idempotent_after_final_decision(client, test_app):
+    reader_headers = await headers_for(client, test_app, 501)
+    editor_headers = await headers_for(client, test_app, 502, editor=True)
+    post_id = await published_post(client, editor_headers)
+    comment = await client.post(
+        f"/api/v1/posts/{post_id}/comments", headers=reader_headers, json={"body": "На модерацию"}
+    )
+    comment_id = comment.json()["id"]
+
+    assert (await client.patch(
+        f"/api/v1/comments/{comment_id}/moderate", headers=editor_headers, json={"action": "approve"}
+    )).status_code == 200
+    repeated = await client.patch(
+        f"/api/v1/comments/{comment_id}/moderate", headers=editor_headers, json={"action": "approve"}
+    )
+    assert repeated.status_code == 200
+    assert repeated.json()["comment"]["status"] == "approved"
+    conflicting = await client.patch(
+        f"/api/v1/comments/{comment_id}/moderate", headers=editor_headers, json={"action": "reject"}
+    )
+    assert conflicting.status_code == 409
+    async with test_app.state.database.session_factory() as session:
+        notifications = (await session.scalars(select(Notification))).all()
+        assert len(notifications) == 1

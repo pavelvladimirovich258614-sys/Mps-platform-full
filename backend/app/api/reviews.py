@@ -104,7 +104,12 @@ async def moderate_review(
     review = await session.get(Review, review_id)
     if review is None:
         raise HTTPException(404, "Отзыв не найден")
-    review.status = ModerationStatus.APPROVED if payload.action == ModerationAction.APPROVE else ModerationStatus.REJECTED
+    target_status = ModerationStatus.APPROVED if payload.action == ModerationAction.APPROVE else ModerationStatus.REJECTED
+    if review.status != ModerationStatus.PENDING:
+        if review.status != target_status:
+            raise HTTPException(409, "Решение по отзыву уже принято")
+        return {"review": review_dto(review), "pending_count": await pending_reviews_count(session)}
+    review.status = target_status
     review.moderated_by = editor.id
     if review.status == ModerationStatus.APPROVED and review.user_id is not None:
         session.add(Notification(user_id=review.user_id, type="review_approved", payload={"review_id": review.id}))

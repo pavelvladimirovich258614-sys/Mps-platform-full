@@ -26,4 +26,8 @@ async def answer(payload:AnswerIn,request:Request,x_bot_bridge_secret:str|None=H
  if not x_bot_bridge_secret or not hmac.compare_digest(x_bot_bridge_secret,request.app.state.settings.bot_bridge_secret): raise HTTPException(401,"Недействительный внутренний секрет")
  q=await session.get(Question,payload.question_id)
  if q is None: raise HTTPException(404,"Вопрос не найден")
+ if q.status==QuestionStatus.ANSWERED:
+  if q.answer==payload.answer and q.answered_by_name==payload.answered_by_name: return dto(q)
+  raise HTTPException(409,"На вопрос уже дан другой ответ")
+ if q.status!=QuestionStatus.OPEN: raise HTTPException(409,"Вопрос уже закрыт")
  q.status=QuestionStatus.ANSWERED;q.answer=payload.answer;q.answered_by_name=payload.answered_by_name;q.answered_at=datetime.now(UTC);session.add(Notification(user_id=q.user_id,type="qa_answered",payload={"question_id":q.id}));await session.commit();return dto(q)

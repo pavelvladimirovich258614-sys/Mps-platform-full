@@ -142,7 +142,12 @@ async def moderate_comment(
     comment = await session.get(Comment, comment_id)
     if comment is None:
         raise HTTPException(404, "Комментарий не найден")
-    comment.status = ModerationStatus.APPROVED if payload.action == ModerationAction.APPROVE else ModerationStatus.REJECTED
+    target_status = ModerationStatus.APPROVED if payload.action == ModerationAction.APPROVE else ModerationStatus.REJECTED
+    if comment.status != ModerationStatus.PENDING:
+        if comment.status != target_status:
+            raise HTTPException(409, "Решение по комментарию уже принято")
+        return {"comment": await comment_dto(session, comment), "pending_count": await pending_comments_count(session)}
+    comment.status = target_status
     if comment.status == ModerationStatus.APPROVED:
         session.add(Notification(user_id=comment.user_id, type="comment_approved", payload={"comment_id": comment.id}))
     await session.commit()

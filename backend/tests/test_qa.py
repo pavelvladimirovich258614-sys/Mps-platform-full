@@ -6,6 +6,10 @@ import time
 import httpx
 import pytest
 import respx
+from sqlalchemy import select
+
+from app.models.notification import Notification
+from app.models.question import Question
 
 
 def telegram_payload():
@@ -44,3 +48,28 @@ async def test_qa_relay_answer_and_notification(client):
 async def test_qa_rejects_invalid_target_and_secret(client):
     assert (await client.post("/api/v1/qa", headers=await headers(client), json={"target": "other", "body": "x"})).status_code == 422
     assert (await client.post("/api/v1/internal/qa-answer", json={"question_id": 1, "answer": "x", "answered_by_name": "x"})).status_code == 401
+
+
+@respx.mock
+async def test_qa_answer_is_idempotent_only_for_exactly_matching_payload(client, test_app):
+    respx.post("https://api.telegram.org/bottest-bot-token/sendMessage").mock(
+        return_value=httpx.Response(200, json={"ok": True, "result": {"message_id": 89}})
+    )
+    created = await client.post("/api/v1/qa", headers=await headers(client), json={"target": "manager", "body": "Нужна помощь"})
+    question_id = created.json()["id"]
+    payload = {"question_id": question_id, "answer": "Точный ответ", "answered_by_name": "Менеджер"}
+
+    assert (await client.post("/api/v1/internal/qa-answer", headers={"X-Bot-Bridge-Secret": "bridge-secret"}, json=payload)).status_code == 200
+    assert (await client.post("/api/v1/internal/qa-answer", headers={"X-Bot-Bridge-Secret": "bridge-secret"}, json=payload)).status_code == 200
+    conflicting = await client.post(
+        "/api/v1/internal/qa-answer",
+        headers={"X-Bot-Bridge-Secret": "bridge-secret"},
+        json={**payload, "answer": "Точный ответ "},
+    )
+    assert conflicting.status_code == 409
+    async with test_app.state.database.session_factory() as session:
+        notifications = (await session.scalars(select(Notification))).all()
+        assert len(notifications) == 1
+        question = await session.get(Question, question_id)
+        assert question.answer == "Точный ответ"
+        assert question.answered_by_name == "Менеджер"

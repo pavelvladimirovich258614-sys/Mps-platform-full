@@ -1,8 +1,8 @@
-# Session handoff — состояние после audit I-01 и I-15 перед deploy
+# Session handoff — состояние после audit I-01, I-15 и I-16 перед deploy
 
 ## Готовность проекта
 - Backend и frontend полностью готовы к развёртыванию: F01–F10, включая последовательные этапы F09a1/F09a2/F09b, имеют статус `passing`; записей `in_progress` нет.
-- Финальная локальная проверка 2026-08-20: полный backend pytest — 40 passed; `./init.sh` вне sandbox — `pip check` без конфликтов и 40 passed.
+- Финальная локальная проверка 2026-08-20: полный backend pytest — 43 passed; `./init.sh` вне sandbox — `pip check` без конфликтов и 43 passed.
 - Все согласованные launch blocker'ы устранены: реальная отправка email-кода через Unisender, официальный Telegram Login Widget, pathname/history routing, корректная subscribe confirm-ссылка и готовый к VPS-запуску PostgreSQL backup.
 - Access JWT во frontend хранится только в памяти; refresh использует httpOnly cookie. В storage остаются только тема и cookie consent.
 - Исходный Claude Design `frontend/mir-pod-solncem.dc.html` сохранён; production frontend собирается из `frontend/app`.
@@ -25,8 +25,9 @@
 - Неблокирующие замечания находятся в категориях «Важно» и «Желательно» `docs/AUDIT_REPORT.md`; они не препятствуют первому запуску.
 - I-01 закрыт: при отказе Unisender `/api/v1/subscribe` возвращает `502`, а неподтверждённые подписка и confirm-token сохраняются для повторной отправки.
 - I-15 закрыт: закрытая forum-тема отклоняет новые сообщения с `423`; notification открытой темы содержит фактический `message_id`.
+- I-16 закрыт: одинаковые retry moderation/QA не создают duplicate notifications; противоречащие final state/QA-payload получают `409`, а QA сравнивается только по точному тексту и автору.
 - C-05 исторически остаётся в разделе «Критично», но по явному решению Павла вынесен в отдельную security-задачу и не входил в последние launch-blocker фиксы.
-- Следующая выбранная маленькая доработка — I-16: идемпотентность повторной moderation/answer; deploy по `DEPLOY.md` по-прежнему можно начать вручную на VPS.
+- Deploy по `DEPLOY.md` по-прежнему можно начать вручную на VPS; следующую доработку из audit нужно отдельно оценить и подтвердить.
 
 ## Основные команды
 - Полная backend-проверка: `cd backend && python -m pytest`

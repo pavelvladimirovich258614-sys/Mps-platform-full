@@ -168,6 +168,8 @@
 
 ### I-16. Повторная moderation/answer создаёт повторные уведомления
 
+**Статус: закрыто 2026-08-20.** Повторное одинаковое решение moderation возвращает `200` без нового notification, а противоположное финальному решение получает `409`. Повторный QA-ответ возвращает `200` только при точном совпадении `answer` и `answered_by_name`; любое отличие возвращает `409`, не перезаписывая исходные ответ, автора и timestamp. Контракт покрыт negative/retry tests comments, reviews и QA.
+
 **Где:** `backend/app/api/comments.py:135-150`, `reviews.py:97-113`, `qa.py:19-29`.
 **Проблема:** повторный approve уже approved объекта снова добавляет notification; повторный internal answer также добавляет новую notification и перезаписывает ответ без проверки состояния.
 **Предлагаемый фикс:** идемпотентные transitions и uniqueness/idempotency key; negative tests повторного вызова.

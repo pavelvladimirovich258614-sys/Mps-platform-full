@@ -6,10 +6,19 @@
 - Standard verification path: `python -m pytest backend/tests -q`
 - Feature state: F01–F10 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; записей `in_progress` нет.
 - Deploy readiness: backend и frontend готовы к развёртыванию по `DEPLOY.md`; все согласованные launch blocker'ы C-01–C-04 и C-06 устранены.
-- Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01 и I-15 закрыты 2026-08-20, прочий неблокирующий технический долг находится в категориях «Важно»/«Желательно» `docs/AUDIT_REPORT.md`.
-- Next best action: deploy на VPS по `DEPLOY.md` либо I-16 как следующая маленькая backend-доработка idempotency.
+- Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-15 и I-16 закрыты 2026-08-20, прочий неблокирующий технический долг находится в категориях «Важно»/«Желательно» `docs/AUDIT_REPORT.md`.
+- Next best action: deploy на VPS по `DEPLOY.md` либо отдельная оценка следующего audit-пункта.
 
 ## Session Record
+
+### Session 19 — 2026-08-20 (Codex, audit I-16)
+- Goal: сделать повторную moderation и internal QA-answer идемпотентными до VPS deploy.
+- Completed: повторное одинаковое moderation решение возвращает `200` без нового notification; противоположное решение после final state возвращает `409`. QA retry возвращает `200` только при точном равенстве `answer` и `answered_by_name`; любой отличающийся payload возвращает `409` и сохраняет первый ответ/автора.
+- Verification run: RED `python -m pytest tests/test_comments.py tests/test_reviews.py tests/test_qa.py -q --basetemp .pytest-i16-red` — 3 failed: все conflicting retries возвращали `200`; targeted `python -m pytest tests/test_comments.py tests/test_reviews.py tests/test_qa.py -q --basetemp .pytest-i16-target-final` — 9 passed; full `python -m pytest tests -q --basetemp .pytest-i16-full` — 43 passed; `./init.sh` вне sandbox — `pip check` без конфликтов, 43 passed.
+- Evidence recorded: `docs/AUDIT_REPORT.md` I-16; tests фиксируют отсутствие duplicate notifications, `409` для противоречащей moderation/QA и строгое сравнение QA answer/author.
+- Commits: будет создан `fix: audit I-16 — идемпотентность moderation и qa-answer`.
+- Known risks: `409` — намеренное breaking change для клиентов, которые раньше перезаписывали уже принятые решения или ответы; приблизительное сравнение QA payload не применяется.
+- Next best action: VPS deploy по `DEPLOY.md` либо отдельная оценка следующего audit-пункта.
 
 ### Session 18 — 2026-08-20 (Codex, audit I-15)
 - Goal: применить forum lock и сохранять ID нового сообщения в notification.
