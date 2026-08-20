@@ -5,11 +5,20 @@
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
 - Feature state: F01–F10 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; записей `in_progress` нет.
-- Deploy readiness: backend и frontend готовы к развёртыванию по `DEPLOY.md`; все согласованные launch blocker'ы C-01–C-04 и C-06 устранены.
-- Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15, I-16, I-18 и I-20 закрыты 2026-08-20. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
-- Next best action: ручной VPS deploy по `DEPLOY.md` либо отдельное согласование I-19a (email validation) или I-06b.
+- Deploy state: платформа развёрнута и живая на `https://mir.pod-solncem.ru`. MPS использует отдельные PostgreSQL DB/role, Redis DB 2 и backend на `127.0.0.1:8001`; nginx, certbot, HSTS, systemd timers и PostgreSQL backup проверены на VPS.
+- Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15, I-16, I-18 и I-20 закрыты 2026-08-20. I-21 отложен до pre-launch юридической проверки. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
+- Next best action: заполнить оставшиеся production env-поля для Relay-бота и Unisender, затем вручную пройти сквозные критерии приёмки из `docs/TZ.md` §7, включая реальную проверку MiniMax.
 
 ## Session Record
+
+### Session 25 — 2026-08-20 (Codex, финальная production control point)
+- Goal: зафиксировать завершённые audit-доработки, legal-тексты и реальный первый VPS deploy без раскрытия production secrets.
+- Completed: I-18, I-20 закрыты; I-21 явно отложен до pre-launch юридической проверки. В Legal опубликованы тексты Политики обработки персональных данных и Пользовательского соглашения (152-ФЗ); реквизиты оператора остаются динамическими public settings. На VPS `https://mir.pod-solncem.ru` развёрнут MPS: изолированные PostgreSQL DB/role и Redis DB 2, backend на `127.0.0.1:8001`, production nginx, certbot, HSTS, systemd backend/digest/backup units, PostgreSQL/Redis автозапуск, ежедневный backup и первый Telegram admin.
+- Verification run: frontend tests — 24 passed; frontend build успешен; backend pytest — 47 passed; `./init.sh` — 47 passed. VPS: Alembic до `20260820_0008`; nginx config test успешен; TLS certificate выпущен; `certbot.timer` enabled/active и адресный `certbot renew --dry-run --cert-name mir.pod-solncem.ru` successful; backend active на 8001; первый `mps-backup.service` — `Result=success`, непустой читаемый dump; `deploy/smoke.sh` — `[OK] smoke passed: https://mir.pod-solncem.ru`.
+- Evidence recorded: systemd `mps-backend.service`, `mps-digest.timer`, `mps-backup.timer`, `postgresql`, `redis-server` и `certbot.timer` enabled/active; HSTS header получен; один admin создан по server-side `ADMIN_TG_ID` без вывода ID.
+- Commits: `3a723c2 fix: deploy MPS backend on port 8001`; `594652d fix: enable HSTS after MPS TLS verification`; `4a1d7aa fix: proxy MPS sitemap and robots`; `786aefb docs: тексты политики персональных данных и пользовательского соглашения (152-ФЗ)`.
+- Known risks: на VPS используется уже установленный Python `3.11.0rc1`; это технический долг до планового перехода на поддерживаемый stable Python 3.11+. Relay/Unisender поля остаются незаполненными; I-06b, I-19a/I-19b и C-05 не закрывались этой сессией.
+- Next best action: Павел заполняет незаполненные поля напрямую в `/etc/mps-platform/backend.env`, затем выполняет ручную сквозную проверку `docs/TZ.md` §7; не передавать секреты в чат.
 
 ### Session 24 — 2026-08-20 (Codex, I-20 legal-compliance)
 - Goal: дополнить публичные реквизиты ОГРН, воспроизводимо заполнить чистую БД и проверить ограниченную UI-часть 152-ФЗ.

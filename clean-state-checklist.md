@@ -1,15 +1,14 @@
-# clean-state-checklist.md — контрольная точка audit I-20 legal-compliance 2026-08-20
+# clean-state-checklist.md — финальная production control point 2026-08-20
 
-- [x] RED backend `python -m pytest tests/test_admin.py -q --basetemp .pytest-i20-red` — 1 failed: public settings endpoint отсутствовал (404)
-- [x] RED frontend `npm run test:quiet -- src/components/PublicContacts.test.tsx` — фиктивный `ИП Иванова И.И.` присутствовал в DOM
-- [x] Targeted backend — 3 passed; targeted frontend — 2 passed
-- [x] Frontend `npm run test:quiet` — 6 files, 23 passed; `npm run build` — 48 modules, успешно
-- [x] Полный `python -m pytest tests -q --basetemp .pytest-i20-full` вне sandbox — 47 passed
-- [x] Финальный `./init.sh` через Git Bash вне sandbox — `No broken requirements found`, 47 passed, `[OK] Верификация прошла`
-- [x] Public API выдаёт только legal/contact whitelist и не раскрывает `cta_bot_url`; пустая конфигурация скрывает реквизиты в Footer/About
-- [x] Реальные реквизиты и секреты не добавлены в исходники, тесты или документацию
-- [x] Миграция `20260820_0008` воспроизводимо заполняет публичные реквизиты на чистой БД; I-21 фиксирует незакрытые consent/cookie риски
-- [x] Дополнительные проверки I-20: frontend — 23 passed, build успешен; backend — 47 passed; `./init.sh` — 47 passed
-- [x] `docs/AUDIT_REPORT.md`, `DEPLOY.md`, `claude-progress.md` и `session-handoff.md` обновлены для I-20
-- [x] Временные pytest-каталоги удалены перед коммитом
-- [ ] Финальная Git-проверка: local `main` совпадает с `origin/main`, рабочее дерево чисто после push
+- [x] Audit I-18 и I-20 закрыты; I-21 документирован как отложенный до pre-launch юридической проверки.
+- [x] Legal page содержит утверждённые тексты Политики обработки персональных данных и Пользовательского соглашения; реквизиты остаются public settings, без статических секретов.
+- [x] Frontend tests — 24 passed; production build успешен.
+- [x] Full backend pytest — 47 passed; `./init.sh` — `No broken requirements found`, 47 passed.
+- [x] VPS: Alembic применён до `20260820_0008`; backend active на `127.0.0.1:8001`; nginx config test и live HTTPS успешны.
+- [x] VPS: `mps-backend.service`, `mps-digest.timer`, `mps-backup.timer`, `postgresql`, `redis-server`, `certbot.timer` — enabled и active.
+- [x] VPS: HSTS включён после успешного certbot; адресный `certbot renew --dry-run --cert-name mir.pod-solncem.ru` успешен.
+- [x] VPS: первый `mps-backup.service` завершился `Result=success`; создан непустой читаемый dump новой MPS БД.
+- [x] VPS: создан первый admin по server-side `ADMIN_TG_ID`; ID не записан в tracker.
+- [x] VPS: `/usr/bin/bash deploy/smoke.sh` — `[OK] smoke passed: https://mir.pod-solncem.ru`.
+- [x] Незаполненные production env-поля зафиксированы в `session-handoff.md` только именами, без значений.
+- [ ] Финальная Git-проверка: выполнится после commit/push этого documentation checkpoint.
