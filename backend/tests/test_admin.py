@@ -95,3 +95,41 @@ async def test_admin_moderation_users_ban_and_settings(client, test_app):
     assert settings.json() == {"cta_bot_url": "https://t.me/bot?start=platform", "cta_manager_url": "https://t.me/manager", "irishka_enabled": "false", "irishka_delay_min": "45"}
     async with test_app.state.database.session_factory() as session:
         assert (await session.scalar(select(User.is_banned).where(User.id == author.id))) is True
+
+
+async def test_public_settings_expose_only_configured_legal_contact_values(client, test_app):
+    empty = await client.get("/api/v1/settings/public")
+    assert empty.status_code == 200
+    assert empty.json() == {
+        "legal_name": None,
+        "legal_inn": None,
+        "contact_email": None,
+        "contact_phone": None,
+        "contact_address": None,
+    }
+
+    admin = await make_user(test_app, "admin-settings@example.test", role=Role.ADMIN)
+    saved = await client.patch(
+        "/api/v1/admin/settings",
+        headers=headers(test_app, admin),
+        json={
+            "legal_name": "Тестовое агентство",
+            "legal_inn": "123456789012",
+            "contact_email": "contact@example.test",
+            "contact_phone": "+7 000 000-00-00",
+            "contact_address": "Тестовый адрес, 1",
+            "cta_bot_url": "https://t.me/private_bot",
+        },
+    )
+    assert saved.status_code == 200
+
+    public = await client.get("/api/v1/settings/public")
+    assert public.status_code == 200
+    assert public.json() == {
+        "legal_name": "Тестовое агентство",
+        "legal_inn": "123456789012",
+        "contact_email": "contact@example.test",
+        "contact_phone": "+7 000 000-00-00",
+        "contact_address": "Тестовый адрес, 1",
+    }
+    assert "cta_bot_url" not in public.json()

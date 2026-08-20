@@ -1,12 +1,13 @@
-# clean-state-checklist.md — контрольная точка audit I-18 2026-08-20
+# clean-state-checklist.md — контрольная точка audit I-20 2026-08-20
 
-- [x] RED `python -m pytest tests/test_deploy_bootstrap.py -q --basetemp .pytest-i18-red` — 2 failed: отсутствовал pre-cert template; digest не содержал User/Group/EnvironmentFile
-- [x] Targeted `python -m pytest tests/test_deploy_bootstrap.py -q --basetemp .pytest-i18-target-final` — 2 passed
-- [x] Полный `python -m pytest tests -q --basetemp .pytest-i18-full-final` вне sandbox — 46 passed
-- [x] Финальный `./init.sh` через Git Bash вне sandbox — `No broken requirements found`, 46 passed, `[OK] Верификация прошла`
-- [x] `deploy/nginx.pre-cert.conf` содержит только HTTP/ACME; production `nginx.conf` и DEPLOY.md используют `YOUR_DOMAIN`, без `mir.pod-solncem.ru`
-- [x] `mps-digest.service` запускается как `mps:mps` и читает `/etc/mps-platform/backend.env`
-- [x] `docs/AUDIT_REPORT.md`, `claude-progress.md` и `session-handoff.md` фиксируют I-18; ручные VPS проверки явно отделены
-- [x] В staging добавляются только файлы I-18 и относящиеся документы
+- [x] RED backend `python -m pytest tests/test_admin.py -q --basetemp .pytest-i20-red` — 1 failed: public settings endpoint отсутствовал (404)
+- [x] RED frontend `npm run test:quiet -- src/components/PublicContacts.test.tsx` — фиктивный `ИП Иванова И.И.` присутствовал в DOM
+- [x] Targeted backend — 3 passed; targeted frontend — 2 passed
+- [x] Frontend `npm run test:quiet` — 6 files, 23 passed; `npm run build` — 48 modules, успешно
+- [x] Полный `python -m pytest tests -q --basetemp .pytest-i20-full` вне sandbox — 47 passed
+- [x] Финальный `./init.sh` через Git Bash вне sandbox — `No broken requirements found`, 47 passed, `[OK] Верификация прошла`
+- [x] Public API выдаёт только legal/contact whitelist и не раскрывает `cta_bot_url`; пустая конфигурация скрывает реквизиты в Footer/About
+- [x] Реальные реквизиты и секреты не добавлены в исходники, тесты или документацию
+- [x] `docs/AUDIT_REPORT.md`, `DEPLOY.md`, `claude-progress.md` и `session-handoff.md` обновлены для I-20
 - [x] Временные pytest-каталоги удалены перед коммитом
 - [ ] Финальная Git-проверка: local `main` совпадает с `origin/main`, рабочее дерево чисто после push

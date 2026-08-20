@@ -1,8 +1,8 @@
-# Session handoff — состояние после audit I-01, I-06a, I-13, I-15, I-16 и I-18 перед deploy
+# Session handoff — состояние после audit I-01, I-06a, I-13, I-15, I-16, I-18 и I-20 перед deploy
 
 ## Готовность проекта
 - Backend и frontend полностью готовы к развёртыванию: F01–F10, включая последовательные этапы F09a1/F09a2/F09b, имеют статус `passing`; записей `in_progress` нет.
-- Финальная локальная проверка I-18 2026-08-20: targeted deploy-contract test — 2 passed; полный backend pytest — 46 passed; `./init.sh` вне sandbox — `pip check` без конфликтов и 46 passed.
+- Финальная локальная проверка I-20 2026-08-20: frontend tests — 6 files, 23 passed; production build успешен; полный backend pytest — 47 passed; `./init.sh` вне sandbox — `pip check` без конфликтов и 47 passed.
 - Все согласованные launch blocker'ы устранены: реальная отправка email-кода через Unisender, официальный Telegram Login Widget, pathname/history routing, корректная subscribe confirm-ссылка и готовый к VPS-запуску PostgreSQL backup.
 - Access JWT во frontend хранится только в памяти; refresh использует httpOnly cookie. В storage остаются только тема и cookie consent.
 - Исходный Claude Design `frontend/mir-pod-solncem.dc.html` сохранён; production frontend собирается из `frontend/app`.
@@ -30,8 +30,9 @@
 - I-15 закрыт: закрытая forum-тема отклоняет новые сообщения с `423`; notification открытой темы содержит фактический `message_id`.
 - I-16 закрыт: одинаковые retry moderation/QA не создают duplicate notifications; противоречащие final state/QA-payload получают `409`, а QA сравнивается только по точному тексту и автору.
 - I-18 закрыт в репозитории: pre-cert nginx template не требует certificate files, а digest запускается от `mps:mps` с `/etc/mps-platform/backend.env`. Реальные `nginx`, certbot и systemd остаются ручной VPS-проверкой.
+- I-20 закрыт: публичные реквизиты задаются через защищённый `PATCH /api/v1/admin/settings` и выдаются через отдельный whitelist `GET /api/v1/settings/public`. При пустых значениях Footer/About скрывают реквизиты; в исходниках нет фиктивных production fallback.
 - C-05 исторически остаётся в разделе «Критично», но по явному решению Павла вынесен в отдельную security-задачу и не входил в последние launch-blocker фиксы.
-- Deploy по `DEPLOY.md` по-прежнему можно начать вручную на VPS. Следующая согласованная audit-задача — отдельный план I-20: публичные настраиваемые реквизиты без фиктивных значений; не начинать без нового подтверждения. I-06b также требует отдельного продуктового согласования перед кодом.
+- Deploy по `DEPLOY.md` по-прежнему можно начать вручную на VPS. После создания администратора задать публичные реквизиты через защищённый admin API; не передавать их через Codex. Следующая согласованная audit-задача — I-19a (email validation); I-19b и I-06b требуют отдельных продуктовых решений перед кодом.
 
 ## Основные команды
 - Полная backend-проверка: `cd backend && python -m pytest`

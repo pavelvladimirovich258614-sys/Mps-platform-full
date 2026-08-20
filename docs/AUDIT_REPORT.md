@@ -206,6 +206,8 @@
 
 ### I-20. В production UI остаются фиктивные юридические и контактные данные
 
+**Статус: закрыто 2026-08-20.** Пять публичных реквизитов (`legal_name`, `legal_inn`, `contact_email`, `contact_phone`, `contact_address`) хранятся в существующей key-value таблице settings и записываются только защищённым admin endpoint. `GET /api/v1/settings/public` возвращает только этот whitelist, без CTA/Irishka или иных settings. Footer и About показывают только заданные значения; при пустой конфигурации блок с реквизитами скрыт, фиктивных fallback нет.
+
 **Где:** `frontend/app/src/components/Layout.tsx:18`, `frontend/app/src/components/About.tsx:6`.
 **Проблема:** футер показывает `ИП Иванова И.И.`, нулевой ИНН, example phone/address. Значения не берутся из env/settings. Для публичного запуска это юридически и репутационно неприемлемо.
 **Предлагаемый фикс:** обязательная deploy-конфигурация/контент с реальными реквизитами и smoke, запрещающий placeholders.

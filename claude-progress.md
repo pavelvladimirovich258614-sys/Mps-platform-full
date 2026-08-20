@@ -6,10 +6,19 @@
 - Standard verification path: `python -m pytest backend/tests -q`
 - Feature state: F01–F10 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; записей `in_progress` нет.
 - Deploy readiness: backend и frontend готовы к развёртыванию по `DEPLOY.md`; все согласованные launch blocker'ы C-01–C-04 и C-06 устранены.
-- Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15, I-16 и I-18 закрыты 2026-08-20. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
-- Next best action: отдельный план I-20 (публичные настраиваемые реквизиты) либо ручной VPS deploy по `DEPLOY.md`.
+- Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15, I-16, I-18 и I-20 закрыты 2026-08-20. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
+- Next best action: ручной VPS deploy по `DEPLOY.md` либо отдельное согласование I-19a (email validation) или I-06b.
 
 ## Session Record
+
+### Session 23 — 2026-08-20 (Codex, audit I-20)
+- Goal: убрать фиктивные юридические и контактные данные из production UI без внесения реальных данных в репозиторий.
+- Completed: `legal_name`, `legal_inn`, `contact_email`, `contact_phone`, `contact_address` записываются через существующий защищённый `PATCH /admin/settings`. Публичный `GET /settings/public` выдаёт только эти пять ключей. Footer и About получают settings по API, показывают настроенные значения и скрывают блоки при пустой конфигурации.
+- Verification run: baseline `./init.sh` — 46 passed; RED backend `python -m pytest tests/test_admin.py -q --basetemp .pytest-i20-red` — 1 failed: `GET /settings/public` вернул 404; RED frontend — фиктивный `ИП Иванова И.И.` присутствовал в DOM; targeted backend — 3 passed; targeted frontend — 2 passed; full frontend — 6 files, 23 passed, build successful; full backend — 47 passed; final `./init.sh` — `pip check` без конфликтов, 47 passed.
+- Evidence recorded: `docs/AUDIT_REPORT.md` I-20; backend test доказывает whitelist без `cta_bot_url`, frontend test — отсутствие placeholders и отображение настроенных значений.
+- Commits: будет создан `fix: audit I-20 — публичные настраиваемые реквизиты`.
+- Known risks: полноценного admin UI пока нет; до его реализации реквизиты задаются защищённым backend admin API. Валидация формата email/URL относится к согласованной следующей подзадаче I-19a/I-19b.
+- Next best action: ручной VPS deploy либо отдельный план I-19a; не подставлять реальные данные в исходники.
 
 ### Session 22 — 2026-08-20 (Codex, audit I-18)
 - Goal: сделать первый nginx/certbot bootstrap воспроизводимым и дать digest service production environment до VPS deploy.

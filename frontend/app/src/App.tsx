@@ -12,7 +12,7 @@ import { Profile } from "./components/Profile";
 import { QA } from "./components/QA";
 import { Reviews } from "./components/Reviews";
 import { Subscribe } from "./components/Subscribe";
-import { type ApiPost, useAuth, useNotifications, useOnline, usePost, usePosts } from "./hooks";
+import { type ApiPost, useAuth, useNotifications, useOnline, usePost, usePosts, usePublicSettings } from "./hooks";
 import { pathForRoute, type PathRoute, routeFromPath } from "./router";
 
 function routeForPage(page: Page): PathRoute {
@@ -41,6 +41,7 @@ export function App() {
   const posts = usePosts();
   const notifications = useNotifications();
   const online = useOnline();
+  const publicSettings = usePublicSettings();
   const article = usePost(route.page === "article" ? route.slug : undefined);
 
   useEffect(() => {
@@ -136,7 +137,7 @@ export function App() {
   }
   if (page === "reviews") content = <Reviews onError={showError} />;
   if (page === "subscribe") content = <Subscribe onError={showError} />;
-  if (page === "about") content = <About />;
+  if (page === "about") content = <About publicSettings={publicSettings.value} />;
   if (page === "privacy" || page === "terms") {
     content = <Legal kind={page as LegalKind} onBack={() => navigate({ page: "feed" })} />;
   }
@@ -150,6 +151,7 @@ export function App() {
         unreadCount={notifications.items.filter((item) => !item.is_read).length}
         userName={auth.user ? `${auth.user.name || "Читатель"} · ${role}` : "Войти"}
         online={online.value ?? []}
+        publicSettings={publicSettings.value}
         onNavigate={openPage}
         onThemeToggle={() => setTheme(theme === "dark" ? "light" : "dark")}
         onOpenQA={() => setOverlay("qa")}

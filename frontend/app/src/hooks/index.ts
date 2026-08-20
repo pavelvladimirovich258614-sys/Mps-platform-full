@@ -14,6 +14,7 @@ export type Topic = { id: number; title: string; messages_count: number };
 export type ForumMessage = { id: number; body: string; author: { id: number; name: string; avatar_url: string | null }; is_ai: boolean };
 export type Notification = { id: number; type: string; payload: Record<string, unknown>; is_read: boolean; created_at: string };
 export type OnlineUser = { id: number; name: string; avatar_url: string | null };
+export type PublicSettings = { legal_name: string | null; legal_inn: string | null; contact_email: string | null; contact_phone: string | null; contact_address: string | null };
 export type TelegramLoginPayload = { id: number; first_name: string; last_name?: string; username?: string; photo_url?: string; auth_date: number; hash: string };
 
 function useResource<T>(load: () => Promise<T>, deps: unknown[] = []) {
@@ -82,4 +83,5 @@ export const useQA = () => { const resource = useResource(() => api<Question[]>(
 export const useForum = (countryId?: number, topicId?: number) => ({ countries: useResource(() => api<Country[]>("/countries"), []), topics: useResource(() => countryId ? api<Topic[]>(`/countries/${countryId}/topics`) : Promise.resolve([]), [countryId]), messages: useResource(() => topicId ? api<ForumMessage[]>(`/topics/${topicId}/messages`) : Promise.resolve([]), [topicId]), createTopic: (title: string) => apiJson<Topic>(`/countries/${countryId}/topics`, "POST", { title }), createMessage: (body: string) => apiJson<ForumMessage>(`/topics/${topicId}/messages`, "POST", { body }) });
 export const useNotifications = () => { const resource = useResource(() => api<{ items: Notification[] }>("/notifications"), []); const read = async (ids?: number[]) => { await apiJson<{ updated: number }>("/notifications/read", "PATCH", ids ? { ids } : {}); await resource.reload(); }; return { ...resource, items: resource.value?.items ?? [], read }; };
 export const useOnline = () => useResource(() => api<OnlineUser[]>("/online"), []);
+export const usePublicSettings = () => useResource(() => api<PublicSettings>("/settings/public"), []);
 export const useComments = (postId: number) => { const resource = useResource(() => api<Comment[]>(`/posts/${postId}/comments`), [postId]); const react = async (commentId: number, emoji: string) => { const result = await apiJson<ReactionResult>(`/comments/${commentId}/react`, "POST", { emoji }); resource.setValue((items) => (items ?? []).map((item) => item.id === commentId ? { ...item, ...result } : item)); }; const create = async (body: string) => { await apiJson(`/posts/${postId}/comments`, "POST", { body }); await resource.reload(); }; return { ...resource, comments: resource.value ?? [], react, create }; };
