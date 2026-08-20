@@ -149,6 +149,8 @@
 
 ### I-13. Profile state не синхронизируется с пользователем после login
 
+**Статус: закрыто 2026-08-20.** `Profile` синхронизирует name, bio и anonymous при изменении `user.id` (включая anonymous → существующий пользователь после email или Telegram login), не сбрасывая draft при обновлении того же пользователя. `Profile.test.tsx` фиксирует rerender без unmount и сохранение полей существующего профиля.
+
 **Где:** `frontend/app/src/components/Profile.tsx:4`.
 **Проблема:** `name`, `bio`, `anonymous` инициализируются один раз из nullable user. После email verify тот же mounted component переключается на authenticated form со старыми локальными значениями; существующий профиль может быть затёрт пустыми данными при сохранении.
 **Предлагаемый фикс:** effect/reset по `user.id` либо remount с key; тест login существующего пользователя → поля сохранены.

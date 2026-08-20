@@ -6,10 +6,19 @@
 - Standard verification path: `python -m pytest backend/tests -q`
 - Feature state: F01–F10 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; записей `in_progress` нет.
 - Deploy readiness: backend и frontend готовы к развёртыванию по `DEPLOY.md`; все согласованные launch blocker'ы C-01–C-04 и C-06 устранены.
-- Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-15 и I-16 закрыты 2026-08-20. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
+- Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15 и I-16 закрыты 2026-08-20. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
 - Next best action: deploy на VPS по `DEPLOY.md` либо отдельное согласование I-06b.
 
 ## Session Record
+
+### Session 21 — 2026-08-20 (Codex, audit I-13)
+- Goal: синхронизировать локальный state Profile с существующим пользователем после login без перезаписи draft на том же user ID.
+- Completed: `Profile` сбрасывает name, bio и anonymous только при изменении `user.id`. Email и Telegram login уже reload `/me`; после перехода anonymous → user форма сразу показывает сохранённые поля и больше не может отправить пустые defaults.
+- Verification run: RED `npm run test:quiet -- src/components/Profile.test.tsx` — 1 failed: после rerender name остался пустым вместо «Павел»; frontend `npm run test:quiet` — 5 files, 21 passed; `npm run build` — 48 modules, успешно; full `python -m pytest tests -q --basetemp .pytest-i13-full` — 44 passed; `./init.sh` вне sandbox — `pip check` без конфликтов, 44 passed.
+- Evidence recorded: `docs/AUDIT_REPORT.md` I-13; `Profile.test.tsx` проверяет rerender без unmount и существующие name/bio/anonymous.
+- Commits: будет создан `fix: audit I-13 — синхронизация Profile state после login`.
+- Known risks: state намеренно синхронизируется по ID, не по каждому обновлению user object; это сохраняет незавершённый draft пользователя.
+- Next best action: VPS deploy по `DEPLOY.md` либо отдельная оценка следующего audit-пункта.
 
 ### Session 20 — 2026-08-20 (Codex, audit I-06a)
 - Goal: устранить возможность закрыть JSON-LD script через данные Article, не расширяя scope до общей sanitization policy.
