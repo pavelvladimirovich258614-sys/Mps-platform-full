@@ -6,10 +6,19 @@
 - Standard verification path: `python -m pytest backend/tests -q`
 - Feature state: F01–F10 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; записей `in_progress` нет.
 - Deploy readiness: backend и frontend готовы к развёртыванию по `DEPLOY.md`; все согласованные launch blocker'ы C-01–C-04 и C-06 устранены.
-- Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; прочий неблокирующий технический долг находится в категориях «Важно»/«Желательно» `docs/AUDIT_REPORT.md`.
-- Next best action: deploy на VPS по `DEPLOY.md` либо выбранная Павлом доработка пунктов аудита.
+- Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01 закрыт 2026-08-20, прочий неблокирующий технический долг находится в категориях «Важно»/«Желательно» `docs/AUDIT_REPORT.md`.
+- Next best action: deploy на VPS по `DEPLOY.md` либо I-15 как следующая маленькая backend-доработка reliability.
 
 ## Session Record
+
+### Session 17 — 2026-08-20 (Codex, audit I-01)
+- Goal: устранить ложный success подписки при отказе Unisender до VPS deploy.
+- Completed: `POST /api/v1/subscribe` возвращает контролируемый `502` с русским сообщением, если `send_confirm()` не принял письмо. Неподтверждённая подписка и её confirm-token сохраняются; повторный запрос использует тот же токен.
+- Verification run: RED `python -m pytest tests/test_subscribe.py -q --basetemp .pytest-i01-red` — 1 failed, endpoint вернул ложный `201` при Unisender `503`; targeted `python -m pytest tests/test_subscribe.py -q --basetemp .pytest-i01-target` — 3 passed; full `python -m pytest tests -q --basetemp .pytest-i01-full` — 39 passed; `./init.sh` вне sandbox — `pip check` без конфликтов, pytest exit 0.
+- Evidence recorded: `docs/AUDIT_REPORT.md` I-01; `test_subscription_reports_unisender_delivery_failure_without_losing_token` фиксирует Unisender `503` → API `502`, persisted unconfirmed subscription и неизменный token при retry.
+- Commits: будет создан `fix: audit I-01 — честный отказ подписки`.
+- Known risks: delivery state/outbox и отложенный retry не добавлялись; пользователь выполняет retry вручную, а существующая запись остаётся unconfirmed.
+- Next best action: I-15 — применить forum lock и записывать ID сообщения в notification.
 
 ### Session 0 — 2026-08-18 (Claude, подготовка)
 - Goal: собрать обвязку проекта по методике Harness Engineering.

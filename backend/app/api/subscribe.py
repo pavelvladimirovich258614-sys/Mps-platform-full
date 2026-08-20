@@ -11,7 +11,8 @@ router=APIRouter(prefix="/subscribe",tags=["subscribe"])
 async def subscribe(payload:SubscribeIn,request:Request,session:AsyncSession=Depends(get_db)):
  email=payload.email.lower(); sub=await session.scalar(select(Subscription).where(Subscription.email==email))
  if sub is None: sub=Subscription(email=email,confirm_token=secrets.token_urlsafe(24),unsub_token=secrets.token_urlsafe(24));session.add(sub);await session.commit();await session.refresh(sub)
- await send_confirm(request.app.state.settings,email,sub.confirm_token);return {"email":email,"confirmed":sub.confirmed}
+ if not await send_confirm(request.app.state.settings,email,sub.confirm_token): raise HTTPException(502,"Не удалось отправить письмо с подтверждением. Повторите попытку позже.")
+ return {"email":email,"confirmed":sub.confirmed}
 @router.get("/confirm/{token}")
 async def confirm(token:str,session:AsyncSession=Depends(get_db)):
  sub=await session.scalar(select(Subscription).where(Subscription.confirm_token==token))

@@ -43,6 +43,32 @@ async def test_double_opt_in_and_unsubscribe(client, test_app):
         assert await session.scalar(select(Subscription).where(Subscription.email == "tourist@example.com")) is None
 
 
+@respx.mock
+async def test_subscription_reports_unisender_delivery_failure_without_losing_token(client, test_app):
+    respx.post("https://go1.unisender.ru/ru/transactional/api/v1/email/send.json").mock(
+        return_value=httpx.Response(503, json={"error": "temporary unavailable"})
+    )
+
+    response = await client.post("/api/v1/subscribe", json={"email": "retry@example.com"})
+
+    assert response.status_code == 502
+    assert "Не удалось отправить" in response.json()["detail"]
+    async with test_app.state.database.session_factory() as session:
+        subscription = await session.scalar(select(Subscription).where(Subscription.email == "retry@example.com"))
+        assert subscription is not None
+        assert subscription.confirmed is False
+        assert subscription.confirm_token
+        confirm_token = subscription.confirm_token
+
+    retry = await client.post("/api/v1/subscribe", json={"email": "retry@example.com"})
+
+    assert retry.status_code == 502
+    async with test_app.state.database.session_factory() as session:
+        subscription = await session.scalar(select(Subscription).where(Subscription.email == "retry@example.com"))
+        assert subscription is not None
+        assert subscription.confirm_token == confirm_token
+
+
 async def test_digest_uses_only_recent_published_posts(test_app):
     async with test_app.state.database.session_factory() as session:
         user = User(email="editor@example.com", name="Editor")

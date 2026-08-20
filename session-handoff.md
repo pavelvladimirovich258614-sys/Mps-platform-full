@@ -1,8 +1,8 @@
-# Session handoff — финальное состояние перед deploy
+# Session handoff — состояние после audit I-01 перед deploy
 
 ## Готовность проекта
 - Backend и frontend полностью готовы к развёртыванию: F01–F10, включая последовательные этапы F09a1/F09a2/F09b, имеют статус `passing`; записей `in_progress` нет.
-- Финальная локальная проверка 2026-08-18: полный backend pytest — 38 passed; `./init.sh` вне sandbox — `pip check` без конфликтов и 38 passed.
+- Финальная локальная проверка 2026-08-20: полный backend pytest — 39 passed; `./init.sh` вне sandbox — `pip check` без конфликтов, pytest завершился успешно.
 - Все согласованные launch blocker'ы устранены: реальная отправка email-кода через Unisender, официальный Telegram Login Widget, pathname/history routing, корректная subscribe confirm-ссылка и готовый к VPS-запуску PostgreSQL backup.
 - Access JWT во frontend хранится только в памяти; refresh использует httpOnly cookie. В storage остаются только тема и cookie consent.
 - Исходный Claude Design `frontend/mir-pod-solncem.dc.html` сохранён; production frontend собирается из `frontend/app`.
@@ -23,8 +23,9 @@
 
 ## Оставшийся технический долг
 - Неблокирующие замечания находятся в категориях «Важно» и «Желательно» `docs/AUDIT_REPORT.md`; они не препятствуют первому запуску.
+- I-01 закрыт: при отказе Unisender `/api/v1/subscribe` возвращает `502`, а неподтверждённые подписка и confirm-token сохраняются для повторной отправки.
 - C-05 исторически остаётся в разделе «Критично», но по явному решению Павла вынесен в отдельную security-задачу и не входил в последние launch-blocker фиксы.
-- Дальнейшая работа начинается только по выбранному Павлом пункту аудита либо с deploy по `DEPLOY.md`.
+- Следующая выбранная маленькая доработка — I-15: forum lock и корректный `message_id` в notification; deploy по `DEPLOY.md` по-прежнему можно начать вручную на VPS.
 
 ## Основные команды
 - Полная backend-проверка: `cd backend && python -m pytest`
