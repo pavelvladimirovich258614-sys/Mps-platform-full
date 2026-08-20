@@ -6,10 +6,19 @@
 - Standard verification path: `python -m pytest backend/tests -q`
 - Feature state: F01–F10 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; записей `in_progress` нет.
 - Deploy readiness: backend и frontend готовы к развёртыванию по `DEPLOY.md`; все согласованные launch blocker'ы C-01–C-04 и C-06 устранены.
-- Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01 закрыт 2026-08-20, прочий неблокирующий технический долг находится в категориях «Важно»/«Желательно» `docs/AUDIT_REPORT.md`.
-- Next best action: deploy на VPS по `DEPLOY.md` либо I-15 как следующая маленькая backend-доработка reliability.
+- Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01 и I-15 закрыты 2026-08-20, прочий неблокирующий технический долг находится в категориях «Важно»/«Желательно» `docs/AUDIT_REPORT.md`.
+- Next best action: deploy на VPS по `DEPLOY.md` либо I-16 как следующая маленькая backend-доработка idempotency.
 
 ## Session Record
+
+### Session 18 — 2026-08-20 (Codex, audit I-15)
+- Goal: применить forum lock и сохранять ID нового сообщения в notification.
+- Completed: закрытая тема отклоняет `POST /topics/{id}/messages` с `423` до записи; открытая тема делает `flush()` и сохраняет фактический ID forum message в notification payload.
+- Verification run: RED `python -m pytest tests/test_forum.py -q --basetemp .pytest-i15-red` — 2 failed: locked topic вернул `201`, notification содержал `message_id: null`; targeted `python -m pytest tests/test_forum.py -q --basetemp .pytest-i15-target` — 3 passed; full `python -m pytest tests -q --basetemp .pytest-i15-full` — 40 passed; `./init.sh` вне sandbox — `pip check` без конфликтов, 40 passed.
+- Evidence recorded: `docs/AUDIT_REPORT.md` I-15; `test_forum_rejects_messages_in_locked_topic` проверяет `423` и отсутствие записи/notification, success-path проверяет payload с фактическим message ID.
+- Commits: будет создан `fix: audit I-15 — forum lock и message id`.
+- Known risks: `423` намеренно меняет прежнее неявное разрешение на точный API-отказ для закрытых тем; миграция не нужна.
+- Next best action: I-16 — идемпотентность повторной moderation/answer.
 
 ### Session 17 — 2026-08-20 (Codex, audit I-01)
 - Goal: устранить ложный success подписки при отказе Unisender до VPS deploy.

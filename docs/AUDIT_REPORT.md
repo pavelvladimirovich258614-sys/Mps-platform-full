@@ -159,6 +159,8 @@
 
 ### I-15. Forum lock не применяется, notification содержит `message_id: null`
 
+**Статус: закрыто 2026-08-20.** `POST /topics/{id}/messages` возвращает `423` для закрытой темы до создания сообщения. Для открытой темы route выполняет `flush()` до создания notification, поэтому payload содержит фактический ID сообщения. Контракты закреплены в `test_forum_rejects_messages_in_locked_topic` и расширенном forum success-path.
+
 **Где:** `backend/app/models/forum.py:7`, `backend/app/api/forum.py:113-136`.
 **Проблема:** `is_locked` хранится, но POST message его игнорирует. Notification создаётся до refresh/получения ID и записывает `message_id: None`, затрудняя точный переход к ответу.
 **Предлагаемый фикс:** 423/403 для locked topic, flush перед notification, тест обоих контрактов.

@@ -121,8 +121,11 @@ async def message(
     topic = await session.get(ForumTopic, topic_id)
     if topic is None:
         raise HTTPException(404, "Тема не найдена")
+    if topic.is_locked:
+        raise HTTPException(423, "Тема закрыта")
     forum_message = ForumMessage(topic_id=topic_id, author_id=user.id, body=payload.body)
     session.add(forum_message)
+    await session.flush()
     topic.messages_count += 1
     topic.last_message_at = datetime.now(UTC)
     if topic.author_id != user.id:
@@ -130,7 +133,7 @@ async def message(
             Notification(
                 user_id=topic.author_id,
                 type="forum_message",
-                payload={"topic_id": topic.id, "message_id": None},
+                payload={"topic_id": topic.id, "message_id": forum_message.id},
             )
         )
     await session.commit()

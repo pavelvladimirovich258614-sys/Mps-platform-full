@@ -28,9 +28,27 @@ async def test_forum_limit_search_messages_and_notifications(client,test_app):
  assert (await client.get(f"/api/v1/countries/{c.id}/topics",params={"search":"симка"})).json()[0]["id"]==ids[0]
  m=await client.post(f"/api/v1/topics/{ids[0]}/messages",headers=oh,json={"body":"Ответ"});assert m.status_code==201
  async with test_app.state.database.session_factory() as s:
-  t=await s.get(ForumTopic,ids[0]);assert t.messages_count==1 and t.last_message_at is not None;assert len((await s.scalars(select(Notification))).all())==1
+  t=await s.get(ForumTopic,ids[0]);assert t.messages_count==1 and t.last_message_at is not None
+  notifications=(await s.scalars(select(Notification))).all();assert len(notifications)==1
+  assert notifications[0].payload=={"topic_id":ids[0],"message_id":m.json()["id"]}
  assert (await client.post(f"/api/v1/topics/{ids[0]}/messages",headers=rh,json={"body":"Сам"})).status_code==201
  async with test_app.state.database.session_factory() as s:assert len((await s.scalars(select(Notification))).all())==1
+
+
+async def test_forum_rejects_messages_in_locked_topic(client, test_app):
+ c=await country(test_app);author=await user(test_app,"author@x.ru");reply_author=await user(test_app,"reply@example.com")
+ topic=(await client.post(f"/api/v1/countries/{c.id}/topics",headers=hdr(test_app,author),json={"title":"Закрытая тема"})).json()
+ async with test_app.state.database.session_factory() as s:
+  saved_topic=await s.get(ForumTopic,topic["id"]);saved_topic.is_locked=True;await s.commit()
+
+ response=await client.post(f"/api/v1/topics/{topic['id']}/messages",headers=hdr(test_app,reply_author),json={"body":"Поздний ответ"})
+
+ assert response.status_code==423
+ async with test_app.state.database.session_factory() as s:
+  saved_topic=await s.get(ForumTopic,topic["id"])
+  assert saved_topic.messages_count==0
+  assert await s.scalar(select(ForumMessage).where(ForumMessage.topic_id==topic["id"])) is None
+  assert await s.scalar(select(Notification).where(Notification.user_id==author.id)) is None
 
 
 async def test_forum_messages_include_author_and_ai_marker(client, test_app):
