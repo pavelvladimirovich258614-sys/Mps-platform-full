@@ -103,6 +103,7 @@ async def test_public_settings_expose_only_configured_legal_contact_values(clien
     assert empty.json() == {
         "legal_name": None,
         "legal_inn": None,
+        "legal_ogrn": None,
         "contact_email": None,
         "contact_phone": None,
         "contact_address": None,
@@ -115,6 +116,7 @@ async def test_public_settings_expose_only_configured_legal_contact_values(clien
         json={
             "legal_name": "Тестовое агентство",
             "legal_inn": "123456789012",
+            "legal_ogrn": "1234567890123",
             "contact_email": "contact@example.test",
             "contact_phone": "+7 000 000-00-00",
             "contact_address": "Тестовый адрес, 1",
@@ -128,6 +130,7 @@ async def test_public_settings_expose_only_configured_legal_contact_values(clien
     assert public.json() == {
         "legal_name": "Тестовое агентство",
         "legal_inn": "123456789012",
+        "legal_ogrn": "1234567890123",
         "contact_email": "contact@example.test",
         "contact_phone": "+7 000 000-00-00",
         "contact_address": "Тестовый адрес, 1",

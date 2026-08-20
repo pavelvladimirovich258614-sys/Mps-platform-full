@@ -135,11 +135,11 @@ export function App() {
       </main>
     );
   }
-  if (page === "reviews") content = <Reviews onError={showError} />;
-  if (page === "subscribe") content = <Subscribe onError={showError} />;
+  if (page === "reviews") content = <Reviews onError={showError} onPrivacy={() => openPage("privacy")} />;
+  if (page === "subscribe") content = <Subscribe onError={showError} onPrivacy={() => openPage("privacy")} />;
   if (page === "about") content = <About publicSettings={publicSettings.value} />;
   if (page === "privacy" || page === "terms") {
-    content = <Legal kind={page as LegalKind} onBack={() => navigate({ page: "feed" })} />;
+    content = <Legal kind={page as LegalKind} onBack={() => navigate({ page: "feed" })} publicSettings={publicSettings.value} />;
   }
 
   return (
@@ -171,7 +171,7 @@ export function App() {
             }}
           />
         )}
-        {overlay === "qa" && <QA onClose={() => setOverlay(null)} onError={showError} />}
+        {overlay === "qa" && <QA onClose={() => setOverlay(null)} onError={showError} onPrivacy={() => { setOverlay(null); openPage("privacy"); }} />}
         {overlay === "profile" && (
           <Profile
             user={auth.user}

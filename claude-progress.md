@@ -11,6 +11,12 @@
 
 ## Session Record
 
+### Session 24 — 2026-08-20 (Codex, I-20 legal-compliance)
+- Goal: дополнить публичные реквизиты ОГРН, воспроизводимо заполнить чистую БД и проверить ограниченную UI-часть 152-ФЗ.
+- Completed: Alembic `20260820_0008` добавляет официальные public settings; Legal показывает оператора (наименование и адрес), формы требуют явного UI-согласия и дают ссылку на policy. I-21 открыт для server-side consent evidence и cookie gating.
+- Verification run: RED public settings — 1 failed из-за отсутствия `legal_ogrn`; targeted backend — 3 passed; frontend tests — 23 passed; build successful; full backend — 47 passed; final `./init.sh` — `pip check` без конфликтов, 47 passed.
+- Next best action: I-21 только по отдельному продуктовому решению.
+
 ### Session 23 — 2026-08-20 (Codex, audit I-20)
 - Goal: убрать фиктивные юридические и контактные данные из production UI без внесения реальных данных в репозиторий.
 - Completed: `legal_name`, `legal_inn`, `contact_email`, `contact_phone`, `contact_address` записываются через существующий защищённый `PATCH /admin/settings`. Публичный `GET /settings/public` выдаёт только эти пять ключей. Footer и About получают settings по API, показывают настроенные значения и скрывают блоки при пустой конфигурации.

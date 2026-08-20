@@ -40,13 +40,14 @@ describe("public contacts", () => {
     const publicSettings = {
       legal_name: "Тестовое агентство",
       legal_inn: "123456789012",
+      legal_ogrn: "1234567890123",
       contact_email: "contact@example.test",
       contact_phone: "+7 000 000-00-00",
       contact_address: "Тестовый адрес, 1",
     };
     const { unmount } = render(<Layout {...layoutProps} publicSettings={publicSettings}>content</Layout>);
 
-    screen.getByText("Тестовое агентство · ИНН 123456789012 · contact@example.test");
+    screen.getByText("Тестовое агентство · ИНН 123456789012 · ОГРН 1234567890123 · contact@example.test");
     unmount();
 
     render(<About publicSettings={publicSettings} />);

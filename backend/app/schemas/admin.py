@@ -12,6 +12,7 @@ class SettingsUpdate(BaseModel):
     irishka_delay_min: int | None = Field(default=None, ge=1, le=10080)
     legal_name: str | None = Field(default=None, max_length=255)
     legal_inn: str | None = Field(default=None, max_length=32)
+    legal_ogrn: str | None = Field(default=None, max_length=32)
     contact_email: str | None = Field(default=None, max_length=320)
     contact_phone: str | None = Field(default=None, max_length=64)
     contact_address: str | None = Field(default=None, max_length=500)
@@ -20,6 +21,7 @@ class SettingsUpdate(BaseModel):
 class PublicSettingsResponse(BaseModel):
     legal_name: str | None = None
     legal_inn: str | None = None
+    legal_ogrn: str | None = None
     contact_email: str | None = None
     contact_phone: str | None = None
     contact_address: str | None = None

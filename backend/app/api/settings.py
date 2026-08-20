@@ -10,6 +10,7 @@ from app.schemas.admin import PublicSettingsResponse
 PUBLIC_SETTING_KEYS = (
     "legal_name",
     "legal_inn",
+    "legal_ogrn",
     "contact_email",
     "contact_phone",
     "contact_address",
