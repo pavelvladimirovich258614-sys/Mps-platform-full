@@ -2,7 +2,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:quiet": "vitest run --reporter=dot"
   },
   "dependencies": {
     "react": "^18.3.1",

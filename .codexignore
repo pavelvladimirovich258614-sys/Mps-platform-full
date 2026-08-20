@@ -1,0 +1,19 @@
+# Generated dependencies and frontend artifacts
+node_modules/
+frontend/app/node_modules/
+frontend/app/dist/
+package-lock.json
+
+# Python bytecode, environments, and test artifacts
+**/__pycache__/
+*.pyc
+.pytest_cache/
+backend/.venv/
+backend/media/
+
+# Large generated reports and build metadata
+coverage/
+htmlcov/
+*.coverage
+*.tsbuildinfo
+*.log
