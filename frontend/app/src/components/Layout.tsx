@@ -5,7 +5,7 @@ export type Page = "feed" | "countries" | "topic" | "article" | "reviews" | "sub
 type LayoutProps = { children: ReactNode; page: Page; theme: "dark" | "light"; notificationsOpen: boolean; unreadCount: number; userName: string; online: OnlineUser[]; publicSettings: PublicSettings | null; onNavigate: (page: Page) => void; onThemeToggle: () => void; onOpenQA: () => void; onOpenProfile: () => void; onToggleNotifications: () => void; onOpenPrivacy: () => void; onOpenTerms: () => void };
 const navigation: Array<{ id: Extract<Page, "feed" | "countries" | "reviews" | "subscribe" | "about">; label: string; icon: string }> = [{ id: "feed", label: "Лента", icon: "▤" }, { id: "countries", label: "Страны", icon: "◌" }, { id: "reviews", label: "Отзывы", icon: "☆" }, { id: "subscribe", label: "Подписка", icon: "✉" }, { id: "about", label: "О нас", icon: "ⓘ" }];
 
-export function SunLogo() { return <svg aria-hidden="true" className="sun-logo" viewBox="0 0 40 40" fill="none"><circle cx="20" cy="17" r="5.4" /><path d="M20 6.5v-3M28.5 9.5l2-2M11.5 9.5l-2-2M31 17h3M6 17h3" /><path d="M9 26.5c2.6 0 2.6-1.6 5.2-1.6s2.6 1.6 5.2 1.6 2.6-1.6 5.2-1.6 2.6 1.6 5.2 1.6" /><path d="M9 31.5c2.6 0 2.6-1.6 5.2-1.6s2.6 1.6 5.2 1.6 2.6-1.6 5.2-1.6 2.6 1.6 5.2 1.6" /></svg>; }
+export function SunLogo() { return <img aria-hidden="true" className="sun-logo" src="/favicon.svg" alt="" />; }
 
 export function Layout({ children, page, theme, notificationsOpen, unreadCount, userName, online, publicSettings, onNavigate, onThemeToggle, onOpenQA, onOpenProfile, onToggleNotifications, onOpenPrivacy, onOpenTerms }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

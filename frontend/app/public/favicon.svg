@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
+  <style>
+    .sun { stroke: #e4c67f; stroke-linecap: round; stroke-width: 1.4; }
+    @media (prefers-color-scheme: light) { .sun { stroke: #b8912f; } }
+  </style>
+  <circle class="sun" cx="20" cy="17" r="5.4"/>
+  <path class="sun" d="M20 6.5v-3M28.5 9.5l2-2M11.5 9.5l-2-2M31 17h3M6 17h3"/>
+  <path class="sun" d="M9 26.5c2.6 0 2.6-1.6 5.2-1.6s2.6 1.6 5.2 1.6 2.6-1.6 5.2-1.6 2.6 1.6 5.2 1.6"/>
+  <path class="sun" d="M9 31.5c2.6 0 2.6-1.6 5.2-1.6s2.6 1.6 5.2 1.6 2.6-1.6 5.2-1.6 2.6 1.6 5.2 1.6"/>
+</svg>
