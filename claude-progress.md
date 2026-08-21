@@ -7,9 +7,20 @@
 - Feature state: F01–F10 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; записей `in_progress` нет.
 - Deploy state: платформа развёрнута и живая на `https://mir.pod-solncem.ru`. MPS использует отдельные PostgreSQL DB/role, Redis DB 2 и backend на `127.0.0.1:8001`; nginx, certbot, HSTS, systemd timers и PostgreSQL backup проверены на VPS.
 - Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15, I-16, I-18 и I-20 закрыты 2026-08-20. I-21 отложен до pre-launch юридической проверки. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
-- Next best action: заполнить оставшиеся production env-поля для Relay-бота и Unisender, затем вручную пройти сквозные критерии приёмки из `docs/TZ.md` §7, включая реальную проверку MiniMax.
+- Auth/UI state: production build использует `https://mir.pod-solncem.ru/api/v1` и `Reg_Under_the_sun_bot`; закрыты найденные UI-проблемы login/profile (logout, avatar upload, золотой online-индикатор, toast поверх modal, email input). Telegram Login Widget и API callback-код задеплоены; браузерная приёмка Павлом остаётся окончательным доказательством сквозного входа.
+- Email state: UnisenderGo transport использует официальный default `goapi.unisender.ru` (с возможностью override на go1/go2) и `X-API-KEY`; payload `message/recipients/body/subject/from_email` проверен mock-тестами. Реальная отправка ожидает ручного подтверждения Павла, что перевыпущенный ключ и sender email внесены в server env.
+- Next best action: начать отдельно согласованную публичную страницу профиля; до этого Павел вручную подтверждает получение email-кода на почту и сквозной login.
 
 ## Session Record
+
+### Session 26 — 2026-08-21 (Codex, production login/profile hardening)
+- Goal: диагностировать и точечно устранить production-проблемы авторизации и Profile после первого deploy, сохранив secrets вне чата и Git.
+- Completed: production frontend получил build-time `VITE_TELEGRAM_BOT_USERNAME=Reg_Under_the_sun_bot` и `VITE_API_URL=https://mir.pod-solncem.ru/api/v1`; это устранило запросы browser к localhost:8000. Profile получил logout с server-side `POST /auth/logout`, upload avatar через existing media endpoint и PATCH `/me`, отображение user name вместо technical role и золотой online indicator. Toast поднят над modal backdrop, email input стал `type=email`; функциональный RTL-тест покрывает error toast при открытом Profile (визуальный stacking вручную подтверждается live-проверкой).
+- Completed: UnisenderGo default переключён с go1 на официальный routing-host goapi с documented override на go1/go2; mailer исправлен с `Authorization: Bearer` на `X-API-KEY`. RED respx mock не принял прежний go1/Bearer request; GREEN и full suite проверяют goapi + exact header и обязательный `from_email` без изменения payload format.
+- Production: commits `4804202`, `89a9a6a`, `61f82a0`, `6a40a7d`, `4ef4a07` pushed and applied. Static assets updated; backend at `4ef4a07` restarted, health returned `status: ok`, `mps-backend.service` active and `deploy/smoke.sh` passed. Backup copies of the previous static dist and backend app were created server-side before each deploy.
+- Verification run: frontend — 29 tests passed and `npm run build` successful. Backend — targeted RED then GREEN, full `python -m pytest backend/tests -q --basetemp ...` — 48 passed. `./init.sh` ran but its global `pip check` was blocked by the external Hermes Python environment missing `charset-normalizer` for unrelated packages; no project dependency or source workaround was made.
+- Security and pending acceptance: a previously pasted Unisender API key is treated as compromised and must not be used. No new secret was read, written or logged in this session. Await Pavel's out-of-band confirmation that the rotated key and `UNISENDER_FROM_EMAIL` are in `/etc/mps-platform/backend.env`, followed by manual email-code delivery/login verification.
+- Next best action: public profile page, only after a separate plan/approval; first obtain manual confirmation that email code is delivered.
 
 ### Session 25 — 2026-08-20 (Codex, финальная production control point)
 - Goal: зафиксировать завершённые audit-доработки, legal-тексты и реальный первый VPS deploy без раскрытия production secrets.
