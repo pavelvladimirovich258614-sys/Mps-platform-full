@@ -26,6 +26,12 @@ const props = {
 };
 
 describe("Profile", () => {
+  it("uses browser email semantics before requesting a login code", () => {
+    const view = render(<Profile user={null} {...props} />);
+
+    expect(view.getByPlaceholderText("Электронная почта").getAttribute("type")).toBe("email");
+  });
+
   it("synchronizes existing profile fields when login changes user without unmounting", () => {
     const view = render(<Profile user={null} {...props} />);
 

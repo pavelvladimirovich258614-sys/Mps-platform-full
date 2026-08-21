@@ -21,8 +21,9 @@ const jsonResponse = (status: number, body: unknown) => new Response(JSON.string
 });
 
 type DetailResult = "ok" | "missing" | "network";
+type EmailRequestResult = "ok" | "failure";
 
-function installApi(detailResult: DetailResult = "ok") {
+function installApi(detailResult: DetailResult = "ok", emailRequestResult: EmailRequestResult = "ok") {
   const fetchMock = vi.fn<typeof fetch>(async (input) => {
     const path = new URL(String(input)).pathname;
     if (path === "/api/v1/posts/bali-guide") {
@@ -36,6 +37,11 @@ function installApi(detailResult: DetailResult = "ok") {
     if (path === "/api/v1/countries/1/topics") return jsonResponse(200, []);
     if (path === "/api/v1/online") return jsonResponse(200, []);
     if (path === "/api/v1/notifications") return jsonResponse(200, { items: [] });
+    if (path === "/api/v1/auth/email/request") {
+      return emailRequestResult === "failure"
+        ? jsonResponse(502, { detail: "Не удалось отправить код. Попробуйте ещё раз позже" })
+        : new Response(null, { status: 204 });
+    }
     if (path === "/api/v1/me" || path === "/api/v1/auth/refresh") {
       return jsonResponse(401, { detail: "Требуется авторизация" });
     }
@@ -93,6 +99,19 @@ describe("App pathname routing", () => {
 
     expect((await screen.findByRole("alert")).textContent).toContain("Не удалось загрузить публикацию");
     expect(screen.queryByText("Публикация не найдена")).toBeNull();
+  });
+
+  it("renders an email delivery error while the Profile modal remains open", async () => {
+    installApi("ok", "failure");
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Войти" }));
+    fireEvent.change(screen.getByPlaceholderText("Электронная почта"), { target: { value: "reader@example.test" } });
+    fireEvent.click(screen.getByRole("button", { name: "Получить код" }));
+
+    // jsdom verifies the error flow, while toast layering is verified manually on live production.
+    expect((await screen.findByRole("alert")).textContent).toContain("Не удалось отправить код. Попробуйте ещё раз позже");
+    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
   it("pushes a shareable article URL after an internal feed click", async () => {
