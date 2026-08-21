@@ -20,3 +20,6 @@
 - Audit: I-06b, I-19a/I-19b и C-05 остаются открытыми; I-21 отложен до pre-launch юридической проверки.
 - VPS использует Python `3.11.0rc1`; нужен отдельный контролируемый переход на stable Python 3.11+.
 - Relay/manager/lawyer production env поля по-прежнему требуют out-of-band configuration. Не передавать secrets, Telegram IDs или содержимое `.env` через чат.
+
+## Известное ограничение среды разработки
+- Локальный `./init.sh` сейчас может завершаться на глобальном Hermes Python `pip check`: внешним пакетам `pdfminer-six`, `reportlab` и `requests` не хватает `charset-normalizer`. Это не относится к зависимостям или runtime MPS Platform и не является production-блокером; не чинить Hermes-зависимости в рамках задач MPS.
