@@ -50,11 +50,11 @@ describe("useAuth Telegram login", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const [loginUrl, loginInit] = fetchMock.mock.calls[0];
-    expect(loginUrl).toBe("http://localhost:8000/api/v1/auth/telegram");
+    expect(loginUrl).toBe("https://mir.pod-solncem.ru/api/v1/auth/telegram");
     expect(loginInit?.method).toBe("POST");
     expect(JSON.parse(String(loginInit?.body))).toMatchObject({ id: 42, hash: "signed-hash" });
     const [meUrl, meInit] = fetchMock.mock.calls[1];
-    expect(meUrl).toBe("http://localhost:8000/api/v1/me");
+    expect(meUrl).toBe("https://mir.pod-solncem.ru/api/v1/me");
     expect(new Headers(meInit?.headers).get("Authorization")).toBe("Bearer telegram-access-token");
     expect(auth.result.current.user?.role).toBe("reader");
     expect(localStorage.getItem("access_token")).toBeNull();

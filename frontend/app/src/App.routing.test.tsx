@@ -67,7 +67,7 @@ describe("App pathname routing", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: post.title })).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:8000/api/v1/posts/bali-guide",
+      "https://mir.pod-solncem.ru/api/v1/posts/bali-guide",
       expect.any(Object),
     );
     expect(window.location.hash).toBe("");
