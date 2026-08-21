@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { api, ApiError, apiJson, setAccessToken } from "../api/client";
+import { api, apiForm, ApiError, apiJson, setAccessToken } from "../api/client";
 import type { Comment, ReactionResult } from "../api/comments";
 
 export type { Comment } from "../api/comments";
@@ -32,7 +32,9 @@ export function useAuth() {
   const verifyCode = async (email: string, code: string) => { setError(""); try { const token = await apiJson<{ access_token: string }>("/auth/email/verify", "POST", { email, code }); setAccessToken(token.access_token); return await loadMe(); } catch (cause) { const message = cause instanceof Error ? cause.message : "Не удалось войти"; setError(message); throw cause; } };
   const loginTelegram = async (payload: TelegramLoginPayload) => { setError(""); try { const token = await apiJson<{ access_token: string }>("/auth/telegram", "POST", payload); setAccessToken(token.access_token); return await loadMe(); } catch (cause) { const message = cause instanceof Error ? cause.message : "Не удалось войти через Telegram"; setError(message); throw cause; } };
   const update = async (changes: Partial<Pick<User, "name" | "bio" | "avatar_url" | "is_anonymous">>) => { const updated = await apiJson<User>("/me", "PATCH", changes); setUser(updated); return updated; };
-  return { user, loading, error, requestCode, verifyCode, loginTelegram, update, reload: loadMe };
+  const uploadAvatar = async (file: File) => { const form = new FormData(); form.append("file", file); const uploaded = await apiForm<{ url: string }>("/media", "POST", form); return update({ avatar_url: uploaded.url }); };
+  const logout = async () => { try { await apiJson<void>("/auth/logout", "POST"); } finally { setAccessToken(null); setUser(null); setError(""); } };
+  return { user, loading, error, requestCode, verifyCode, loginTelegram, update, uploadAvatar, logout, reload: loadMe };
 }
 
 export const usePosts = () => useResource(() => api<ApiPost[]>("/posts"), []);

@@ -180,6 +180,8 @@ export function App() {
             onVerifyCode={auth.verifyCode}
             onTelegramLogin={auth.loginTelegram}
             onUpdate={auth.update}
+            onUploadAvatar={auth.uploadAvatar}
+            onLogout={auth.logout}
             onError={showError}
           />
         )}

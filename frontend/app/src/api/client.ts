@@ -40,7 +40,7 @@ async function refreshAccessToken(): Promise<boolean> {
 /** Makes an API request with a memory-only access token and one refresh retry after 401. */
 export async function api<T>(path: string, init: RequestInit = {}, retried = false): Promise<T> {
   const headers = new Headers(init.headers);
-  if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
   const response = await fetch(`${API_URL}${path}`, { ...init, headers, credentials: "include" });
   if (response.status === 401 && !retried && await refreshAccessToken()) return api<T>(path, init, true);
@@ -51,3 +51,5 @@ export async function api<T>(path: string, init: RequestInit = {}, retried = fal
 
 export const apiJson = <T>(path: string, method: string, body?: unknown) =>
   api<T>(path, { method, body: body === undefined ? undefined : JSON.stringify(body) });
+
+export const apiForm = <T>(path: string, method: string, body: FormData) => api<T>(path, { method, body });

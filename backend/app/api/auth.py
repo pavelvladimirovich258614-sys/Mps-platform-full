@@ -49,6 +49,11 @@ async def telegram_login(payload: TelegramLoginRequest, request: Request, respon
     return tokens_response(user, request, response)
 
 
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(response: Response) -> None:
+    response.delete_cookie("refresh_token", httponly=True, secure=True, samesite="lax")
+
+
 @router.post("/email/request", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("5/minute")
 async def email_request(payload: EmailRequest, request: Request) -> None:

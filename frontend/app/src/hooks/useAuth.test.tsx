@@ -60,4 +60,50 @@ describe("useAuth Telegram login", () => {
     expect(localStorage.getItem("access_token")).toBeNull();
     expect(sessionStorage.getItem("access_token")).toBeNull();
   });
+
+  it("clears the client session through the logout endpoint", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(401, { detail: "Требуется авторизация" }))
+      .mockResolvedValueOnce(jsonResponse(401, { detail: "Недействительный токен" }));
+    const auth = renderHook(() => useAuth());
+    await waitFor(() => expect(auth.result.current.loading).toBe(false));
+    fetchMock.mockClear();
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    await act(async () => {
+      await auth.result.current.logout();
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://mir.pod-solncem.ru/api/v1/auth/logout",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(auth.result.current.user).toBeNull();
+  });
+
+  it("uploads an avatar as multipart data and saves its URL in the profile", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(401, { detail: "Требуется авторизация" }))
+      .mockResolvedValueOnce(jsonResponse(401, { detail: "Недействительный токен" }));
+    const auth = renderHook(() => useAuth());
+    await waitFor(() => expect(auth.result.current.loading).toBe(false));
+    fetchMock.mockClear();
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(200, { url: "/media/avatar.png" }))
+      .mockResolvedValueOnce(jsonResponse(200, {
+        id: 42, email: null, name: "Павел", avatar_url: "/media/avatar.png", bio: null, role: "reader", is_anonymous: false,
+      }));
+
+    await act(async () => {
+      await auth.result.current.uploadAvatar(new File(["avatar"], "avatar.png", { type: "image/png" }));
+    });
+
+    const [uploadUrl, uploadInit] = fetchMock.mock.calls[0];
+    expect(uploadUrl).toBe("https://mir.pod-solncem.ru/api/v1/media");
+    expect(uploadInit?.method).toBe("POST");
+    expect(uploadInit?.body).toBeInstanceOf(FormData);
+    expect(new Headers(uploadInit?.headers).has("Content-Type")).toBe(false);
+    expect(fetchMock.mock.calls[1][0]).toBe("https://mir.pod-solncem.ru/api/v1/me");
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ avatar_url: "/media/avatar.png" });
+  });
 });

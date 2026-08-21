@@ -35,6 +35,14 @@ async def test_telegram_valid_and_tampered_hash(client):
     assert (await client.post("/api/v1/auth/telegram", json=payload)).status_code == 401
 
 
+async def test_logout_clears_refresh_cookie(client):
+    response = await client.post("/api/v1/auth/logout")
+
+    assert response.status_code == 204
+    assert "refresh_token=\"\"" in response.headers["set-cookie"]
+    assert "Max-Age=0" in response.headers["set-cookie"]
+
+
 @respx.mock
 async def test_email_code_is_sent_stored_verified_and_rejected_when_wrong(client, test_app):
     delivery = respx.post("https://go1.unisender.ru/ru/transactional/api/v1/email/send.json").mock(
