@@ -1,7 +1,7 @@
 import { type ReactNode, useState } from "react";
 import type { OnlineUser, PublicSettings } from "../hooks";
 
-export type Page = "feed" | "countries" | "topic" | "article" | "reviews" | "subscribe" | "about" | "privacy" | "terms";
+export type Page = "feed" | "countries" | "topic" | "article" | "profile" | "reviews" | "subscribe" | "about" | "privacy" | "terms";
 type LayoutProps = { children: ReactNode; page: Page; theme: "dark" | "light"; notificationsOpen: boolean; unreadCount: number; userName: string; online: OnlineUser[]; publicSettings: PublicSettings | null; onNavigate: (page: Page) => void; onThemeToggle: () => void; onOpenQA: () => void; onOpenProfile: () => void; onToggleNotifications: () => void; onOpenPrivacy: () => void; onOpenTerms: () => void };
 const navigation: Array<{ id: Extract<Page, "feed" | "countries" | "reviews" | "subscribe" | "about">; label: string; icon: string }> = [{ id: "feed", label: "Лента", icon: "▤" }, { id: "countries", label: "Страны", icon: "◌" }, { id: "reviews", label: "Отзывы", icon: "☆" }, { id: "subscribe", label: "Подписка", icon: "✉" }, { id: "about", label: "О нас", icon: "ⓘ" }];
 

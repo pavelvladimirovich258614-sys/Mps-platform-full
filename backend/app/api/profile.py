@@ -1,14 +1,15 @@
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps import get_current_user, get_db
 from app.models.notification import Notification
+from app.models.post import Country, Post, PostStatus
 from app.models.user import User
 from app.schemas.admin import NotificationsReadUpdate
-from app.schemas.user import UserResponse, UserUpdate
+from app.schemas.user import PublicProfileResponse, UserResponse, UserUpdate
 
 router = APIRouter(tags=["profile"])
 
@@ -24,6 +25,46 @@ async def update_me(payload: UserUpdate, session: AsyncSession = Depends(get_db)
         setattr(user, field, value)
     await session.commit(); await session.refresh(user)
     return user
+
+
+@router.get("/users/{user_id}/profile", response_model=PublicProfileResponse)
+async def public_profile(user_id: int, session: AsyncSession = Depends(get_db)) -> dict:
+    user = await session.scalar(
+        select(User).where(
+            User.id == user_id,
+            User.is_anonymous.is_(False),
+            User.is_banned.is_(False),
+        )
+    )
+    if user is None:
+        raise HTTPException(404, "Профиль не найден")
+    posts_count = await session.scalar(
+        select(func.count(Post.id)).where(
+            Post.author_id == user.id,
+            Post.status == PostStatus.PUBLISHED,
+        )
+    ) or 0
+    countries = (
+        await session.execute(
+            select(Country.id, Country.name, Country.flag_emoji)
+            .join(Post, Post.country_id == Country.id)
+            .where(
+                Post.author_id == user.id,
+                Post.status == PostStatus.PUBLISHED,
+                Country.is_active.is_(True),
+            )
+            .distinct()
+            .order_by(Country.sort_order, Country.id)
+        )
+    ).mappings().all()
+    return {
+        "id": user.id,
+        "name": user.name,
+        "avatar_url": user.avatar_url,
+        "bio": user.bio,
+        "posts_count": posts_count,
+        "countries": countries,
+    }
 
 
 @router.get("/online")

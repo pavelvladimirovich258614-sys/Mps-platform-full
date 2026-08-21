@@ -15,6 +15,15 @@ const post = {
   shot_at: null,
 };
 
+const publicProfile = {
+  id: 7,
+  name: "Мария",
+  avatar_url: "/media/maria.webp",
+  bio: "Пишу о путешествиях.",
+  posts_count: 1,
+  countries: [{ id: 1, name: "ОАЭ", flag_emoji: "🇦🇪" }],
+};
+
 const jsonResponse = (status: number, body: unknown) => new Response(JSON.stringify(body), {
   status,
   headers: { "Content-Type": "application/json" },
@@ -25,7 +34,9 @@ type EmailRequestResult = "ok" | "failure";
 
 function installApi(detailResult: DetailResult = "ok", emailRequestResult: EmailRequestResult = "ok") {
   const fetchMock = vi.fn<typeof fetch>(async (input) => {
-    const path = new URL(String(input)).pathname;
+    const url = new URL(String(input));
+    const path = url.pathname;
+    if (path === "/api/v1/users/7/profile") return jsonResponse(200, publicProfile);
     if (path === "/api/v1/posts/bali-guide") {
       if (detailResult === "missing") return jsonResponse(404, { detail: "Публикация не найдена" });
       if (detailResult === "network") throw new TypeError("Failed to fetch");
@@ -77,6 +88,20 @@ describe("App pathname routing", () => {
       expect.any(Object),
     );
     expect(window.location.hash).toBe("");
+  });
+
+  it("loads a public profile opened directly by pathname", async () => {
+    window.history.replaceState({}, "", "/users/7");
+    const fetchMock = installApi();
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Мария" })).toBeTruthy();
+    expect(screen.getByText("Гид по Бали")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://mir.pod-solncem.ru/api/v1/users/7/profile",
+      expect.any(Object),
+    );
   });
 
   it("shows a dedicated not-found state for a physically missing slug", async () => {

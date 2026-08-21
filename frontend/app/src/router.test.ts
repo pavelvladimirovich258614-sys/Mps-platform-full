@@ -13,6 +13,7 @@ describe("pathname router", () => {
     ["/countries", { page: "countries" }],
     ["/countries/7", { page: "countries", countryId: 7 }],
     ["/posts/bali-guide", { page: "article", slug: "bali-guide" }],
+    ["/users/7", { page: "profile", userId: 7 }],
   ])("parses %s", (pathname, expected) => {
     expect(routeFromPath(pathname)).toEqual(expected);
   });
@@ -25,6 +26,7 @@ describe("pathname router", () => {
   it("builds shareable paths for articles and countries", () => {
     expect(pathForRoute({ page: "article", slug: "bali guide" })).toBe("/posts/bali%20guide");
     expect(pathForRoute({ page: "countries", countryId: 3 })).toBe("/countries/3");
+    expect(pathForRoute({ page: "profile", userId: 7 })).toBe("/users/7");
     expect(pathForRoute({ page: "reviews" })).toBe("/reviews");
   });
 });

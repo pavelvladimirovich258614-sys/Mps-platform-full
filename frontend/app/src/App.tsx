@@ -9,10 +9,11 @@ import { Layout, type Page } from "./components/Layout";
 import { Legal, type LegalKind } from "./components/Legal";
 import { Notifications } from "./components/Notifications";
 import { Profile } from "./components/Profile";
+import { PublicProfile } from "./components/PublicProfile";
 import { QA } from "./components/QA";
 import { Reviews } from "./components/Reviews";
 import { Subscribe } from "./components/Subscribe";
-import { type ApiPost, useAuth, useNotifications, useOnline, usePost, usePosts, usePublicSettings } from "./hooks";
+import { type ApiPost, useAuthorPosts, useAuth, useNotifications, useOnline, usePost, usePosts, usePublicProfile, usePublicSettings } from "./hooks";
 import { pathForRoute, type PathRoute, routeFromPath } from "./router";
 
 function routeForPage(page: Page): PathRoute {
@@ -43,6 +44,8 @@ export function App() {
   const online = useOnline();
   const publicSettings = usePublicSettings();
   const article = usePost(route.page === "article" ? route.slug : undefined);
+  const publicProfile = usePublicProfile(route.page === "profile" ? route.userId : undefined);
+  const authorPosts = useAuthorPosts(route.page === "profile" ? route.userId : undefined);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -132,6 +135,23 @@ export function App() {
       <main className="article-page">
         <button className="back-link" onClick={() => navigate({ page: "feed" })}>← В ленту</button>
         <button className="panel-button" onClick={() => void article.reload()}>Повторить загрузку</button>
+      </main>
+    );
+  }
+  if (page === "profile" && publicProfile.loading) {
+    content = <main className="public-profile-page"><div className="comment-skeleton"><i /><i /><i /></div></main>;
+  }
+  if (page === "profile" && publicProfile.value) {
+    content = <PublicProfile profile={publicProfile.value} posts={authorPosts.value ?? []} loading={authorPosts.loading} onOpenPost={openArticle} />;
+  }
+  if (page === "profile" && publicProfile.error) {
+    content = (
+      <main className="public-profile-page">
+        <section className="public-profile-empty">
+          <h1>Профиль не найден</h1>
+          <p>Возможно, пользователь скрыл профиль или ссылка устарела.</p>
+          <button className="primary-button" onClick={() => navigate({ page: "feed" })}>Вернуться в ленту</button>
+        </section>
       </main>
     );
   }

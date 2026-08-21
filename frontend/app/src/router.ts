@@ -6,7 +6,8 @@ export type PathRoute =
   | { page: "privacy" }
   | { page: "terms" }
   | { page: "countries"; countryId?: number }
-  | { page: "article"; slug: string };
+  | { page: "article"; slug: string }
+  | { page: "profile"; userId: number };
 
 const staticRoutes = new Map<string, PathRoute>([
   ["/", { page: "feed" }],
@@ -45,12 +46,19 @@ export function routeFromPath(pathname: string): PathRoute {
     }
   }
 
+  const profileMatch = path.match(/^\/users\/(\d+)$/);
+  if (profileMatch) {
+    const userId = Number(profileMatch[1]);
+    if (Number.isSafeInteger(userId) && userId > 0) return { page: "profile", userId };
+  }
+
   return { page: "feed" };
 }
 
 /** Builds the canonical shareable pathname for a client-side route. */
 export function pathForRoute(route: PathRoute): string {
   if (route.page === "article") return `/posts/${encodeURIComponent(route.slug)}`;
+  if (route.page === "profile") return `/users/${route.userId}`;
   if (route.page === "countries") return route.countryId ? `/countries/${route.countryId}` : "/countries";
   if (route.page === "feed") return "/";
   return `/${route.page}`;

@@ -22,10 +22,11 @@ async def unique_slug(session,title):
 def dto(p): return {"id":p.id,"type":p.type.value,"title":p.title,"slug":p.slug,"body":p.body,"views":p.views,"likes_count":p.likes_count,"shot_at":p.shot_at.isoformat() if p.shot_at else None}
 
 @router.get("")
-async def list_posts(type:PostType|None=None,country:int|None=None,page:int=1,session:AsyncSession=Depends(get_db)):
+async def list_posts(type:PostType|None=None,country:int|None=None,author_id:int|None=None,page:int=1,session:AsyncSession=Depends(get_db)):
     q=select(Post).where(Post.status==PostStatus.PUBLISHED)
     if type:q=q.where(Post.type==type)
     if country:q=q.where(Post.country_id==country)
+    if author_id:q=q.where(Post.author_id==author_id)
     rows=(await session.scalars(q.offset((max(page,1)-1)*20).limit(20))).all(); return [dto(x) for x in rows]
 @router.get("/{slug}")
 async def get_post(slug:str,session:AsyncSession=Depends(get_db)):

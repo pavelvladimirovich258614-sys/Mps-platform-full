@@ -24,3 +24,18 @@ class UserUpdate(BaseModel):
     bio: str | None = Field(default=None, max_length=5000)
     avatar_url: str | None = Field(default=None, max_length=2048)
     is_anonymous: bool | None = None
+
+
+class PublicProfileCountry(BaseModel):
+    id: int
+    name: str
+    flag_emoji: str
+
+
+class PublicProfileResponse(BaseModel):
+    id: int
+    name: str
+    avatar_url: str | None
+    bio: str | None
+    posts_count: int
+    countries: list[PublicProfileCountry]

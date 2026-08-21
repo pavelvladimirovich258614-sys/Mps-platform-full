@@ -14,6 +14,7 @@ export type Topic = { id: number; title: string; messages_count: number };
 export type ForumMessage = { id: number; body: string; author: { id: number; name: string; avatar_url: string | null }; is_ai: boolean };
 export type Notification = { id: number; type: string; payload: Record<string, unknown>; is_read: boolean; created_at: string };
 export type OnlineUser = { id: number; name: string; avatar_url: string | null };
+export type PublicProfile = { id: number; name: string; avatar_url: string | null; bio: string | null; posts_count: number; countries: Array<{ id: number; name: string; flag_emoji: string }> };
 export type PublicSettings = { legal_name: string | null; legal_inn: string | null; legal_ogrn: string | null; contact_email: string | null; contact_phone: string | null; contact_address: string | null };
 export type TelegramLoginPayload = { id: number; first_name: string; last_name?: string; username?: string; photo_url?: string; auth_date: number; hash: string };
 
@@ -38,6 +39,8 @@ export function useAuth() {
 }
 
 export const usePosts = () => useResource(() => api<ApiPost[]>("/posts"), []);
+export const useAuthorPosts = (authorId?: number) => useResource(() => authorId ? api<ApiPost[]>(`/posts?author_id=${authorId}`) : Promise.resolve([]), [authorId]);
+export const usePublicProfile = (userId?: number) => useResource(() => userId ? api<PublicProfile>(`/users/${userId}/profile`) : Promise.resolve(null), [userId]);
 export function usePost(slug?: string) {
   const [value, setValue] = useState<ApiPost | null>(null);
   const [loading, setLoading] = useState(Boolean(slug));
