@@ -5,7 +5,7 @@
 ## Подготовка сервера
 
 1. Установите пакеты: `sudo apt update && sudo apt install nginx certbot python3-certbot-nginx postgresql-client redis-server`.
-2. Создайте пользователя и каталог: `sudo useradd --system --create-home --shell /usr/sbin/nologin mps`; затем разверните репозиторий в `/opt/mps-platform`, создайте `/opt/mps-platform/venv` и установите `backend/requirements.txt`.
+2. Создайте пользователя и каталог: `sudo useradd --system --create-home --shell /usr/sbin/nologin mps`; затем разверните репозиторий в `/opt/mps-platform`, создайте `/opt/mps-platform/venv` и установите `backend/requirements.txt`. Для публичных загруженных изображений создайте каталог `sudo install -d -o mps -g www-data -m 0750 /opt/mps-platform/backend/media`: backend пишет от `mps`, а nginx worker `www-data` получает только доступ на чтение/проход.
 3. Создайте `/etc/mps-platform/backend.env` с правами `640`, владельцем `root:mps`. Задайте реальные `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, Telegram/Unisender/MiniMax настройки, `BASE_URL=https://YOUR_DOMAIN`, `CORS_ORIGINS=https://YOUR_DOMAIN` и `FRONTEND_DIST_DIR=/opt/mps-platform/frontend/app/dist`. Для backup обязательно добавьте отдельный `PG_DUMP_URL=postgresql://USER:PASSWORD@HOST:5432/DB`: это libpq URL без драйвера `+asyncpg`, в отличие от application `DATABASE_URL`.
 4. Перед сборкой frontend создайте `/opt/mps-platform/frontend/app/.env.production` и задайте публичные build-time переменные `VITE_API_URL=https://YOUR_DOMAIN/api/v1` и `VITE_TELEGRAM_BOT_USERNAME=REAL_BOT_USERNAME` (username без `@`, не токен бота). Затем выполните `cd /opt/mps-platform/frontend/app && npm ci && npm run build`.
 5. Выполните миграции: `cd /opt/mps-platform/backend && /opt/mps-platform/venv/bin/alembic upgrade head`.
