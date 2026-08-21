@@ -25,7 +25,11 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(255), default="", server_default="")
     avatar_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
-    role: Mapped[Role] = mapped_column(SqlEnum(Role, native_enum=False), default=Role.READER, server_default=Role.READER.value)
+    role: Mapped[Role] = mapped_column(
+        SqlEnum(Role, native_enum=False, values_callable=lambda enum: [member.value for member in enum]),
+        default=Role.READER,
+        server_default=Role.READER.value,
+    )
     is_anonymous: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     is_banned: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
