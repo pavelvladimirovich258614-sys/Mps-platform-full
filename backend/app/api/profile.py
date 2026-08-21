@@ -14,6 +14,21 @@ from app.schemas.user import PublicProfileResponse, UserResponse, UserUpdate
 router = APIRouter(tags=["profile"])
 
 
+def published_countries_query(user_id: int):
+    """Return unique, display-ordered countries used in an author's publications."""
+    return (
+        select(Country.id, Country.name, Country.flag_emoji, Country.sort_order)
+        .join(Post, Post.country_id == Country.id)
+        .where(
+            Post.author_id == user_id,
+            Post.status == PostStatus.PUBLISHED,
+            Country.is_active.is_(True),
+        )
+        .distinct()
+        .order_by(Country.sort_order, Country.id)
+    )
+
+
 @router.get("/me", response_model=UserResponse)
 async def me(user: User = Depends(get_current_user)) -> User:
     return user
@@ -44,19 +59,11 @@ async def public_profile(user_id: int, session: AsyncSession = Depends(get_db)) 
             Post.status == PostStatus.PUBLISHED,
         )
     ) or 0
-    countries = (
-        await session.execute(
-            select(Country.id, Country.name, Country.flag_emoji)
-            .join(Post, Post.country_id == Country.id)
-            .where(
-                Post.author_id == user.id,
-                Post.status == PostStatus.PUBLISHED,
-                Country.is_active.is_(True),
-            )
-            .distinct()
-            .order_by(Country.sort_order, Country.id)
-        )
-    ).mappings().all()
+    country_rows = (await session.execute(published_countries_query(user.id))).mappings().all()
+    countries = [
+        {"id": row["id"], "name": row["name"], "flag_emoji": row["flag_emoji"]}
+        for row in country_rows
+    ]
     return {
         "id": user.id,
         "name": user.name,

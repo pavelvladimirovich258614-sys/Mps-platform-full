@@ -2,8 +2,11 @@ from datetime import UTC, datetime
 
 import httpx
 import pytest
+from sqlalchemy import select, text
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.profile import published_countries_query
 from app.models.post import Country, Post, PostStatus, PostType
 from app.models.user import Role, User
 
@@ -87,3 +90,40 @@ async def test_public_profile_hides_anonymous_and_banned_users(client, test_app)
 
     assert (await client.get(f"/api/v1/users/{anonymous.id}/profile")).status_code == 404
     assert (await client.get(f"/api/v1/users/{banned.id}/profile")).status_code == 404
+
+
+def test_public_profile_countries_distinct_query_is_postgresql_compatible():
+    """PostgreSQL requires every DISTINCT ORDER BY expression in the select-list."""
+    sql = str(published_countries_query(7).compile(dialect=postgresql.dialect()))
+    select_clause = sql.split("FROM", maxsplit=1)[0]
+
+    assert "countries.sort_order" in select_clause
+    assert "ORDER BY countries.sort_order, countries.id" in sql
+
+
+async def test_post_status_uses_one_consistent_database_name_convention(test_app):
+    """Guard the existing SQLAlchemy Enum-name convention: PUBLISHED, not published."""
+    async with test_app.state.database.session_factory() as session:
+        author = User(email="post-status@example.test", name="Автор")
+        country = Country(name="Статусия", flag_emoji="🏝️")
+        session.add_all([author, country])
+        await session.flush()
+        post = Post(
+            type=PostType.ARTICLE,
+            title="Проверка статуса",
+            slug="post-status-convention",
+            body="Текст",
+            author_id=author.id,
+            country_id=country.id,
+            status=PostStatus.PUBLISHED,
+            published_at=datetime.now(UTC),
+        )
+        session.add(post)
+        await session.flush()
+
+        stored_status = await session.scalar(text("SELECT status FROM posts WHERE id = :id"), {"id": post.id})
+        loaded = await session.scalar(select(Post).where(Post.status == PostStatus.PUBLISHED))
+
+    assert stored_status == "PUBLISHED"
+    assert loaded is not None
+    assert loaded.status is PostStatus.PUBLISHED
