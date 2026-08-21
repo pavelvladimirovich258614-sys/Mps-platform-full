@@ -45,7 +45,10 @@ async def test_logout_clears_refresh_cookie(client):
 
 @respx.mock
 async def test_email_code_is_sent_stored_verified_and_rejected_when_wrong(client, test_app):
-    delivery = respx.post("https://go1.unisender.ru/ru/transactional/api/v1/email/send.json").mock(
+    delivery = respx.post(
+        "https://goapi.unisender.ru/ru/transactional/api/v1/email/send.json",
+        headers={"X-API-KEY": "key"},
+    ).mock(
         return_value=httpx.Response(200, json={"result": {"id": "login-code-mail"}})
     )
     assert (await client.post("/api/v1/auth/email/request", json={"email": "a@example.com"})).status_code == 204
@@ -54,6 +57,7 @@ async def test_email_code_is_sent_stored_verified_and_rejected_when_wrong(client
     request_json = json.loads(delivery.calls.last.request.content)
     assert request_json["message"]["recipients"] == [{"email": "a@example.com"}]
     assert request_json["message"]["subject"] == "Код для входа в «Мир под солнцем»"
+    assert request_json["message"]["from_email"] == test_app.state.settings.unisender_from_email
     assert code in request_json["message"]["body"]["html"]
     assert 0 < await test_app.state.redis.ttl("email-code:a@example.com") <= 600
     assert (await client.post("/api/v1/auth/email/verify", json={"email": "a@example.com", "code": "000000"})).status_code == 400
@@ -65,7 +69,10 @@ async def test_email_code_is_sent_stored_verified_and_rejected_when_wrong(client
 
 @respx.mock
 async def test_email_delivery_failure_removes_undelivered_code(client, test_app):
-    delivery = respx.post("https://go1.unisender.ru/ru/transactional/api/v1/email/send.json").mock(
+    delivery = respx.post(
+        "https://goapi.unisender.ru/ru/transactional/api/v1/email/send.json",
+        headers={"X-API-KEY": "key"},
+    ).mock(
         return_value=httpx.Response(503, json={"message": "temporarily unavailable"})
     )
 

@@ -45,7 +45,7 @@ async def test_f09b_api_acceptance_flow_with_email_auth(client, test_app):
         await session.refresh(post)
 
     # TZ 7.1 and 7.4: a public feed is available and subscription confirms by link.
-    respx.post("https://go1.unisender.ru/ru/transactional/api/v1/email/send.json").mock(return_value=httpx.Response(200, json={}))
+    respx.post("https://goapi.unisender.ru/ru/transactional/api/v1/email/send.json", headers={"X-API-KEY": "key"}).mock(return_value=httpx.Response(200, json={}))
     assert (await client.get("/api/v1/posts")).json()[0]["id"] == post.id
     subscription = await client.post("/api/v1/subscribe", json={"email": "reader@example.com"})
     assert subscription.status_code == 201

@@ -7,7 +7,7 @@ logger=logging.getLogger(__name__)
 async def send_email(settings,email,subject,html):
  """Send transactional JSON to Unisender Go and return delivery acceptance.
 
- Uses Authorization from UNISENDER_GO_API_KEY and POST /email/send.json. Transport
+ Uses X-API-KEY from UNISENDER_GO_API_KEY and POST /email/send.json. Transport
  4xx/5xx is logged and returns False, leaving subscription confirm/unsubscribe state
  unchanged because mail delivery and those state transitions are separate operations.
  """
@@ -15,7 +15,7 @@ async def send_email(settings,email,subject,html):
  payload={"message":{"recipients":[{"email":email}],"body":{"html":html},"subject":subject,"from_email":settings.unisender_from_email}}
  try:
   async with httpx.AsyncClient() as client:
-   response=await client.post(f"{settings.unisender_go_base_url.rstrip('/')}/email/send.json",headers={"Authorization":f"Bearer {settings.unisender_go_api_key}"},json=payload);response.raise_for_status()
+   response=await client.post(f"{settings.unisender_go_base_url.rstrip('/')}/email/send.json",headers={"X-API-KEY":settings.unisender_go_api_key},json=payload);response.raise_for_status()
   return True
  except httpx.HTTPError: logger.exception("Unisender delivery failed for %s",email);return False
 async def send_code(settings,email,code):

@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     lawyer_tg_id: str = ""
     bot_bridge_secret: str = ""
     unisender_go_api_key: str = ""
-    unisender_go_base_url: str = "https://go1.unisender.ru/ru/transactional/api/v1"
+    unisender_go_base_url: str = "https://goapi.unisender.ru/ru/transactional/api/v1"
     unisender_from_email: str = "noreply@example.com"
     minimax_api_key: str = ""
     minimax_model: str = ""

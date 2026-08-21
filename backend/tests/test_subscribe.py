@@ -22,7 +22,7 @@ async def client(test_app):
 
 @respx.mock
 async def test_double_opt_in_and_unsubscribe(client, test_app):
-    route = respx.post("https://go1.unisender.ru/ru/transactional/api/v1/email/send.json").mock(return_value=httpx.Response(200, json={"result": {"id": "mail-1"}}))
+    route = respx.post("https://goapi.unisender.ru/ru/transactional/api/v1/email/send.json", headers={"X-API-KEY": "key"}).mock(return_value=httpx.Response(200, json={"result": {"id": "mail-1"}}))
     created = await client.post("/api/v1/subscribe", json={"email": "tourist@example.com"})
     assert created.status_code == 201
     assert route.called
@@ -45,7 +45,7 @@ async def test_double_opt_in_and_unsubscribe(client, test_app):
 
 @respx.mock
 async def test_subscription_reports_unisender_delivery_failure_without_losing_token(client, test_app):
-    respx.post("https://go1.unisender.ru/ru/transactional/api/v1/email/send.json").mock(
+    respx.post("https://goapi.unisender.ru/ru/transactional/api/v1/email/send.json", headers={"X-API-KEY": "key"}).mock(
         return_value=httpx.Response(503, json={"error": "temporary unavailable"})
     )
 
