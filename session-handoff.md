@@ -5,11 +5,12 @@
 - Production revision: `4ef4a07`. После deploy `mps-backend.service` перезапущен, health вернул `status: ok`, service active. Перед deploy сохранён recoverable archive прежнего `backend/app`.
 - Frontend production build использует настоящий API URL и Auth-бота; устранены localhost API calls, Telegram widget configuration issue, Profile logout/avatar/name/online UI, а также невидимый toast/error email flow.
 - UnisenderGo code uses `goapi.unisender.ru` by default and `X-API-KEY`; `go1`/`go2` remain valid explicit env overrides. Тело email/send не менялось и соответствует verified transport contract.
+- **Открытый внешний блокер:** VPS получает ConnectTimeout к `goapi` и `go1` на `31.184.200.*:443`; email-код и digest не могут быть доставлены. Local UFW/iptables не блокируют outgoing traffic, а `ya.ru` и `google.com` доступны. До ответа HostKey/Unisender реальную доставку email считать недоступной.
 
 ## Обязательная ручная проверка Павлом
-1. Вне чата внести перевыпущенный `UNISENDER_GO_API_KEY` и корректный `UNISENDER_FROM_EMAIL` в `/etc/mps-platform/backend.env`, если это ещё не сделано; не записывать значения в Git, trackers или chat.
-2. После подтверждения внесения значения перезапустить только `mps-backend.service` и выполнить smoke.
-3. В browser проверить получение email-кода и полный email login. До этой проверки нельзя считать реальную доставку email подтверждённой, хотя код и mocked transport contract готовы.
+1. Открыть тикет HostKey: selective outbound TCP timeout до `31.184.200.*:443` при рабочем HTTPS к ya.ru/google.com. Не менять firewall VPS без отдельного согласования.
+2. После восстановления связности вручную проверить получение email-кода и полный email login; до этого email-code и digest остаются недоступными независимо от корректности ключа/config.
+3. Рассмотреть SMTP-транспорт UnisenderGo или другого email-провайдера как отдельную согласованную работу, если сетевой маршрут не будет восстановлен.
 4. В browser пройти Telegram Login Widget и Profile regression smoke: logout, avatar, name вместо role, gold online indicator и visible error toast.
 
 ## Следующая разработка
