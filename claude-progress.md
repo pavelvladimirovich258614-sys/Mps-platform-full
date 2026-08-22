@@ -18,7 +18,7 @@
 - Root cause: нестандартный `EditorContent.onInput` вручную вызывал `setContent(innerHTML, { emitUpdate: false })` на каждом вводе, переписывая документ вне ProseMirror transaction state. RED regression при Bold-вводе `привет мир` зафиксировал ровно один такой вызов.
 - Completed: удалён ручной `onInput`; HTML синхронизируется только штатным TipTap `onUpdate`. Подзаголовок ленты заменён на утверждённый общий текст; composer и его общий `PostDraft` больше не допускают `fishka` (video option не существовал и не добавлялся).
 - Verification run: targeted — 4 suites / 6 passed; final frontend `npm test` — 48 passed; `npm run build` — success, 110 modules. Commit `7da63d4` pushed to `origin/main`.
-- Deploy: не выполнялся, ожидает отдельного подтверждения владельца.
+- Production deploy: frontend-only VPS rollout `17a1a2d -> d67155c`; staging build с явными VITE API/bot values verified, localhost API absent; previous static dist retained as rollback `/root/backups/mps-f14-typing-hotfix-20260822T145900Z`; `deploy/smoke.sh` — `[OK]`; served JS confirms the new feed subtitle. Backend diff was empty, so `mps-backend` was not restarted and remains active.
 
 ### Session 37 — 2026-08-22 (Codex, F14 composer modal production hotfix)
 - Goal: убрать навязчивый inline TipTap composer из верхней части ленты и открыть его только по компактному действию editor/admin.
