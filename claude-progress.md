@@ -13,6 +13,12 @@
 
 ## Session Record
 
+### Session 37 — 2026-08-22 (Codex, F14 composer modal production hotfix)
+- Goal: убрать навязчивый inline TipTap composer из верхней части ленты и открыть его только по компактному действию editor/admin.
+- Completed: composer перенесён в modal overlay; кнопка «Создать публикацию» сохраняет золотой визуальный акцент платформы. Модалка закрывается по Escape, клику на фон и кнопке закрытия; подзаголовок ленты не менялся.
+- Verification run: RED — 2 ожидаемых frontend failures (composer был в initial DOM и кнопка отсутствовала); targeted GREEN — 2 passed. Final frontend `npm test` — 46 passed; `npm run build` — success, 110 modules. Production frontend-only deploy: VPS fast-forwarded `c549085 -> 17a1a2d`; staging build с явными VITE API/bot values verified, localhost API absent; previous static `dist` retained as rollback `/root/backups/mps-f14-composer-modal-20260822T143700Z`; `deploy/smoke.sh` — `[OK]`; served JS has composer-modal markers. `git diff c549085 17a1a2d -- backend` was empty, so `mps-backend` was not restarted and remains active.
+- Commit: `17a1a2d fix: composer публикации как модальное окно вместо инлайн-формы`, pushed and deployed.
+
 ### Session 36 — 2026-08-22 (Codex, F14 production deploy)
 - Goal: единый production rollout backend sanitizer и TipTap frontend для F14.
 - Completed: rollback backup `/root/backups/mps-f14-20260822T140321Z`; VPS fast-forwarded `fff502a -> c549085`. `mps-backend` restarted; after one short startup refusal loopback `/api/v1/health` returned 200 and service stayed active. Frontend executed `npm ci` and `npm run build` using verified production VITE API/bot settings; bundle contains the required public values and no localhost API; dist permissions were refreshed for nginx.
