@@ -131,7 +131,7 @@ describe("App pathname routing", () => {
     expect(screen.queryByRole("heading", { level: 2, name: post.title })).toBeNull();
   });
 
-  it("navigates to Fishki from the sidebar and leaves only two feed filters", async () => {
+  it("navigates to Fishki from the sidebar and leaves one inactive article heading", async () => {
     installApi("ok", "ok", null, [post, fishka]);
     render(<App />);
 
@@ -142,7 +142,8 @@ describe("App pathname routing", () => {
     await waitFor(() => expect(window.location.pathname).toBe("/"));
     const filters = document.querySelector(".feed-filters");
     expect(filters).not.toBeNull();
-    expect(within(filters as HTMLElement).getAllByRole("button").map((button) => button.textContent)).toEqual(["Все", "Статьи"]);
+    expect(within(filters as HTMLElement).getByRole("heading", { level: 2, name: "Статьи" })).toBeTruthy();
+    expect(within(filters as HTMLElement).queryAllByRole("button")).toEqual([]);
   });
 
   it("opens the authenticated reader's public profile from the header and edits through the existing modal", async () => {

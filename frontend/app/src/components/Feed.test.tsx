@@ -17,6 +17,9 @@ describe("Feed composer modal", () => {
     render(<Feed {...editorProps} />);
 
     expect(screen.getByText("Реальные истории, честные отзывы и разборы направлений — живые впечатления от путешествий")).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 2, name: "Статьи" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Все" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Статьи" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Создать публикацию" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Создать публикацию" }));
 

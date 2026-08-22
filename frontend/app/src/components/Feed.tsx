@@ -13,15 +13,11 @@ type FeedProps = {
   onOpenArticle: (post: ApiPost) => void;
   onOpenProfile: (userId: number) => void;
 };
-type Filter = "all" | "article";
-const filters: Array<{ id: Filter; label: string }> = [{ id: "all", label: "Все" }, { id: "article", label: "Статьи" }];
-
 export function Feed({ mode = "feed", posts, loading, canCreate = false, onCreatePost, onOpenArticle, onOpenProfile }: FeedProps) {
-  const [filter, setFilter] = useState<Filter>("all");
   const [composerOpen, setComposerOpen] = useState(false);
   const isFishki = mode === "fishki";
   const canOpenComposer = canCreate && !isFishki && Boolean(onCreatePost);
-  const visiblePosts = isFishki ? posts.filter((post) => post.type === "fishka" || post.type === "tip") : filter === "all" ? posts : posts.filter((post) => post.type === filter);
+  const visiblePosts = isFishki ? posts.filter((post) => post.type === "fishka" || post.type === "tip") : posts;
 
   useEffect(() => {
     if (!composerOpen) return;
@@ -34,7 +30,7 @@ export function Feed({ mode = "feed", posts, loading, canCreate = false, onCreat
     {isFishki ? <section className="journal-intro"><p>Туристическое агентство «Под солнцем»</p><h1>Фишки</h1><div className="ornament"><i />◆<i /></div><div className="intro-text">Короткие советы от менеджеров, которые сами были в путешествии.</div></section> : <section className="journal-intro"><p>Туристическое агентство «Под солнцем»</p><h1>Журнал о путешествиях <b>без прикрас</b></h1><div className="ornament"><i />◆<i /></div><div className="intro-text">Реальные истории, честные отзывы и разборы направлений — живые впечатления от путешествий</div></section>}
     {canOpenComposer && <button type="button" className="create-post-button" aria-label="Создать публикацию" onClick={() => setComposerOpen(true)}>✦ Создать публикацию</button>}
     {composerOpen && onCreatePost && <ComposerModal onClose={() => setComposerOpen(false)} onCreate={onCreatePost} />}
-    {!isFishki && <div className="feed-filters">{filters.map((item) => <button key={item.id} onClick={() => setFilter(item.id)} className={filter === item.id ? "current" : ""}>{item.label}</button>)}</div>}
+    {!isFishki && <div className="feed-filters"><h2>Статьи</h2></div>}
     {loading && <div className="comment-skeleton"><i /><i /><i /></div>}
     {visiblePosts.map((post) => <PostCard key={post.id} post={post} onOpen={() => onOpenArticle(post)} onOpenProfile={() => onOpenProfile(post.author.id)} />)}
     {!loading && !visiblePosts.length && <div className="empty-comments">Публикаций в этом разделе пока нет.</div>}
