@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { Legal } from "./Legal";
 
-const publicSettings = { legal_name: "ООО «Тест»", legal_inn: "123", legal_ogrn: "456", contact_address: "Тестовый адрес", contact_email: "test@example.test", contact_phone: "+7 000" };
+const publicSettings = { legal_name: "ООО «Тест»", legal_inn: "123", legal_ogrn: "456", contact_address: "Тестовый адрес", contact_email: "test@example.test", contact_phone: "+7 000", comments_moderation_enabled: false };
 
 describe("Legal", () => {
   it("uses public settings for operator details and does not render former placeholder text", () => {

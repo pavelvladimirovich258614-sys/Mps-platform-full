@@ -90,9 +90,9 @@ async def test_admin_moderation_users_ban_and_settings(client, test_app):
     banned = await client.patch(f"/api/v1/admin/users/{author.id}", headers=headers(test_app, admin), json={"is_banned": True})
     assert banned.status_code == 200
     assert banned.json()["is_banned"] is True
-    settings = await client.patch("/api/v1/admin/settings", headers=headers(test_app, admin), json={"cta_bot_url": "https://t.me/bot?start=platform", "cta_manager_url": "https://t.me/manager", "irishka_enabled": False, "irishka_delay_min": 45})
+    settings = await client.patch("/api/v1/admin/settings", headers=headers(test_app, admin), json={"cta_bot_url": "https://t.me/bot?start=platform", "cta_manager_url": "https://t.me/manager", "irishka_enabled": False, "irishka_delay_min": 45, "comments_moderation_enabled": True})
     assert settings.status_code == 200
-    assert settings.json() == {"cta_bot_url": "https://t.me/bot?start=platform", "cta_manager_url": "https://t.me/manager", "irishka_enabled": "false", "irishka_delay_min": "45"}
+    assert settings.json() == {"cta_bot_url": "https://t.me/bot?start=platform", "cta_manager_url": "https://t.me/manager", "irishka_enabled": "false", "irishka_delay_min": "45", "comments_moderation_enabled": "true"}
     async with test_app.state.database.session_factory() as session:
         assert (await session.scalar(select(User.is_banned).where(User.id == author.id))) is True
 
@@ -107,6 +107,7 @@ async def test_public_settings_expose_only_configured_legal_contact_values(clien
         "contact_email": None,
         "contact_phone": None,
         "contact_address": None,
+        "comments_moderation_enabled": False,
     }
 
     admin = await make_user(test_app, "admin-settings@example.test", role=Role.ADMIN)
@@ -118,9 +119,10 @@ async def test_public_settings_expose_only_configured_legal_contact_values(clien
             "legal_inn": "123456789012",
             "legal_ogrn": "1234567890123",
             "contact_email": "contact@example.test",
-            "contact_phone": "+7 000 000-00-00",
-            "contact_address": "Тестовый адрес, 1",
-            "cta_bot_url": "https://t.me/private_bot",
+        "contact_phone": "+7 000 000-00-00",
+        "contact_address": "Тестовый адрес, 1",
+        "comments_moderation_enabled": True,
+        "cta_bot_url": "https://t.me/private_bot",
         },
     )
     assert saved.status_code == 200
@@ -134,5 +136,6 @@ async def test_public_settings_expose_only_configured_legal_contact_values(clien
         "contact_email": "contact@example.test",
         "contact_phone": "+7 000 000-00-00",
         "contact_address": "Тестовый адрес, 1",
+        "comments_moderation_enabled": True,
     }
     assert "cta_bot_url" not in public.json()

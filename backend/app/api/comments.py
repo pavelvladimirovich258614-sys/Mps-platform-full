@@ -8,6 +8,7 @@ from app.models.comment import Comment, comment_reactions
 from app.models.notification import Notification
 from app.models.post import Post
 from app.models.review import ModerationStatus
+from app.models.setting import Setting
 from app.models.user import Role, User
 from app.schemas.moderation import CommentCreate, ModerateRequest, ModerationAction, ReactionCreate
 
@@ -56,6 +57,11 @@ async def pending_comments_count(session: AsyncSession) -> int:
     return await session.scalar(select(func.count()).select_from(Comment).where(Comment.status == ModerationStatus.PENDING)) or 0
 
 
+async def comments_moderation_enabled(session: AsyncSession) -> bool:
+    value = await session.scalar(select(Setting.value).where(Setting.key == "comments_moderation_enabled"))
+    return value is not None and value.strip().lower() == "true"
+
+
 @router.get("/posts/{post_id}/comments")
 async def list_comments(
     post_id: int,
@@ -85,7 +91,8 @@ async def create_comment(
             raise HTTPException(404, "Родительский комментарий не найден")
         if parent.parent_id is not None:
             raise HTTPException(422, "Разрешён только один уровень ответов")
-    comment = Comment(post_id=post_id, user_id=user.id, parent_id=payload.parent_id, body=nh3.clean(payload.body))
+    status = ModerationStatus.PENDING if await comments_moderation_enabled(session) else ModerationStatus.APPROVED
+    comment = Comment(post_id=post_id, user_id=user.id, parent_id=payload.parent_id, body=nh3.clean(payload.body), status=status)
     session.add(comment)
     await session.commit()
     await session.refresh(comment)

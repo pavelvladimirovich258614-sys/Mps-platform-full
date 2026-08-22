@@ -3,6 +3,7 @@ import { api, apiJson } from "./client";
 /** API adapter for the F04 comments contract used by the F09 UI. */
 export type Comment = {
   id: number;
+  status: "pending" | "approved" | "rejected";
   body: string;
   author: { id: number; name: string; avatar_url: string | null };
   reactions: Record<string, number>;

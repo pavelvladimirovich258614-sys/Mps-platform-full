@@ -123,7 +123,7 @@ export function App() {
     content = <main className="article-page"><div className="comment-skeleton"><i /><i /><i /></div></main>;
   }
   if (page === "article" && article.value) {
-    content = <ArticleComments article={article.value} onBack={() => navigate({ page: "feed" })} onError={showError} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
+    content = <ArticleComments article={article.value} commentsModerationEnabled={publicSettings.value?.comments_moderation_enabled ?? false} onBack={() => navigate({ page: "feed" })} onError={showError} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
   }
   if (page === "article" && article.notFound) {
     content = (

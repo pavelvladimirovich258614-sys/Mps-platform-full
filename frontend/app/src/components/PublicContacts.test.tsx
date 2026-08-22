@@ -44,6 +44,7 @@ describe("public contacts", () => {
       contact_email: "contact@example.test",
       contact_phone: "+7 000 000-00-00",
       contact_address: "Тестовый адрес, 1",
+      comments_moderation_enabled: false,
     };
     const { unmount } = render(<Layout {...layoutProps} publicSettings={publicSettings}>content</Layout>);
 

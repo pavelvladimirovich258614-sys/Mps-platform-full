@@ -10,6 +10,7 @@ class SettingsUpdate(BaseModel):
     cta_manager_url: HttpUrl | None = None
     irishka_enabled: bool | None = None
     irishka_delay_min: int | None = Field(default=None, ge=1, le=10080)
+    comments_moderation_enabled: bool | None = None
     legal_name: str | None = Field(default=None, max_length=255)
     legal_inn: str | None = Field(default=None, max_length=32)
     legal_ogrn: str | None = Field(default=None, max_length=32)
@@ -25,6 +26,7 @@ class PublicSettingsResponse(BaseModel):
     contact_email: str | None = None
     contact_phone: str | None = None
     contact_address: str | None = None
+    comments_moderation_enabled: bool = False
 
 
 class NotificationsReadUpdate(BaseModel):

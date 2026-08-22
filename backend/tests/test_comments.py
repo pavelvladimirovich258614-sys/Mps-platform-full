@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy import select
 
 from app.models.notification import Notification
+from app.models.setting import Setting
 from app.models.user import Role, User
 
 
@@ -48,7 +49,45 @@ async def published_post(client, headers) -> int:
     return response.json()["id"]
 
 
+async def set_comments_moderation(test_app, enabled: bool) -> None:
+    async with test_app.state.database.session_factory() as session:
+        session.add(Setting(key="comments_moderation_enabled", value=str(enabled).lower()))
+        await session.commit()
+
+
+async def test_comments_are_approved_and_visible_when_moderation_is_disabled(client, test_app):
+    await set_comments_moderation(test_app, False)
+    reader_headers = await headers_for(client, test_app, 201)
+    editor_headers = await headers_for(client, test_app, 202, editor=True)
+    post_id = await published_post(client, editor_headers)
+
+    created = await client.post(
+        f"/api/v1/posts/{post_id}/comments", headers=reader_headers, json={"body": "Видно сразу"}
+    )
+
+    assert created.status_code == 201
+    assert created.json()["status"] == "approved"
+    listed = await client.get(f"/api/v1/posts/{post_id}/comments", headers=reader_headers)
+    assert [comment["id"] for comment in listed.json()] == [created.json()["id"]]
+
+
+async def test_comments_stay_pending_when_moderation_is_enabled(client, test_app):
+    await set_comments_moderation(test_app, True)
+    reader_headers = await headers_for(client, test_app, 211)
+    editor_headers = await headers_for(client, test_app, 212, editor=True)
+    post_id = await published_post(client, editor_headers)
+
+    created = await client.post(
+        f"/api/v1/posts/{post_id}/comments", headers=reader_headers, json={"body": "На проверку"}
+    )
+
+    assert created.status_code == 201
+    assert created.json()["status"] == "pending"
+    assert (await client.get(f"/api/v1/posts/{post_id}/comments", headers=reader_headers)).json() == []
+
+
 async def test_comments_moderation_replies_and_reactions(client, test_app):
+    await set_comments_moderation(test_app, True)
     reader_headers = await headers_for(client, test_app, 301)
     other_reader_headers = await headers_for(client, test_app, 303)
     editor_headers = await headers_for(client, test_app, 302, editor=True)
@@ -113,6 +152,7 @@ async def test_comments_moderation_replies_and_reactions(client, test_app):
 
 
 async def test_comment_moderation_requires_editor(client, test_app):
+    await set_comments_moderation(test_app, True)
     reader_headers = await headers_for(client, test_app, 401)
     editor_headers = await headers_for(client, test_app, 402, editor=True)
     post_id = await published_post(client, editor_headers)
@@ -133,6 +173,7 @@ async def test_comment_moderation_requires_editor(client, test_app):
 
 
 async def test_comment_moderation_is_idempotent_after_final_decision(client, test_app):
+    await set_comments_moderation(test_app, True)
     reader_headers = await headers_for(client, test_app, 501)
     editor_headers = await headers_for(client, test_app, 502, editor=True)
     post_id = await published_post(client, editor_headers)
