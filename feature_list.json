@@ -199,7 +199,7 @@
       "area": "public-profile",
       "title": "Публичный профиль, часть Б",
       "user_visible_behavior": "Пользователь подписывается на открытый профиль, видит реальные счётчики, вкладку лайков и переходит на профиль автора из ленты и комментариев.",
-      "status": "in_progress",
+      "status": "passing",
       "verification": [
         "RED/GREEN: follow/unfollow, self-follow, duplicate, hidden/banned profile and counters",
         "Alembic upgrade на чистой SQLite БД и PostgreSQL-compatible SQL checks",
@@ -207,8 +207,8 @@
         "frontend: npm test и npm run build",
         "./init.sh вне sandbox, если Windows-окружение позволяет"
       ],
-      "evidence": "2026-08-22: RED backend follow — 2 failed (маршруты отсутствовали); GREEN profile tests — 7 passed. SQLite Alembic clean upgrade прошёл до 20260822_0009; UserFollow DDL скомпилирован для PostgreSQL (composite PK, self-follow CHECK, FK CASCADE). Пакет likes: RED 1 failed, GREEN profile tests — 8 passed. Пакет author: RED API KeyError author; GREEN posts+profile — 10 passed. Final: full backend pytest с test-only UNISENDER_GO_BASE_URL=goapi — 58 passed in 11.31s; frontend npm test — 36 passed; npm run build — successful (49 modules).",
-      "notes": "Согласованный scope 2026-08-22 выполнен в четырёх коммитах: ed9025d, dedc865, 6c09ae4, 994c072. Status остаётся in_progress только из-за внешнего harness gate: обычный full pytest с локальным UNISENDER_GO_BASE_URL=go1 ломает 5 historical email/respx tests, а ./init.sh вне sandbox останавливается на Hermes pip check (missing charset-normalizer for external pdfminer-six/reportlab/requests). Код F11 и production не менялись этой диагностикой; deploy требует отдельного подтверждения Павла."
+      "evidence": "2026-08-22: RED backend follow — 2 failed (маршруты отсутствовали); GREEN profile tests — 7 passed. SQLite Alembic clean upgrade прошёл до 20260822_0009; UserFollow DDL скомпилирован для PostgreSQL (composite PK, self-follow CHECK, FK CASCADE). Пакет likes: RED 1 failed, GREEN profile tests — 8 passed. Пакет author: RED API KeyError author; GREEN posts+profile — 10 passed. Final backend `python -m pytest tests -q --basetemp .pytest-f11-clean-goapi` без override — 58 passed in 11.41s; frontend npm test — 36 passed; npm run build — successful (49 modules).",
+      "notes": "Согласованный scope 2026-08-22 выполнен в четырёх коммитах: ed9025d, dedc865, 6c09ae4, 994c072. Local backend/.env aligned to official goapi default; clean full backend pytest is green. ./init.sh remains blocked only by external Hermes pip check (missing charset-normalizer for external pdfminer-six/reportlab/requests); per approved boundary it does not block F11 passing. Код F11 и production не менялись этой диагностикой; deploy требует отдельного подтверждения Павла."
     },
     {
       "id": "F10",

@@ -10,12 +10,11 @@
 ## Верификация
 - Follow RED -> GREEN: 7 профильных тестов; likes RED -> GREEN: 8; author API RED -> GREEN: 10 (posts+profile).
 - Fresh SQLite Alembic прошёл до `20260822_0009`; UserFollow DDL отдельно скомпилирован PostgreSQL dialect.
-- Final test-only override `UNISENDER_GO_BASE_URL=goapi`: backend `58 passed in 11.31s`; frontend `36 passed`; `npm run build` успешен (49 modules).
+- Рабочий `backend/.env` выровнен с official goapi default. Final backend без override: `58 passed in 11.41s`; frontend `36 passed`; `npm run build` успешен (49 modules).
 
-## Формальный harness blocker
-- Обычный локальный full pytest читает пользовательский `UNISENDER_GO_BASE_URL=go1`, а пять старых email/respx tests жёстко мокаются на `goapi`; это не регрессия F11. Не менять `.env` и тесты вне отдельного scope.
+## Внешняя заметка о harness
 - `./init.sh` вне sandbox реально запущен, но остановился на внешнем Hermes `pip check`: отсутствует `charset-normalizer` для `pdfminer-six`, `reportlab`, `requests`. Не чинить Hermes-зависимости в MPS-задаче.
-- Поэтому `feature_list.json` сохраняет F11 как `in_progress` до воспроизводимого общего harness, хотя функциональная работа и её целевые проверки завершены.
+- Это не блокирует F11: `feature_list.json` переведён в `passing` после чистого полного pytest.
 
 ## Production
 - `https://mir.pod-solncem.ru` остаётся на прежнем revision `7e8eb07`; deploy F11 не выполнялся. Нужны отдельные подтверждение Павла, backup, один deployment, migration, frontend build и smoke.
