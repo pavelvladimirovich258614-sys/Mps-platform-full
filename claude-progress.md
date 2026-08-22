@@ -13,6 +13,11 @@
 
 ## Session Record
 
+### Session 39 — 2026-08-22 (Codex, feed filter heading production deploy)
+- Goal: убрать избыточные интерактивные табы «Все/Статьи», не меняя API и backend-типы публикаций.
+- Completed: лента показывает один неинтерактивный заголовок «Статьи»; data flow и `fishka`/`video_review` support на backend не менялись.
+- Verification run: RED — 2 expected failures for absent heading and present buttons; targeted GREEN — 13 passed; final frontend `npm test` — 48 passed; `npm run build` — success, 110 modules. Production frontend-only rollout `d67155c -> 4b17239`: staging bundle verified with production VITE API/bot values and without localhost API; rollback `/root/backups/mps-feed-heading-20260822T151100Z`; `deploy/smoke.sh` — `[OK]`; served JS heading marker verified. Backend diff empty, `mps-backend` not restarted and active.
+
 ### Session 38 — 2026-08-22 (Codex, F14 composer typing hotfix)
 - Goal: устранить потерю пробелов в Bold-режиме TipTap и уточнить публичный текст/доступные editor-типы публикаций.
 - Root cause: нестандартный `EditorContent.onInput` вручную вызывал `setContent(innerHTML, { emitUpdate: false })` на каждом вводе, переписывая документ вне ProseMirror transaction state. RED regression при Bold-вводе `привет мир` зафиксировал ровно один такой вызов.
