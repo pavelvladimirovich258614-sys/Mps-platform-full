@@ -39,5 +39,17 @@ async def test_posts_verification(client,test_app):
  assert (await client.delete(f"/api/v1/posts/{post['id']}",headers=reader)).status_code==403
  assert (await client.delete(f"/api/v1/posts/{post['id']}",headers=editor)).status_code==204
 
+async def test_rich_text_body_uses_the_explicit_allowlist_on_create_and_patch(client, test_app):
+ editor = await token(client, test_app, True)
+ rich_body = '<h1>Заголовок</h1><p><strong>Жирный</strong><em>Курсив</em><s>Зачёркнутый</s><br></p><ul><li>Пункт</li></ul><ol><li>Первый</li></ol><blockquote>Цитата</blockquote><a href="https://example.com">Ссылка</a><img src="https://cdn.example/image.jpg" alt="Море"><code>Не из редактора</code><iframe src="https://evil.example"></iframe><a href="javascript:alert(1)">XSS</a><p onclick="alert(1)">Без обработчика</p>'
+ expected = '<h1>Заголовок</h1><p><strong>Жирный</strong><em>Курсив</em><s>Зачёркнутый</s><br></p><ul><li>Пункт</li></ul><ol><li>Первый</li></ol><blockquote>Цитата</blockquote><a href="https://example.com" rel="noopener noreferrer">Ссылка</a><img src="https://cdn.example/image.jpg" alt="Море">Не из редактора<a rel="noopener noreferrer">XSS</a><p>Без обработчика</p>'
+ created = await client.post("/api/v1/posts", json={"type": "article", "title": "Rich text", "body": rich_body, "status": "published"}, headers=editor)
+ assert created.status_code == 201
+ assert created.json()["body"] == expected
+
+ patched = await client.patch(f"/api/v1/posts/{created.json()['id']}", json={"body": '<h2>Обновлено</h2><img src="https://cdn.example/next.jpg" alt="Далее"><code>Убрать</code><script>alert(1)</script>'}, headers=editor)
+ assert patched.status_code == 200
+ assert patched.json()["body"] == '<h2>Обновлено</h2><img src="https://cdn.example/next.jpg" alt="Далее">Убрать'
+
 def test_slugify_cyrillic_edge_letters():
  assert slugify("Щука, южная Ялта и ёлка") == "shchuka-yuzhnaya-yalta-i-yolka"

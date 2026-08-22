@@ -13,7 +13,7 @@ import { PublicProfile } from "./components/PublicProfile";
 import { QA } from "./components/QA";
 import { Reviews } from "./components/Reviews";
 import { Subscribe } from "./components/Subscribe";
-import { type ApiPost, useAuthorPosts, useAuth, useLikedPosts, useNotifications, useOnline, usePost, usePosts, usePublicProfile, usePublicSettings } from "./hooks";
+import { type ApiPost, useAuthorPosts, useAuth, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePosts, usePublicProfile, usePublicSettings } from "./hooks";
 import { pathForRoute, type PathRoute, routeFromPath } from "./router";
 
 function routeForPage(page: Page): PathRoute {
@@ -41,6 +41,7 @@ export function App() {
 
   const auth = useAuth();
   const posts = usePosts();
+  const postCreator = usePostCreator();
   const notifications = useNotifications();
   const online = useOnline();
   const publicSettings = usePublicSettings();
@@ -99,9 +100,13 @@ export function App() {
   };
 
   const openArticle = (post: ApiPost) => navigate({ page: "article", slug: post.slug });
+  const createPost = async (draft: Parameters<typeof postCreator.create>[0]) => {
+    await postCreator.create(draft);
+    await posts.reload();
+  };
   const page: Page = route.page === "countries" && topicOpen ? "topic" : route.page;
   let content = null;
-  if (page === "feed") content = <Feed posts={posts.value ?? []} loading={posts.loading} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
+  if (page === "feed") content = <Feed posts={posts.value ?? []} loading={posts.loading} canCreate={auth.user?.role === "editor" || auth.user?.role === "admin"} onCreatePost={createPost} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
   if (page === "fishki") content = <Feed mode="fishki" posts={posts.value ?? []} loading={posts.loading} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
   if (page === "countries" || page === "topic") {
     content = (

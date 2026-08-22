@@ -10,6 +10,12 @@ from app.models.user import Role, User
 from app.schemas.post import PostPatch, PostWrite
 
 router=APIRouter(prefix="/posts",tags=["posts"])
+POST_BODY_TAGS = {"p", "br", "strong", "em", "s", "h1", "h2", "h3", "ul", "ol", "li", "blockquote", "a", "img"}
+POST_BODY_ATTRIBUTES = {"a": {"href"}, "img": {"src", "alt"}}
+
+def clean_post_body(body: str) -> str:
+    return nh3.clean(body, tags=POST_BODY_TAGS, attributes=POST_BODY_ATTRIBUTES)
+
 def slugify(title:str)->str:
     value=title.lower()
     for source,target in {"щ":"shch","ш":"sh","ч":"ch","ц":"ts","х":"kh","ж":"zh","ю":"yu","я":"ya","ё":"yo","ъ":"","ь":""}.items(): value=value.replace(source,target)
@@ -37,7 +43,7 @@ async def get_post(slug:str,session:AsyncSession=Depends(get_db)):
 @router.post("",status_code=201)
 async def create(payload:PostWrite,session:AsyncSession=Depends(get_db),user:User=Depends(require_role(Role.EDITOR))):
     values = payload.model_dump()
-    values["body"] = nh3.clean(payload.body)
+    values["body"] = clean_post_body(payload.body)
     post=Post(**values,slug=await unique_slug(session,payload.title),author_id=user.id,published_at=datetime.now(UTC) if payload.status==PostStatus.PUBLISHED else None);session.add(post);await session.commit();await session.refresh(post);return dto(post,user)
 @router.post("/{post_id}/like")
 async def like(post_id:int,session:AsyncSession=Depends(get_db),user:User=Depends(get_current_user)):
@@ -56,7 +62,7 @@ async def patch(post_id:int,payload:PostPatch,session:AsyncSession=Depends(get_d
     shot_at = changes.get("shot_at", post.shot_at)
     if post_type == PostType.VIDEO_REVIEW and shot_at is None:
         raise HTTPException(422, "Для видеообзора обязательна дата съёмки")
-    for key,value in changes.items(): setattr(post,key,nh3.clean(value) if key=="body" else value)
+    for key,value in changes.items(): setattr(post,key,clean_post_body(value) if key=="body" else value)
     await session.commit();await session.refresh(post);author=await session.get(User,post.author_id);return dto(post,author)
 @router.delete("/{post_id}",status_code=204)
 async def remove(post_id:int,session:AsyncSession=Depends(get_db),_:User=Depends(require_role(Role.EDITOR))):

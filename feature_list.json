@@ -270,6 +270,23 @@
       ],
       "evidence": "2026-08-22: RED `npm test -- --run src/App.routing.test.tsx` вне sandbox — 2 failed: `/fishki` fallback в ленту, sidebar-пункт отсутствовал. GREEN targeted — 11 passed. Final frontend `npm test` — 40 passed; `npm run build` — 49 modules, success. Backend `python -m pytest tests -q --basetemp .pytest-f13-full` — 58 passed in 11.45s. `./init.sh` вне sandbox остановился до MPS tests только на внешнем Hermes pip check: missing charset-normalizer у pdfminer-six/reportlab/requests. Production frontend-only rollout: static backup `/root/backups/mps-f13-20260822T130855Z`; VPS fast-forwarded to `fff502a`; production VITE API/bot values embedded, localhost absent; backend active without restart; `deploy/smoke.sh` — [OK]; live `/fishki` — 200 and served JS contains route/sidebar with video filter absent.",
       "notes": "Выполнено и задеплоено 2026-08-22. Scope frontend-only: добавлен /fishki, sidebar и mobile sheet; существующий Feed переиспользует те же PostCard и author links, но показывает только type=tip. В основной ленте оставлены только filters «Все» и «Статьи». video_review API/type/card сохранены, UI tab временно скрыт до появления реального видеоконтента. На production публичный posts API пока возвращает [], поэтому live route/bundle проверены, но реальных карточек для визуального фильтра не было; контент намеренно не создавался."
+    },
+    {
+      "id": "F14",
+      "priority": 14,
+      "area": "rich-text",
+      "title": "Rich-text редактор публикаций на TipTap",
+      "user_visible_behavior": "Редактор создаёт публикацию через базовый TipTap-editor; поддерживаются базовое форматирование и безопасное HTML-отображение новых постов, а старый текст остаётся читаемым.",
+      "status": "in_progress",
+      "verification": [
+        "RED/GREEN: backend HTML allowlist и XSS-сценарии create/patch",
+        "RED/GREEN: frontend toolbar, отправка HTML, safe rendering и legacy text",
+        "frontend: npm test и npm run build",
+        "backend: python -m pytest tests -q",
+        "./init.sh вне sandbox; внешний Hermes pre-flight фиксируется отдельно"
+      ],
+      "evidence": "",
+      "notes": "Approved 2026-08-22. Scope: TipTap composer только для Editor, явный nh3 allowlist p/br/strong/em/s/h1-h3/ul/ol/li/blockquote/a[href]/img[src,alt], client-side DOMPurify and legacy plaintext compatibility. Media upload remains out of scope."
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { ApiPost, PublicProfile as PublicProfileData } from "../hooks";
+import { RichTextContent } from "./RichTextContent";
 
 type Tab = "activity" | "posts" | "answers" | "likes" | "subscriptions";
 
@@ -133,7 +134,7 @@ export function PublicProfile({ profile, posts, likes, loading, likesLoading, vi
             <article key={post.id} className="public-profile-post">
               <p className="post-tag">{post.type === "article" ? "Статья" : post.type === "video_review" ? "Видеообзор" : "Фишка"}</p>
               <h2>{post.title}</h2>
-              <p>{post.body}</p>
+              <RichTextContent html={post.body} className="post-body-excerpt" />
               <button onClick={() => onOpenPost(post)} aria-label={`Читать публикацию: ${post.title}`}>Читать публикацию →</button>
             </article>
           ))}

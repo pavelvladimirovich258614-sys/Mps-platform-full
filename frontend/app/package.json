@@ -6,6 +6,10 @@
     "test:quiet": "vitest run --reporter=dot"
   },
   "dependencies": {
+    "@tiptap/extension-link": "^3.30.2",
+    "@tiptap/react": "^3.30.2",
+    "@tiptap/starter-kit": "^3.30.2",
+    "dompurify": "^3.4.14",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
