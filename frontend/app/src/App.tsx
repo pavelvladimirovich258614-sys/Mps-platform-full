@@ -99,8 +99,6 @@ export function App() {
 
   const openArticle = (post: ApiPost) => navigate({ page: "article", slug: post.slug });
   const page: Page = route.page === "countries" && topicOpen ? "topic" : route.page;
-  const role = devRole ?? auth.user?.role;
-
   let content = null;
   if (page === "feed") content = <Feed posts={posts.value ?? []} loading={posts.loading} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
   if (page === "countries" || page === "topic") {
@@ -152,6 +150,8 @@ export function App() {
         likesLoading={likedPosts.loading}
         viewerId={auth.user?.id ?? null}
         onOpenPost={openArticle}
+        onEditProfile={() => setOverlay("profile")}
+        onNotice={setToast}
         onToggleFollow={async () => {
           try {
             await publicProfile.toggleFollow();
@@ -187,13 +187,17 @@ export function App() {
         theme={theme}
         notificationsOpen={notificationsOpen}
         unreadCount={notifications.items.filter((item) => !item.is_read).length}
-        userName={auth.user ? `${auth.user.name || "Читатель"} · ${role}` : "Войти"}
+        userName={auth.user?.name || (auth.user ? "Читатель" : "Войти")}
+        userAvatarUrl={auth.user?.avatar_url ?? null}
         online={online.value ?? []}
         publicSettings={publicSettings.value}
         onNavigate={openPage}
         onThemeToggle={() => setTheme(theme === "dark" ? "light" : "dark")}
         onOpenQA={() => setOverlay("qa")}
-        onOpenProfile={() => setOverlay("profile")}
+        onOpenProfile={() => {
+          if (auth.user) navigate({ page: "profile", userId: auth.user.id });
+          else setOverlay("profile");
+        }}
         onToggleNotifications={() => setNotificationsOpen(!notificationsOpen)}
         onOpenPrivacy={() => openPage("privacy")}
         onOpenTerms={() => openPage("terms")}

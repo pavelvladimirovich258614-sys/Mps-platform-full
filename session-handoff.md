@@ -1,4 +1,19 @@
-# Session handoff — 2026-08-22 public profile, part B
+# Session handoff — 2026-08-22 F12 profile entry and header UI
+
+## Текущее состояние F12
+- Локально готова F12 «Вход в публичный профиль и UI шапки»; production не менялся и ждёт отдельного подтверждения Павла. Авторизованный клик по avatar/name в desktop header и «Мой профиль» в mobile sheet ведёт на `/users/{own id}`. У гостя сохранён вход через существующую modal.
+- На собственной public profile есть «Редактировать профиль»: он переиспользует `Profile` modal без дублирования формы; logout остаётся там. У других пользователей прежняя follow/unfollow-кнопка. Добавлено `...` menu: copy canonical `/users/{id}` via `navigator.clipboard`, `navigator.share` с copy fallback, toast и Escape/outside close.
+- Визуально: компактная зона name/счётчики/actions/avatar, отдельная неинтерактивная строка «Посмотреть подписчиков · N», подчёркнутые tabs. Username и follower list не реализованы намеренно: public username отсутствует в схеме, а backend API отдаёт лишь counts.
+
+## F12 верификация
+- RED: 2 теста упали до реализации (header navigation и owner menu/actions). GREEN targeted: 13 passed. Final frontend: 38 passed; `npm run build` — 49 modules. Final backend: 58 passed in 17.00s.
+- `./init.sh` вне sandbox повторно блокируется только внешним Hermes `pip check` (missing charset-normalizer for pdfminer-six/reportlab/requests); не менять Hermes в MPS scope.
+- Agent-browser skill прочитан для visual review, но binary не установлен; browser screenshot не выполнен. CSS/DOM композиция вручную сопоставлена с приложенными Substack screenshots.
+
+## Предстоящий шаг
+- После одобрения: один F12 production deploy с build-time `VITE_API_URL`/`VITE_TELEGRAM_BOT_USERNAME`, `npm run build`, restart не нужен (frontend-only), `deploy/smoke.sh` и browser/manual smoke. Список подписчиков и username — отдельные планируемые пакеты.
+
+# Предыдущий контекст — 2026-08-22 public profile, part B
 
 ## Реализовано и задеплоено
 - F11 «Публичный профиль, часть Б» готова в четырёх коммитах: `ed9025d` (UserFollow/API), `dedc865` (UI счётчиков/подписки), `6c09ae4` (вкладка «Лайки»), `994c072` (ссылки на авторов).

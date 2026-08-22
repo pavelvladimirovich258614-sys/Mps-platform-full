@@ -94,6 +94,42 @@ describe("PublicProfile", () => {
     expect(screen.queryByRole("button", { name: "Подписаться" })).toBeNull();
   });
 
+  it("shows owner actions and copies the public link from the compact menu", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const onNotice = vi.fn();
+    const clipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    render(
+      <PublicProfile
+        profile={profile}
+        posts={[]}
+        likes={[]}
+        loading={false}
+        likesLoading={false}
+        viewerId={profile.id}
+        onOpenPost={vi.fn()}
+        onToggleFollow={vi.fn()}
+        onNotice={onNotice}
+      />,
+    );
+
+    expect(screen.getByText("12 подписчиков")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Редактировать профиль" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Действия с профилем" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Действия с профилем" }));
+    expect(screen.getByRole("menuitem", { name: /Скопировать ссылку/ })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: /Поделиться/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("menuitem", { name: /Скопировать ссылку/ }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/users/7`));
+    expect(onNotice).toHaveBeenCalledWith("Ссылка на профиль скопирована");
+    fireEvent.click(screen.getByRole("button", { name: "Действия с профилем" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /Поделиться/ }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(2));
+    if (clipboard) Object.defineProperty(navigator, "clipboard", clipboard);
+    else Reflect.deleteProperty(navigator, "clipboard");
+  });
+
   it("loads real liked posts in the likes tab", () => {
     render(
       <PublicProfile

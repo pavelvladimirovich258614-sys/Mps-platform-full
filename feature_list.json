@@ -237,6 +237,22 @@
         "status": "passing",
         "evidence": "bash -n deploy/backup.sh — OK; negative smoke без PG_DUMP_URL — exit 1 и journal-friendly mps-backup: ERROR; functional smoke с fake pg_dump — непустой .dump.gz, атомарная публикация и удаление файла старше 14 дней. mps-backup.service направляет stdout/stderr в journal и запускает script через /usr/bin/bash. Реальный pg_dump + pg_restore --list остаётся обязательным VPS-шагом по DEPLOY.md."
       }
+    },
+    {
+      "id": "F12",
+      "priority": 12,
+      "area": "public-profile-ui",
+      "title": "Вход в публичный профиль и UI шапки",
+      "user_visible_behavior": "Авторизованный пользователь открывает свой публичный профиль кликом в шапке, редактирует его через существующую модалку, а профиль получает owner actions и меню ссылки/поделиться.",
+      "status": "passing",
+      "verification": [
+        "RED/GREEN frontend tests: header navigation, owner edit action, profile menu clipboard/share fallback",
+        "cd frontend/app && npm test",
+        "cd frontend/app && npm run build",
+        "./init.sh вне sandbox; известный внешний Hermes pip check фиксируется отдельно"
+      ],
+      "evidence": "2026-08-22: RED — 2 F12 tests failed: header kept opening the edit modal and owner actions/menu were absent. GREEN targeted: `npm test -- src/App.routing.test.tsx src/components/PublicProfile.test.tsx` — 13 passed. Final: frontend `npm test` — 38 passed; `npm run build` — 49 modules, success; backend `python -m pytest tests -q --basetemp .pytest-f12-full` — 58 passed in 17.00s. `./init.sh` rerun outside sandbox stopped only at external Hermes pip check (missing charset-normalizer for pdfminer-six/reportlab/requests), before MPS tests.",
+      "notes": "Username handle и список подписчиков сознательно вне scope: User не хранит public username, а API отдаёт только follower count без списка. Header name/avatar and mobile My profile now open /users/{own id}; guests still open login modal. Owner edit reuses Profile modal; menu copy uses navigator.clipboard and share falls back to copy. Browser visual screenshot could not run because the locally available agent-browser skill has no installed executable; CSS/DOM composition was compared to the supplied Substack reference. Production deploy requires separate approval."
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { ApiPost, PublicProfile as PublicProfileData } from "../hooks";
 
@@ -13,6 +13,8 @@ type PublicProfileProps = {
   viewerId: number | null;
   onOpenPost: (post: ApiPost) => void;
   onToggleFollow: () => Promise<void>;
+  onEditProfile?: () => void;
+  onNotice?: (message: string) => void;
 };
 
 const tabs: Array<{ id: Tab; label: string; empty: string }> = [
@@ -31,15 +33,27 @@ function countLabel(count: number, singular: string, few: string, many: string) 
   return `${count} ${many}`;
 }
 
-export function PublicProfile({ profile, posts, likes, loading, likesLoading, viewerId, onOpenPost, onToggleFollow }: PublicProfileProps) {
+export function PublicProfile({ profile, posts, likes, loading, likesLoading, viewerId, onOpenPost, onToggleFollow, onEditProfile, onNotice }: PublicProfileProps) {
   const [tab, setTab] = useState<Tab>("posts");
   const [followPending, setFollowPending] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const current = tabs.find((item) => item.id === tab) ?? tabs[1];
-  const canFollow = viewerId !== profile.id;
+  const isOwner = viewerId === profile.id;
   const showingPosts = tab === "posts";
   const showingLikes = tab === "likes";
   const visiblePosts = showingLikes ? likes : posts;
   const postsLoading = showingLikes ? likesLoading : loading;
+  const profileUrl = new URL(`/users/${profile.id}`, window.location.origin).href;
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setMenuOpen(false); };
+    const closeOnOutsideClick = (event: MouseEvent) => { if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false); };
+    document.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    return () => { document.removeEventListener("keydown", closeOnEscape); document.removeEventListener("mousedown", closeOnOutsideClick); };
+  }, [menuOpen]);
   const toggleFollow = async () => {
     setFollowPending(true);
     try {
@@ -49,27 +63,44 @@ export function PublicProfile({ profile, posts, likes, loading, likesLoading, vi
     }
   };
 
+  const copyLink = async () => {
+    setMenuOpen(false);
+    try { await navigator.clipboard.writeText(profileUrl); onNotice?.("Ссылка на профиль скопирована"); }
+    catch { onNotice?.("Не удалось скопировать ссылку"); }
+  };
+  const shareLink = async () => {
+    if (!navigator.share) { await copyLink(); return; }
+    setMenuOpen(false);
+    try { await navigator.share({ title: profile.name || "Профиль путешественника", url: profileUrl }); onNotice?.("Ссылка на профиль отправлена"); }
+    catch (cause) { if (!(cause instanceof DOMException && cause.name === "AbortError")) onNotice?.("Не удалось поделиться ссылкой"); }
+  };
+
   return (
     <main className="public-profile-page">
       <section className="public-profile-header">
-        <span className="public-profile-avatar">
-          {profile.avatar_url && <img src={profile.avatar_url} alt={`Аватар ${profile.name || "пользователя"}`} />}
-        </span>
-        <div>
-          <p className="profile-kicker">Профиль путешественника</p>
+        <div className="public-profile-summary">
           <h1>{profile.name || "Путешественник"}</h1>
           {profile.bio && <p className="public-profile-bio">{profile.bio}</p>}
           <p className="public-profile-count">{countLabel(profile.posts_count, "публикация", "публикации", "публикаций")}</p>
+          <p className="public-profile-followers">Посмотреть подписчиков · {profile.followers_count}</p>
           <div className="public-profile-social">
             <span>{countLabel(profile.followers_count, "подписчик", "подписчика", "подписчиков")}</span>
             <span>{countLabel(profile.following_count, "подписка", "подписки", "подписок")}</span>
           </div>
-          {canFollow && (
-            <button className="public-profile-follow" onClick={() => void toggleFollow()} disabled={followPending}>
-              {followPending ? "Сохраняем…" : profile.is_following ? "Отписаться" : "Подписаться"}
-            </button>
-          )}
+          <div className="public-profile-actions">
+            {isOwner ? <button className="public-profile-edit" onClick={onEditProfile}>Редактировать профиль</button> : (
+              <button className="public-profile-follow" onClick={() => void toggleFollow()} disabled={followPending}>{followPending ? "Сохраняем…" : profile.is_following ? "Отписаться" : "Подписаться"}</button>
+            )}
+            <div className="public-profile-menu" ref={menuRef}>
+              <button className="public-profile-menu-button" aria-label="Действия с профилем" aria-expanded={menuOpen} aria-controls="profile-actions-menu" onClick={() => setMenuOpen(!menuOpen)}>•••</button>
+              {menuOpen && <div className="public-profile-menu-popover" id="profile-actions-menu" role="menu">
+                <button role="menuitem" onClick={() => void copyLink()}>⌁ <span>Скопировать ссылку</span></button>
+                <button role="menuitem" onClick={() => void shareLink()}>⇧ <span>Поделиться</span></button>
+              </div>}
+            </div>
+          </div>
         </div>
+        <span className="public-profile-avatar">{profile.avatar_url && <img src={profile.avatar_url} alt={`Аватар ${profile.name || "пользователя"}`} />}</span>
       </section>
 
       {profile.countries.length > 0 && (

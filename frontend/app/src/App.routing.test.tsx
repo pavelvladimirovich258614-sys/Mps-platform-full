@@ -36,7 +36,7 @@ const jsonResponse = (status: number, body: unknown) => new Response(JSON.string
 type DetailResult = "ok" | "missing" | "network";
 type EmailRequestResult = "ok" | "failure";
 
-function installApi(detailResult: DetailResult = "ok", emailRequestResult: EmailRequestResult = "ok") {
+function installApi(detailResult: DetailResult = "ok", emailRequestResult: EmailRequestResult = "ok", currentUser: Record<string, unknown> | null = null) {
   const fetchMock = vi.fn<typeof fetch>(async (input) => {
     const url = new URL(String(input));
     const path = url.pathname;
@@ -58,6 +58,7 @@ function installApi(detailResult: DetailResult = "ok", emailRequestResult: Email
         ? jsonResponse(502, { detail: "Не удалось отправить код. Попробуйте ещё раз позже" })
         : new Response(null, { status: 204 });
     }
+    if (path === "/api/v1/me" && currentUser) return jsonResponse(200, currentUser);
     if (path === "/api/v1/me" || path === "/api/v1/auth/refresh") {
       return jsonResponse(401, { detail: "Требуется авторизация" });
     }
@@ -107,6 +108,21 @@ describe("App pathname routing", () => {
       "https://mir.pod-solncem.ru/api/v1/users/7/profile",
       expect.any(Object),
     );
+  });
+
+  it("opens the authenticated reader's public profile from the header and edits through the existing modal", async () => {
+    setAccessToken("reader-access-token");
+    installApi("ok", "ok", {
+      id: 7, email: null, name: "Мария", avatar_url: "/media/maria.webp", bio: "Пишу о путешествиях.", role: "reader", is_anonymous: false,
+    });
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Мария" }));
+    await waitFor(() => expect(window.location.pathname).toBe("/users/7"));
+    expect(await screen.findByRole("button", { name: "Редактировать профиль" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Редактировать профиль" }));
+    expect(await screen.findByRole("dialog", { name: "Мой профиль" })).toBeTruthy();
   });
 
   it("shows a dedicated not-found state for a physically missing slug", async () => {

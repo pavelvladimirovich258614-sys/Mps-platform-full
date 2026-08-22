@@ -4,14 +4,24 @@
 - Repository root directory: mps-platform/
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
-- Feature state: F01–F11 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; публичный профиль пользователя, части А и Б задеплоены. `./init.sh` остаётся заблокирован внешним Hermes `pip check`, но это не MPS feature gate.
+- Feature state: F01–F12 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; публичный профиль пользователя, части А и Б задеплоены, вход в собственный public profile готов локально. `./init.sh` остаётся заблокирован внешним Hermes `pip check`, но это не MPS feature gate.
 - Deploy state: платформа развёрнута и живая на `https://mir.pod-solncem.ru`. MPS использует отдельные PostgreSQL DB/role, Redis DB 2 и backend на `127.0.0.1:8001`; nginx, certbot, HSTS, systemd timers и PostgreSQL backup проверены на VPS.
 - Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15, I-16, I-18 и I-20 закрыты 2026-08-20. I-21 отложен до pre-launch юридической проверки. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
 - Auth/UI state: production build использует `https://mir.pod-solncem.ru/api/v1` и `Reg_Under_the_sun_bot`; закрыты найденные UI-проблемы login/profile (logout, avatar upload, золотой online-индикатор, toast поверх modal, email input). Telegram Login Widget и callback работают; role storage устойчиво читает legacy `ADMIN` и текущие строчные значения, что подтверждено live callback 200.
 - Email state: UnisenderGo transport использует официальный default `goapi.unisender.ru` (с возможностью override на go1/go2) и `X-API-KEY`; payload `message/recipients/body/subject/from_email` проверен mock-тестами. Production delivery сейчас заблокирована внешним TCP timeout до сети Unisender `31.184.200.*:443`: goapi и go1 недоступны, при этом ya.ru/google.com доступны, а local UFW/iptables outgoing не блокируют. Email-код и digest не работают до восстановления маршрута или смены транспорта/provider.
-- Next best action: email infrastructure — отдельно открыть тикет HostKey по selective egress timeout к Unisender и выбрать SMTP/alternate provider, если маршрут не восстановят; следующую продуктовую доработку согласовывать отдельно.
+- Next best action: после отдельного подтверждения — production deploy F12; список подписчиков и username-handle остаются самостоятельными задачами, email infrastructure — отдельный тикет HostKey.
 
 ## Session Record
+
+### Session 30 — 2026-08-22 (Codex, F12 profile entry and header UI)
+- Goal: перевести вход из шапки на существующий public profile, переиспользовать настройки владельца и довести шапку по Substack-референсу без backend-расширений.
+- Completed: name/avatar в desktop-шапке и «Мой профиль» в mobile sheet ведут авторизованного пользователя на `/users/{id}`; гостю по-прежнему открывается login modal. Owner получает «Редактировать профиль», открывающее прежний `Profile` modal, где остаётся logout. Public profile получил компактную композицию name/счётчики/actions/avatar, неактивный текст «Посмотреть подписчиков», owner/visitor actions и доступное меню `...`: clipboard copy, Web Share с copy fallback, Escape/outside close и toast. Username и follower-list намеренно не добавлены.
+- Verification run: RED — 2 F12 tests failed before implementation. GREEN targeted — 13 passed; frontend `npm test` — 38 passed; `npm run build` — 49 modules, success; backend full pytest — 58 passed in 17.00s. Final `./init.sh` вне sandbox остановился только на чужом Hermes pre-flight: missing `charset-normalizer` у `pdfminer-six`, `reportlab`, `requests`.
+- Visual review: встроенный просмотр подтвердил референсную композицию; agent-browser skill прочитан, но executable отсутствует, поэтому реальный browser screenshot не выполнялся. CSS/DOM сохраняет компактную верхнюю зону, отдельную строку подписчиков, ряд action buttons и underline tabs; mobile перестраивает avatar/actions без горизонтального overflow.
+- Evidence recorded: feature_list.json → F12 passing.
+- Commits: будет создан `feat: навигация к публичному профилю через шапку + доводка UI`.
+- Known risks: production не менялся; для настоящей ссылки «Посмотреть подписчиков» нужны новый API endpoint и view. Username требует отдельного DB field/unique policy/migration.
+- Next best action: получить подтверждение Павла на единый F12 production deploy.
 
 ### Session 29 — 2026-08-22 (Codex, F11 production deploy)
 - Goal: единым rollout задеплоить соцграф, подписки, «Лайки» и ссылки на профили авторов.
