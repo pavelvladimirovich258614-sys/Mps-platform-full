@@ -1,30 +1,13 @@
-# Session handoff — 2026-08-22 F14 rich-text редактор
+# Session handoff — 2026-08-22
 
-## Текущее состояние
+## Текущее подтверждённое состояние
 
-- Лента упрощена и задеплоена frontend-only на `4b17239`: вместо tab-фильтра «Все/Статьи» показан один неинтерактивный заголовок «Статьи». API/model support `article/fishka/video_review` сохранён; backend не менялся, `mps-backend` не рестартовался и active. Production VITE bundle verified, `deploy/smoke.sh` — `[OK]`, rollback `/root/backups/mps-feed-heading-20260822T151100Z`.
-- F14 typing hotfix `7da63d4` задеплоен frontend-only: VPS revision `d67155c`, rollback static dist `/root/backups/mps-f14-typing-hotfix-20260822T145900Z`. Из `RichTextEditor` удалён ручной `onInput → setContent(innerHTML)`, который сбрасывал ProseMirror transaction state и ломал пробел в Bold-режиме; синхронизация идёт только через штатный TipTap `onUpdate`. Подзаголовок ленты обновлён; в composer остался только тип «Статья», а `fishka` убрана из общего `PostDraft`. Bundle содержит production VITE values без localhost; `deploy/smoke.sh` — `[OK]`. Backend diff пуст, `mps-backend` не рестартовался и active.
-- F14 composer hotfix задеплоен на production: VPS revision `17a1a2d`, rollback static dist `/root/backups/mps-f14-composer-modal-20260822T143700Z`. Editor/admin больше не видит composer инлайн: компактная золотая кнопка «Создать публикацию» открывает TipTap в modal overlay; закрытие работает по Escape, клику на фон и «×». Новый bundle содержит production VITE API/bot values и не содержит localhost API. Backend diff пуст, поэтому `mps-backend` не рестартовался и остаётся active; `deploy/smoke.sh` — `[OK]`.
-- `post.body` хранит HTML только для новых rich-text постов. Server-side nh3 allowlist допускает ровно `p/br/strong/em/s/h1-h3/ul/ol/li/blockquote/a[href]/img[src,alt]`; client-side DOMPurify повторяет фильтрацию при чтении в Feed, full article и PublicProfile. Старые plain/Markdown body остаются escaped plaintext с переносами; миграция БД не требуется.
-- Final F14: frontend `npm test` — 44 passed; `npm run build` — 110 modules success; backend full pytest — 59 passed. `./init.sh` остановился только на известном внешнем Hermes `charset-normalizer` pre-flight, до MPS pytest. Production `deploy/smoke.sh` — `[OK]`; direct authenticated HTTPS API smoke saved `<p>test</p>` and stripped script, then independently confirmed cleanup. Visual browser check не выполнен: agent-browser CLI отсутствует в среде после попытки запуска; не подменять это утверждением о screenshot-проверке.
+- Production: `https://mir.pod-solncem.ru`, revision `8f8978c`; frontend развёрнут с production `VITE_API_URL` и `VITE_TELEGRAM_BOT_USERNAME`, `mps-backend` active, `deploy/smoke.sh` прошёл.
+- F14 завершён и задеплоен: TipTap rich-text composer доступен editor/admin через modal, а не показывается inline в ленте. Bold-space regression устранён штатным TipTap `onUpdate`; серверная nh3 allowlist и клиентская DOMPurify-защита сохраняются.
+- Последующие UI-правки задеплоены: общий подзаголовок ленты, удаление `fishka` из composer, единый заголовок «Статьи» вместо фильтра и CTA «Подобрать тур в боте» после комментариев на полной статье.
+- Миграция `20260822_0010` применена на production PostgreSQL. `comments_moderation_enabled=false`: новые комментарии сразу `approved` и видны через GET. Admin может переключать policy через `PATCH /admin/settings`; при `true` UI подтверждает отправку на проверку. Reviews не менялись.
+- Локальная финальная верификация для этого пакета: SQLite migration clean, backend pytest — 61 passed, frontend — 15 suites / 51 tests passed, `npm run build` success. `./init.sh` по-прежнему останавливается на внешнем Hermes `pip check` из-за missing `charset-normalizer`, не из-за MPS.
 
-- F13 задеплоена на `https://mir.pod-solncem.ru`: code SHA `fff502a`, static backup `/root/backups/mps-f13-20260822T130855Z`. Отдельный shareable route `/fishki` использует существующий `Feed` и те же карточки/ссылки на авторов, но показывает только `type=tip`.
-- В desktop sidebar «Фишки» возвращены между «Страны» и «Отзывы». В mobile sheet пункт тоже есть; нижняя mobile nav сохранена как Лента / Страны / Отзывы / Ещё.
-- На главной ленте filters упрощены до «Все» и «Статьи». «Фишки» теперь отдельный раздел, а «Видеообзоры» временно скрыты только из UI. Backend `PostType.VIDEO_REVIEW`, API и карточка не изменялись.
-- Backend, миграции и runtime `.env` не менялись; backend restart не требовался и `mps-backend` остался active.
+## Следующий шаг — только диагностика лайков
 
-## Верификация F13
-
-- RED: 2 frontend tests упали до реализации — `/fishki` возвращал feed, sidebar-пункт отсутствовал. GREEN targeted: 11 passed.
-- Final: frontend `npm test` — 40 passed; `npm run build` — 49 modules; full backend pytest — 58 passed in 11.45s.
-- `./init.sh` вне sandbox дошёл до внешнего Hermes pre-flight и остановился на missing `charset-normalizer` для `pdfminer-six`, `reportlab`, `requests`; MPS-код и зависимости не менялись.
-- Production: VITE API/bot embedded and localhost absent in served bundle; `deploy/smoke.sh` — `[OK]`; `/fishki` — 200, route/sidebar markers live, video filter marker absent. Public `/api/v1/posts` currently returns `[]`, поэтому live имеет empty state, а не карточки для наглядного фильтра.
-
-## Возможный следующий шаг
-
-- Павел может вручную войти editor-ролью и создать первую реальную публикацию, чтобы оценить writing UX на production.
-- Следующая editor-фаза: безопасная загрузка изображений (HTML allowlist уже содержит `img`, но upload/UI не реализованы), preview, редактирование черновиков, autosave, embeds и более полный Substack-like workflow — только отдельными пакетами.
-
-- Наполнить платформу реальными фишками/статьями: тогда live-проверка покажет карточки раздела «Фишки» и авторские ссылки.
-- После появления реальных опубликованных видеообзоров вернуть UI-tab отдельным небольшим scope. Не делать автопоказ по текущей странице ленты без надёжного API-признака.
-- Либо выбрать отдельный пакет: косметика дублирования счётчиков подписок, follower list или Unisender network blocker.
+Диагностировать отсутствие лайков на опубликованных статьях — последний не начатый пункт из списка находок Павла. Начать read-only: воспроизвести UI/API-путь, проверить запрос/ответ, состояние `post_likes` и правила видимости. Не менять комментарии, CTA, carousel или бизнес-логику лайков без подтверждённой причины и отдельного плана.

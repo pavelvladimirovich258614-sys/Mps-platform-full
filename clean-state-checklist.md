@@ -1,5 +1,14 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 40 final checkpoint — 2026-08-22
+
+- [x] F14 rich-text composer и связанные UX-правки задеплоены: modal вместо inline Feed composer, штатный TipTap `onUpdate` вместо ручного `setContent`, общий подзаголовок ленты, без `fishka` в composer, заголовок «Статьи» и CTA после комментариев.
+- [x] `comments_moderation_enabled` реализован как admin-настраиваемая setting со значением по умолчанию `false`; миграция `20260822_0010` применена на production PostgreSQL. Ветки `approved`/`pending` покрыты RED→GREEN, а UI сообщает об отправке на проверку при pending. Премодерация reviews не менялась.
+- [x] Локальная верификация: migration на чистой SQLite; полный backend pytest — 61 passed; frontend `npm test` — 15 suites / 51 tests passed; `npm run build` — success (110 modules).
+- [x] `./init.sh` запускался через Git Bash и остановился только на внешнем Hermes `pip check`: missing `charset-normalizer` у pdfminer-six/reportlab/requests; это не блокирует MPS feature state.
+- [x] Production verification: revision `8f8978c`, `mps-backend` active, frontend собран с production VITE values, `deploy/smoke.sh` passed. Live `PATCH /admin/settings` переключил comments moderation, POST вернул `approved`, GET показал комментарий; финальное live value восстановлено в `false`.
+- [x] Финальный handoff ограничивает следующий scope read-only диагностикой отсутствующих лайков на опубликованных статьях.
+
 ## F14 local completion — 2026-08-22
 
 - [x] Feed heading UI fix `4b17239`: RED — 2 expected frontend failures; targeted GREEN — 13 passed; final frontend `npm test` — 48 passed; `npm run build` — success (110 modules). Frontend-only production rollout with rollback `/root/backups/mps-feed-heading-20260822T151100Z`; `deploy/smoke.sh` passed; backend unchanged and active without restart.
