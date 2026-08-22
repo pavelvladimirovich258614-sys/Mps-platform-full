@@ -29,7 +29,7 @@ const post = {
 describe("PublicProfile", () => {
   it("shows public author data and makes only the publications tab functional", () => {
     const onOpenPost = vi.fn();
-    render(<PublicProfile profile={profile} posts={[post]} loading={false} viewerId={profile.id} onOpenPost={onOpenPost} onToggleFollow={vi.fn()} />);
+    render(<PublicProfile profile={profile} posts={[post]} likes={[]} loading={false} likesLoading={false} viewerId={profile.id} onOpenPost={onOpenPost} onToggleFollow={vi.fn()} />);
 
     expect(screen.getByRole("heading", { name: "Мария" })).toBeTruthy();
     expect(screen.getByText("Направления в публикациях")).toBeTruthy();
@@ -50,7 +50,9 @@ describe("PublicProfile", () => {
       <PublicProfile
         profile={profile}
         posts={[]}
+        likes={[]}
         loading={false}
+        likesLoading={false}
         viewerId={9}
         onOpenPost={vi.fn()}
         onToggleFollow={onToggleFollow}
@@ -67,7 +69,9 @@ describe("PublicProfile", () => {
       <PublicProfile
         profile={{ ...profile, is_following: true }}
         posts={[]}
+        likes={[]}
         loading={false}
+        likesLoading={false}
         viewerId={9}
         onOpenPost={vi.fn()}
         onToggleFollow={onToggleFollow}
@@ -78,12 +82,33 @@ describe("PublicProfile", () => {
       <PublicProfile
         profile={profile}
         posts={[]}
+        likes={[]}
         loading={false}
+        likesLoading={false}
         viewerId={profile.id}
         onOpenPost={vi.fn()}
         onToggleFollow={onToggleFollow}
       />,
     );
     expect(screen.queryByRole("button", { name: "Подписаться" })).toBeNull();
+  });
+
+  it("loads real liked posts in the likes tab", () => {
+    render(
+      <PublicProfile
+        profile={profile}
+        posts={[]}
+        likes={[post]}
+        loading={false}
+        likesLoading={false}
+        viewerId={profile.id}
+        onOpenPost={vi.fn()}
+        onToggleFollow={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: "Лайки" }));
+    expect(screen.getByText("Гид по Бали")).toBeTruthy();
+    expect(screen.queryByText("Скоро здесь появятся понравившиеся публикации.")).toBeNull();
   });
 });

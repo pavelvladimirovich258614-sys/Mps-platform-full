@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps import get_current_user, get_db, get_optional_current_user
 from app.models.notification import Notification
-from app.models.post import Country, Post, PostStatus
+from app.api.posts import dto as post_dto
+from app.models.post import Country, Post, PostStatus, post_likes
 from app.models.user import User, UserFollow
 from app.schemas.admin import NotificationsReadUpdate
 from app.schemas.user import PublicProfileResponse, UserResponse, UserUpdate
@@ -103,6 +104,21 @@ async def public_profile(
         "is_following": is_following,
         "countries": countries,
     }
+
+
+@router.get("/users/{user_id}/likes")
+async def public_profile_likes(user_id: int, session: AsyncSession = Depends(get_db)) -> list[dict]:
+    await get_public_profile_user(session, user_id)
+    posts = (await session.scalars(
+        select(Post)
+        .join(post_likes, post_likes.c.post_id == Post.id)
+        .where(
+            post_likes.c.user_id == user_id,
+            Post.status == PostStatus.PUBLISHED,
+        )
+        .order_by(post_likes.c.created_at.desc(), Post.id.desc())
+    )).all()
+    return [post_dto(post) for post in posts]
 
 
 @router.post("/users/{user_id}/follow", status_code=201)

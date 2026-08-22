@@ -9,7 +9,7 @@ from sqlalchemy.schema import CreateTable
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.profile import published_countries_query
-from app.models.post import Country, Post, PostStatus, PostType
+from app.models.post import Country, Post, PostStatus, PostType, post_likes
 from app.models.user import Role, User, UserFollow
 
 
@@ -164,6 +164,46 @@ async def test_follow_rejects_self_duplicate_and_hidden_or_banned_profiles(clien
 
     assert (await client.post(f"/api/v1/users/{anonymous.id}/follow", headers=headers)).status_code == 404
     assert (await client.post(f"/api/v1/users/{banned.id}/follow", headers=headers)).status_code == 404
+
+
+async def test_public_profile_likes_returns_only_published_posts(client, test_app):
+    async with test_app.state.database.session_factory() as session:
+        user = User(email="likes-user@example.test", name="Любитель фишек")
+        author = User(email="likes-author@example.test", name="Автор")
+        country = Country(name="Индонезия", flag_emoji="🇮🇩", sort_order=1)
+        session.add_all([user, author, country])
+        await session.flush()
+        published = Post(
+            type=PostType.ARTICLE,
+            title="Понравившийся пост",
+            slug="liked-post",
+            body="Текст",
+            author_id=author.id,
+            country_id=country.id,
+            status=PostStatus.PUBLISHED,
+            published_at=datetime.now(UTC),
+        )
+        draft = Post(
+            type=PostType.ARTICLE,
+            title="Черновик",
+            slug="liked-draft",
+            body="Текст",
+            author_id=author.id,
+            country_id=country.id,
+            status=PostStatus.DRAFT,
+        )
+        session.add_all([published, draft])
+        await session.flush()
+        await session.execute(post_likes.insert(), [
+            {"post_id": published.id, "user_id": user.id},
+            {"post_id": draft.id, "user_id": user.id},
+        ])
+        await session.commit()
+
+    response = await client.get(f"/api/v1/users/{user.id}/likes")
+
+    assert response.status_code == 200
+    assert [post["slug"] for post in response.json()] == ["liked-post"]
 
 
 def test_public_profile_countries_distinct_query_is_postgresql_compatible():

@@ -21,6 +21,9 @@ const publicProfile = {
   avatar_url: "/media/maria.webp",
   bio: "Пишу о путешествиях.",
   posts_count: 1,
+  followers_count: 0,
+  following_count: 0,
+  is_following: false,
   countries: [{ id: 1, name: "ОАЭ", flag_emoji: "🇦🇪" }],
 };
 
@@ -37,6 +40,7 @@ function installApi(detailResult: DetailResult = "ok", emailRequestResult: Email
     const url = new URL(String(input));
     const path = url.pathname;
     if (path === "/api/v1/users/7/profile") return jsonResponse(200, publicProfile);
+    if (path === "/api/v1/users/7/likes") return jsonResponse(200, []);
     if (path === "/api/v1/posts/bali-guide") {
       if (detailResult === "missing") return jsonResponse(404, { detail: "Публикация не найдена" });
       if (detailResult === "network") throw new TypeError("Failed to fetch");

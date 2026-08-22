@@ -13,7 +13,7 @@ import { PublicProfile } from "./components/PublicProfile";
 import { QA } from "./components/QA";
 import { Reviews } from "./components/Reviews";
 import { Subscribe } from "./components/Subscribe";
-import { type ApiPost, useAuthorPosts, useAuth, useNotifications, useOnline, usePost, usePosts, usePublicProfile, usePublicSettings } from "./hooks";
+import { type ApiPost, useAuthorPosts, useAuth, useLikedPosts, useNotifications, useOnline, usePost, usePosts, usePublicProfile, usePublicSettings } from "./hooks";
 import { pathForRoute, type PathRoute, routeFromPath } from "./router";
 
 function routeForPage(page: Page): PathRoute {
@@ -46,6 +46,7 @@ export function App() {
   const article = usePost(route.page === "article" ? route.slug : undefined);
   const publicProfile = usePublicProfile(route.page === "profile" ? route.userId : undefined);
   const authorPosts = useAuthorPosts(route.page === "profile" ? route.userId : undefined);
+  const likedPosts = useLikedPosts(route.page === "profile" ? route.userId : undefined);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -146,7 +147,9 @@ export function App() {
       <PublicProfile
         profile={publicProfile.value}
         posts={authorPosts.value ?? []}
+        likes={likedPosts.value ?? []}
         loading={authorPosts.loading}
+        likesLoading={likedPosts.loading}
         viewerId={auth.user?.id ?? null}
         onOpenPost={openArticle}
         onToggleFollow={async () => {

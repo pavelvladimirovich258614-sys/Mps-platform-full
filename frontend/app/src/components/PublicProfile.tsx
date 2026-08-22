@@ -7,7 +7,9 @@ type Tab = "activity" | "posts" | "answers" | "likes" | "subscriptions";
 type PublicProfileProps = {
   profile: PublicProfileData;
   posts: ApiPost[];
+  likes: ApiPost[];
   loading: boolean;
+  likesLoading: boolean;
   viewerId: number | null;
   onOpenPost: (post: ApiPost) => void;
   onToggleFollow: () => Promise<void>;
@@ -29,11 +31,15 @@ function countLabel(count: number, singular: string, few: string, many: string) 
   return `${count} ${many}`;
 }
 
-export function PublicProfile({ profile, posts, loading, viewerId, onOpenPost, onToggleFollow }: PublicProfileProps) {
+export function PublicProfile({ profile, posts, likes, loading, likesLoading, viewerId, onOpenPost, onToggleFollow }: PublicProfileProps) {
   const [tab, setTab] = useState<Tab>("posts");
   const [followPending, setFollowPending] = useState(false);
   const current = tabs.find((item) => item.id === tab) ?? tabs[1];
   const canFollow = viewerId !== profile.id;
+  const showingPosts = tab === "posts";
+  const showingLikes = tab === "likes";
+  const visiblePosts = showingLikes ? likes : posts;
+  const postsLoading = showingLikes ? likesLoading : loading;
   const toggleFollow = async () => {
     setFollowPending(true);
     try {
@@ -89,10 +95,10 @@ export function PublicProfile({ profile, posts, loading, viewerId, onOpenPost, o
         ))}
       </div>
 
-      {tab === "posts" ? (
-        <section className="public-profile-posts" aria-label="Публикации пользователя">
-          {loading && <div className="comment-skeleton"><i /><i /><i /></div>}
-          {!loading && posts.map((post) => (
+      {(showingPosts || showingLikes) ? (
+        <section className="public-profile-posts" aria-label={showingLikes ? "Понравившиеся публикации" : "Публикации пользователя"}>
+          {postsLoading && <div className="comment-skeleton"><i /><i /><i /></div>}
+          {!postsLoading && visiblePosts.map((post) => (
             <article key={post.id} className="public-profile-post">
               <p className="post-tag">{post.type === "article" ? "Статья" : post.type === "video_review" ? "Видеообзор" : "Фишка"}</p>
               <h2>{post.title}</h2>
@@ -100,7 +106,7 @@ export function PublicProfile({ profile, posts, loading, viewerId, onOpenPost, o
               <button onClick={() => onOpenPost(post)} aria-label={`Читать публикацию: ${post.title}`}>Читать публикацию →</button>
             </article>
           ))}
-          {!loading && !posts.length && <p className="empty-comments">Публикаций пока нет.</p>}
+          {!postsLoading && !visiblePosts.length && <p className="empty-comments">{showingLikes ? "Понравившихся публикаций пока нет." : "Публикаций пока нет."}</p>}
         </section>
       ) : (
         <section className="public-profile-empty" role="tabpanel">

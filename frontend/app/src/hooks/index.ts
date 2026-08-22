@@ -40,6 +40,7 @@ export function useAuth() {
 
 export const usePosts = () => useResource(() => api<ApiPost[]>("/posts"), []);
 export const useAuthorPosts = (authorId?: number) => useResource(() => authorId ? api<ApiPost[]>(`/posts?author_id=${authorId}`) : Promise.resolve([]), [authorId]);
+export const useLikedPosts = (userId?: number) => useResource(() => userId ? api<ApiPost[]>(`/users/${userId}/likes`) : Promise.resolve([]), [userId]);
 export function usePublicProfile(userId?: number) {
   const resource = useResource(() => userId ? api<PublicProfile>(`/users/${userId}/profile`) : Promise.resolve(null), [userId]);
   const toggleFollow = async () => {
