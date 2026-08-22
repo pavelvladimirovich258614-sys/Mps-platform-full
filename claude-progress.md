@@ -13,6 +13,13 @@
 
 ## Session Record
 
+### Session 38 — 2026-08-22 (Codex, F14 composer typing hotfix)
+- Goal: устранить потерю пробелов в Bold-режиме TipTap и уточнить публичный текст/доступные editor-типы публикаций.
+- Root cause: нестандартный `EditorContent.onInput` вручную вызывал `setContent(innerHTML, { emitUpdate: false })` на каждом вводе, переписывая документ вне ProseMirror transaction state. RED regression при Bold-вводе `привет мир` зафиксировал ровно один такой вызов.
+- Completed: удалён ручной `onInput`; HTML синхронизируется только штатным TipTap `onUpdate`. Подзаголовок ленты заменён на утверждённый общий текст; composer и его общий `PostDraft` больше не допускают `fishka` (video option не существовал и не добавлялся).
+- Verification run: targeted — 4 suites / 6 passed; final frontend `npm test` — 48 passed; `npm run build` — success, 110 modules. Commit `7da63d4` pushed to `origin/main`.
+- Deploy: не выполнялся, ожидает отдельного подтверждения владельца.
+
 ### Session 37 — 2026-08-22 (Codex, F14 composer modal production hotfix)
 - Goal: убрать навязчивый inline TipTap composer из верхней части ленты и открыть его только по компактному действию editor/admin.
 - Completed: composer перенесён в modal overlay; кнопка «Создать публикацию» сохраняет золотой визуальный акцент платформы. Модалка закрывается по Escape, клику на фон и кнопке закрытия; подзаголовок ленты не менялся.
