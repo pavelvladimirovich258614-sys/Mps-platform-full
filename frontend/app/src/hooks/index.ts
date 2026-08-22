@@ -6,7 +6,7 @@ import type { Comment, ReactionResult } from "../api/comments";
 export type { Comment } from "../api/comments";
 
 export type User = { id: number; email: string | null; name: string; avatar_url: string | null; bio: string | null; role: string; is_anonymous: boolean };
-export type ApiPost = { id: number; type: "article" | "tip" | "video_review"; title: string; slug: string; body: string; views: number; likes_count: number; shot_at: string | null };
+export type ApiPost = { id: number; type: "article" | "tip" | "video_review"; title: string; slug: string; body: string; views: number; likes_count: number; shot_at: string | null; author: { id: number; name: string; avatar_url: string | null } };
 export type Review = { id: number; author_name: string; rating: number; body: string; photo_url: string | null; status: string };
 export type Question = { id: number; target: "manager" | "lawyer"; body: string; status: string; answer: string | null };
 export type Country = { id: number; name: string; topics_count: number };

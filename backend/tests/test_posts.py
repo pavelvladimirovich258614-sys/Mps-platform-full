@@ -20,6 +20,10 @@ async def test_posts_verification(client,test_app):
  payload={"type":"article","title":"Тест статья","body":"<script>x</script>ok","status":"published"}
  reader=await token(client,test_app);assert (await client.post("/api/v1/posts",json=payload,headers=reader)).status_code==403
  editor=await token(client,test_app,True);r=await client.post("/api/v1/posts",json=payload,headers=editor);assert r.status_code==201;post=r.json()
+ async with test_app.state.database.session_factory() as s:
+  author=await s.scalar(select(User).where(User.tg_id==100))
+ assert post["author"]=={"id":author.id,"name":"Editor","avatar_url":None}
+ listed=(await client.get("/api/v1/posts")).json();assert listed[0]["author"]==post["author"]
  assert (await client.post("/api/v1/posts",json={**payload,"type":"video_review"},headers=editor)).status_code==422
  assert (await client.post(f"/api/v1/posts/{post['id']}/like",headers=reader)).json()["likes_count"]==1
  assert (await client.post(f"/api/v1/posts/{post['id']}/like",headers=reader)).json()["likes_count"]==0

@@ -109,16 +109,17 @@ async def public_profile(
 @router.get("/users/{user_id}/likes")
 async def public_profile_likes(user_id: int, session: AsyncSession = Depends(get_db)) -> list[dict]:
     await get_public_profile_user(session, user_id)
-    posts = (await session.scalars(
-        select(Post)
+    posts = (await session.execute(
+        select(Post, User)
         .join(post_likes, post_likes.c.post_id == Post.id)
+        .join(User, User.id == Post.author_id)
         .where(
             post_likes.c.user_id == user_id,
             Post.status == PostStatus.PUBLISHED,
         )
         .order_by(post_likes.c.created_at.desc(), Post.id.desc())
     )).all()
-    return [post_dto(post) for post in posts]
+    return [post_dto(post, author) for post, author in posts]
 
 
 @router.post("/users/{user_id}/follow", status_code=201)

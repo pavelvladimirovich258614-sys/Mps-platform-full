@@ -13,6 +13,7 @@ const post = {
   views: 12,
   likes_count: 3,
   shot_at: null,
+  author: { id: 7, name: "Мария", avatar_url: "/media/maria.webp" },
 };
 
 const publicProfile = {

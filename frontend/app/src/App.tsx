@@ -102,7 +102,7 @@ export function App() {
   const role = devRole ?? auth.user?.role;
 
   let content = null;
-  if (page === "feed") content = <Feed posts={posts.value ?? []} loading={posts.loading} onOpenArticle={openArticle} />;
+  if (page === "feed") content = <Feed posts={posts.value ?? []} loading={posts.loading} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
   if (page === "countries" || page === "topic") {
     content = (
       <Forum
@@ -118,7 +118,7 @@ export function App() {
     content = <main className="article-page"><div className="comment-skeleton"><i /><i /><i /></div></main>;
   }
   if (page === "article" && article.value) {
-    content = <ArticleComments article={article.value} onBack={() => navigate({ page: "feed" })} onError={showError} />;
+    content = <ArticleComments article={article.value} onBack={() => navigate({ page: "feed" })} onError={showError} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
   }
   if (page === "article" && article.notFound) {
     content = (
