@@ -142,7 +142,22 @@ export function App() {
     content = <main className="public-profile-page"><div className="comment-skeleton"><i /><i /><i /></div></main>;
   }
   if (page === "profile" && publicProfile.value) {
-    content = <PublicProfile profile={publicProfile.value} posts={authorPosts.value ?? []} loading={authorPosts.loading} onOpenPost={openArticle} />;
+    content = (
+      <PublicProfile
+        profile={publicProfile.value}
+        posts={authorPosts.value ?? []}
+        loading={authorPosts.loading}
+        viewerId={auth.user?.id ?? null}
+        onOpenPost={openArticle}
+        onToggleFollow={async () => {
+          try {
+            await publicProfile.toggleFollow();
+          } catch (cause) {
+            showError(cause instanceof Error ? cause.message : "Не удалось изменить подписку");
+          }
+        }}
+      />
+    );
   }
   if (page === "profile" && publicProfile.error) {
     content = (

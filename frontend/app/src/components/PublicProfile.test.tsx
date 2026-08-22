@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { PublicProfile } from "./PublicProfile";
@@ -9,6 +9,9 @@ const profile = {
   avatar_url: "/media/maria.webp",
   bio: "Пишу о путешествиях.",
   posts_count: 1,
+  followers_count: 12,
+  following_count: 3,
+  is_following: false,
   countries: [{ id: 1, name: "ОАЭ", flag_emoji: "🇦🇪" }],
 };
 
@@ -26,7 +29,7 @@ const post = {
 describe("PublicProfile", () => {
   it("shows public author data and makes only the publications tab functional", () => {
     const onOpenPost = vi.fn();
-    render(<PublicProfile profile={profile} posts={[post]} loading={false} onOpenPost={onOpenPost} />);
+    render(<PublicProfile profile={profile} posts={[post]} loading={false} viewerId={profile.id} onOpenPost={onOpenPost} onToggleFollow={vi.fn()} />);
 
     expect(screen.getByRole("heading", { name: "Мария" })).toBeTruthy();
     expect(screen.getByText("Направления в публикациях")).toBeTruthy();
@@ -39,5 +42,48 @@ describe("PublicProfile", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Публикации" }));
     fireEvent.click(screen.getByRole("button", { name: "Читать публикацию: Гид по Бали" }));
     expect(onOpenPost).toHaveBeenCalledWith(post);
+  });
+
+  it("shows real follower counters and lets a visitor follow another profile only", async () => {
+    const onToggleFollow = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = render(
+      <PublicProfile
+        profile={profile}
+        posts={[]}
+        loading={false}
+        viewerId={9}
+        onOpenPost={vi.fn()}
+        onToggleFollow={onToggleFollow}
+      />,
+    );
+
+    expect(screen.getByText("12 подписчиков")).toBeTruthy();
+    expect(screen.getByText("3 подписки")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Подписаться" }));
+    expect(onToggleFollow).toHaveBeenCalledOnce();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Подписаться" })).toBeTruthy());
+
+    rerender(
+      <PublicProfile
+        profile={{ ...profile, is_following: true }}
+        posts={[]}
+        loading={false}
+        viewerId={9}
+        onOpenPost={vi.fn()}
+        onToggleFollow={onToggleFollow}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Отписаться" })).toBeTruthy();
+    rerender(
+      <PublicProfile
+        profile={profile}
+        posts={[]}
+        loading={false}
+        viewerId={profile.id}
+        onOpenPost={vi.fn()}
+        onToggleFollow={onToggleFollow}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Подписаться" })).toBeNull();
   });
 });

@@ -8,7 +8,9 @@ type PublicProfileProps = {
   profile: PublicProfileData;
   posts: ApiPost[];
   loading: boolean;
+  viewerId: number | null;
   onOpenPost: (post: ApiPost) => void;
+  onToggleFollow: () => Promise<void>;
 };
 
 const tabs: Array<{ id: Tab; label: string; empty: string }> = [
@@ -19,9 +21,27 @@ const tabs: Array<{ id: Tab; label: string; empty: string }> = [
   { id: "subscriptions", label: "Подписки", empty: "Скоро здесь появятся подписки пользователя." },
 ];
 
-export function PublicProfile({ profile, posts, loading, onOpenPost }: PublicProfileProps) {
+function countLabel(count: number, singular: string, few: string, many: string) {
+  const remainder = count % 100;
+  if (remainder >= 11 && remainder <= 14) return `${count} ${many}`;
+  if (count % 10 === 1) return `${count} ${singular}`;
+  if (count % 10 >= 2 && count % 10 <= 4) return `${count} ${few}`;
+  return `${count} ${many}`;
+}
+
+export function PublicProfile({ profile, posts, loading, viewerId, onOpenPost, onToggleFollow }: PublicProfileProps) {
   const [tab, setTab] = useState<Tab>("posts");
+  const [followPending, setFollowPending] = useState(false);
   const current = tabs.find((item) => item.id === tab) ?? tabs[1];
+  const canFollow = viewerId !== profile.id;
+  const toggleFollow = async () => {
+    setFollowPending(true);
+    try {
+      await onToggleFollow();
+    } finally {
+      setFollowPending(false);
+    }
+  };
 
   return (
     <main className="public-profile-page">
@@ -33,7 +53,16 @@ export function PublicProfile({ profile, posts, loading, onOpenPost }: PublicPro
           <p className="profile-kicker">Профиль путешественника</p>
           <h1>{profile.name || "Путешественник"}</h1>
           {profile.bio && <p className="public-profile-bio">{profile.bio}</p>}
-          <p className="public-profile-count">{profile.posts_count} {profile.posts_count === 1 ? "публикация" : "публикаций"}</p>
+          <p className="public-profile-count">{countLabel(profile.posts_count, "публикация", "публикации", "публикаций")}</p>
+          <div className="public-profile-social">
+            <span>{countLabel(profile.followers_count, "подписчик", "подписчика", "подписчиков")}</span>
+            <span>{countLabel(profile.following_count, "подписка", "подписки", "подписок")}</span>
+          </div>
+          {canFollow && (
+            <button className="public-profile-follow" onClick={() => void toggleFollow()} disabled={followPending}>
+              {followPending ? "Сохраняем…" : profile.is_following ? "Отписаться" : "Подписаться"}
+            </button>
+          )}
         </div>
       </section>
 
