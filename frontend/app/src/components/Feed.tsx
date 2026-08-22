@@ -1,19 +1,63 @@
-import { useState } from "react";
-import type { ApiPost } from "../hooks";
-import type { PostDraft } from "../hooks";
+import { useEffect, useState } from "react";
+
+import type { ApiPost, PostDraft } from "../hooks";
 import { PostComposer } from "./PostComposer";
 import { RichTextContent } from "./RichTextContent";
 
-type FeedProps = { mode?: "feed" | "fishki"; posts: ApiPost[]; loading: boolean; canCreate?: boolean; onCreatePost?: (post: PostDraft) => Promise<void>; onOpenArticle: (post: ApiPost) => void; onOpenProfile: (userId: number) => void };
+type FeedProps = {
+  mode?: "feed" | "fishki";
+  posts: ApiPost[];
+  loading: boolean;
+  canCreate?: boolean;
+  onCreatePost?: (post: PostDraft) => Promise<void>;
+  onOpenArticle: (post: ApiPost) => void;
+  onOpenProfile: (userId: number) => void;
+};
 type Filter = "all" | "article";
 const filters: Array<{ id: Filter; label: string }> = [{ id: "all", label: "Все" }, { id: "article", label: "Статьи" }];
 
 export function Feed({ mode = "feed", posts, loading, canCreate = false, onCreatePost, onOpenArticle, onOpenProfile }: FeedProps) {
   const [filter, setFilter] = useState<Filter>("all");
+  const [composerOpen, setComposerOpen] = useState(false);
   const isFishki = mode === "fishki";
+  const canOpenComposer = canCreate && !isFishki && Boolean(onCreatePost);
   const visiblePosts = isFishki ? posts.filter((post) => post.type === "fishka" || post.type === "tip") : filter === "all" ? posts : posts.filter((post) => post.type === filter);
-  return <main className="feed-page"><div className="feed-wrap">{isFishki ? <section className="journal-intro"><p>Туристическое агентство «Под солнцем»</p><h1>Фишки</h1><div className="ornament"><i />◆<i /></div><div className="intro-text">Короткие советы от менеджеров, которые сами были в путешествии.</div></section> : <section className="journal-intro"><p>Туристическое агентство «Под солнцем»</p><h1>Журнал о путешествиях <b>без прикрас</b></h1><div className="ornament"><i />◆<i /></div><div className="intro-text">Короткие фишки, проверенные отзывы и большие разборы направлений — от менеджеров, которые сами там были.</div></section>}{canCreate && !isFishki && onCreatePost && <PostComposer onCreate={onCreatePost} />}{!isFishki && <div className="feed-filters">{filters.map((item) => <button key={item.id} onClick={() => setFilter(item.id)} className={filter === item.id ? "current" : ""}>{item.label}</button>)}</div>}{loading && <div className="comment-skeleton"><i /><i /><i /></div>}{visiblePosts.map((post) => <PostCard key={post.id} post={post} onOpen={() => onOpenArticle(post)} onOpenProfile={() => onOpenProfile(post.author.id)} />)}{!loading && !visiblePosts.length && <div className="empty-comments">Публикаций в этом разделе пока нет.</div>}<section className="tour-cta"><div><h2>Подберём тур под ваш бюджет</h2><p>Ответьте на пять вопросов в боте — менеджер пришлёт три варианта с ценами.</p></div><a href="https://t.me/pod_solncem_travel_bot" target="_blank" rel="noreferrer">Подобрать тур →</a></section></div></main>;
+
+  useEffect(() => {
+    if (!composerOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setComposerOpen(false); };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [composerOpen]);
+
+  return <main className="feed-page"><div className="feed-wrap">
+    {isFishki ? <section className="journal-intro"><p>Туристическое агентство «Под солнцем»</p><h1>Фишки</h1><div className="ornament"><i />◆<i /></div><div className="intro-text">Короткие советы от менеджеров, которые сами были в путешествии.</div></section> : <section className="journal-intro"><p>Туристическое агентство «Под солнцем»</p><h1>Журнал о путешествиях <b>без прикрас</b></h1><div className="ornament"><i />◆<i /></div><div className="intro-text">Короткие фишки, проверенные отзывы и большие разборы направлений — от менеджеров, которые сами там были.</div></section>}
+    {canOpenComposer && <button type="button" className="create-post-button" aria-label="Создать публикацию" onClick={() => setComposerOpen(true)}>✦ Создать публикацию</button>}
+    {composerOpen && onCreatePost && <ComposerModal onClose={() => setComposerOpen(false)} onCreate={onCreatePost} />}
+    {!isFishki && <div className="feed-filters">{filters.map((item) => <button key={item.id} onClick={() => setFilter(item.id)} className={filter === item.id ? "current" : ""}>{item.label}</button>)}</div>}
+    {loading && <div className="comment-skeleton"><i /><i /><i /></div>}
+    {visiblePosts.map((post) => <PostCard key={post.id} post={post} onOpen={() => onOpenArticle(post)} onOpenProfile={() => onOpenProfile(post.author.id)} />)}
+    {!loading && !visiblePosts.length && <div className="empty-comments">Публикаций в этом разделе пока нет.</div>}
+    <section className="tour-cta"><div><h2>Подберём тур под ваш бюджет</h2><p>Ответьте на пять вопросов в боте — менеджер пришлёт три варианта с ценами.</p></div><a href="https://t.me/pod_solncem_travel_bot" target="_blank" rel="noreferrer">Подобрать тур →</a></section>
+  </div></main>;
 }
-function PostCard({ post, onOpen, onOpenProfile }: { post: ApiPost; onOpen: () => void; onOpenProfile: () => void }) { const kind = post.type === "video_review" ? "video" : post.type; if (kind === "fishka" || kind === "tip") return <article className="post-card tip-card"><div className="tip-mark">✦</div><div><p className="post-tag">Фишка</p><h2 onClick={onOpen}>{post.title}</h2><AuthorLink post={post} onOpenProfile={onOpenProfile} /><RichTextContent html={post.body} className="post-body-excerpt" /><PostActions onOpen={onOpen} /></div></article>; if (kind === "video") return <article className="post-card video-card"><div className="video-cover"><button aria-label="Смотреть видео">▶</button><span>Под солнцем</span>{post.shot_at && <b>Снято {new Date(post.shot_at).toLocaleDateString("ru-RU")}</b>}</div><h2 onClick={onOpen}>{post.title}</h2><AuthorLink post={post} onOpenProfile={onOpenProfile} /><RichTextContent html={post.body} className="post-body-excerpt" /><PostActions onOpen={onOpen} /></article>; return <article className="post-card article-card"><div className="article-cover"><span>Под солнцем</span></div><p className="post-tag">Статья · {post.views} просмотров</p><h2 onClick={onOpen}>{post.title}</h2><AuthorLink post={post} onOpenProfile={onOpenProfile} /><RichTextContent html={post.body} className="post-body-excerpt" /><PostActions onOpen={onOpen} /></article>; }
+
+function ComposerModal({ onClose, onCreate }: { onClose: () => void; onCreate: (post: PostDraft) => Promise<void> }) {
+  return <div className="modal-backdrop composer-modal-backdrop" role="dialog" aria-modal="true" aria-label="Создание публикации" onMouseDown={onClose}>
+    <button type="button" className="composer-backdrop" aria-label="Закрыть создание публикации" />
+    <section className="composer-modal" onMouseDown={(event) => event.stopPropagation()}>
+      <button type="button" className="round-close" aria-label="Закрыть" onClick={onClose}>×</button>
+      <PostComposer onCreate={onCreate} />
+    </section>
+  </div>;
+}
+
+function PostCard({ post, onOpen, onOpenProfile }: { post: ApiPost; onOpen: () => void; onOpenProfile: () => void }) {
+  const kind = post.type === "video_review" ? "video" : post.type;
+  if (kind === "fishka" || kind === "tip") return <article className="post-card tip-card"><div className="tip-mark">✦</div><div><p className="post-tag">Фишка</p><h2 onClick={onOpen}>{post.title}</h2><AuthorLink post={post} onOpenProfile={onOpenProfile} /><RichTextContent html={post.body} className="post-body-excerpt" /><PostActions onOpen={onOpen} /></div></article>;
+  if (kind === "video") return <article className="post-card video-card"><div className="video-cover"><button aria-label="Смотреть видео">▶</button><span>Под солнцем</span>{post.shot_at && <b>Снято {new Date(post.shot_at).toLocaleDateString("ru-RU")}</b>}</div><h2 onClick={onOpen}>{post.title}</h2><AuthorLink post={post} onOpenProfile={onOpenProfile} /><RichTextContent html={post.body} className="post-body-excerpt" /><PostActions onOpen={onOpen} /></article>;
+  return <article className="post-card article-card"><div className="article-cover"><span>Под солнцем</span></div><p className="post-tag">Статья · {post.views} просмотров</p><h2 onClick={onOpen}>{post.title}</h2><AuthorLink post={post} onOpenProfile={onOpenProfile} /><RichTextContent html={post.body} className="post-body-excerpt" /><PostActions onOpen={onOpen} /></article>;
+}
+
 function AuthorLink({ post, onOpenProfile }: { post: ApiPost; onOpenProfile: () => void }) { return <button className="author-profile-link" onClick={onOpenProfile}>Автор: {post.author.name}</button>; }
 function PostActions({ onOpen }: { onOpen: () => void }) { return <div className="post-actions"><button onClick={onOpen}>Читать дальше →</button><button onClick={onOpen}>◌ Обсуждение</button></div>; }
