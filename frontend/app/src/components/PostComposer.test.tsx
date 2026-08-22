@@ -1,6 +1,10 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+vi.mock("./RichTextEditor", () => ({
+  RichTextEditor: ({ onChange }: { onChange: (html: string) => void }) => <button type="button" onClick={() => onChange("<p><strong>Готово</strong></p>")}>Заполнить текст публикации</button>,
+}));
+
 import { PostComposer } from "./PostComposer";
 
 describe("PostComposer", () => {
@@ -8,8 +12,10 @@ describe("PostComposer", () => {
     const onCreate = vi.fn().mockResolvedValue(undefined);
     render(<PostComposer onCreate={onCreate} />);
 
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual(["Статья"]);
+    expect(screen.queryByRole("option", { name: "Фишка" })).toBeNull();
     fireEvent.change(screen.getByLabelText("Заголовок публикации"), { target: { value: "Мой маршрут" } });
-    fireEvent.input(screen.getByRole("textbox", { name: "Текст публикации" }), { target: { innerHTML: "<p><strong>Готово</strong></p>" } });
+    fireEvent.click(screen.getByRole("button", { name: "Заполнить текст публикации" }));
     fireEvent.click(screen.getByRole("button", { name: "Опубликовать" }));
 
     await Promise.resolve();

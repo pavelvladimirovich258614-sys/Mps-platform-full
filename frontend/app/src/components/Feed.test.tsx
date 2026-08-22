@@ -16,6 +16,7 @@ describe("Feed composer modal", () => {
   it("keeps the composer out of the initial feed and opens it only by the compact action", () => {
     render(<Feed {...editorProps} />);
 
+    expect(screen.getByText("Реальные истории, честные отзывы и разборы направлений — живые впечатления от путешествий")).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "Создать публикацию" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Создать публикацию" }));
 

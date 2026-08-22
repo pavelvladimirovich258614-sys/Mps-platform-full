@@ -49,9 +49,6 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         <ToolbarButton label="Ссылка" active={editor.isActive("link")} onClick={toggleLink}>↗</ToolbarButton>
       </div>
     </div>
-    <EditorContent editor={editor} onInput={(event) => {
-      editor.commands.setContent(event.currentTarget.innerHTML, { emitUpdate: false });
-      onChange(editor.getHTML());
-    }} />
+    <EditorContent editor={editor} />
   </section>;
 }
