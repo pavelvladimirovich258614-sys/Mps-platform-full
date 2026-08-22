@@ -9,9 +9,18 @@
 - Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15, I-16, I-18 и I-20 закрыты 2026-08-20. I-21 отложен до pre-launch юридической проверки. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
 - Auth/UI state: production build использует `https://mir.pod-solncem.ru/api/v1` и `Reg_Under_the_sun_bot`; закрыты найденные UI-проблемы login/profile (logout, avatar upload, золотой online-индикатор, toast поверх modal, email input). Telegram Login Widget и callback работают; role storage устойчиво читает legacy `ADMIN` и текущие строчные значения, что подтверждено live callback 200.
 - Email state: UnisenderGo transport использует официальный default `goapi.unisender.ru` (с возможностью override на go1/go2) и `X-API-KEY`; payload `message/recipients/body/subject/from_email` проверен mock-тестами. Production delivery сейчас заблокирована внешним TCP timeout до сети Unisender `31.184.200.*:443`: goapi и go1 недоступны, при этом ya.ru/google.com доступны, а local UFW/iptables outgoing не блокируют. Email-код и digest не работают до восстановления маршрута или смены транспорта/provider.
-- Next best action: список подписчиков и username-handle остаются самостоятельными задачами; email infrastructure — отдельный тикет HostKey.
+- Next best action: выбрать отдельный следующий пакет: мелкая косметика счётчиков подписок, полноценный список подписчиков, устранение сетевой блокировки Unisender или наполнение платформы реальным контентом.
 
 ## Session Record
+
+### Session 32 — 2026-08-22 (Pavel, final production confirmation)
+- Goal: зафиксировать пользовательское подтверждение завершённых production F11 и F12.
+- Completed: Павел подтвердил вживую единый rollout F11 «Публичный профиль, часть Б»: UserFollow и follow API, реальные счётчики, вкладка «Лайки» и ссылки на профили авторов. F12 «Вход в публичный профиль и UI шапки» также задеплоена и подтверждена скриншотом: клик на avatar/name открывает собственный public profile, как задумано.
+- Verification run: для F11 ранее пройдены миграция `20260822_0009`, safe live follow/unfollow smoke и `deploy/smoke.sh`; для F12 — frontend production deploy и `deploy/smoke.sh`. Подтверждённый Павлом F12 flow: header avatar/name → `/users/{own id}`, «Редактировать профиль» открывает существующую modal, меню `...` выполняет copy-link.
+- Evidence recorded: delivery records F11 `394df80` и F12 `3d660a0`; подтверждение Павла добавлено в session record и handoff.
+- Commits: F11 code `ed9025d`, `dedc865`, `6c09ae4`, `994c072`; F12 code `bdd8962`; deployment records `394df80`, `3d660a0`.
+- Known risks: строка «Посмотреть подписчиков · N» и счётчики `N подписчиков · N подписок` пока дублируют информацию; функциональный список подписчиков намеренно не добавлялся. Unisender TCP blocker остаётся внешней инфраструктурной проблемой.
+- Next best action: выбрать один отдельный scope — косметически убрать дублирование счётчиков, сделать follower list, решить Unisender routing или наполнить платформу реальным контентом.
 
 ### Session 31 — 2026-08-22 (Codex, F12 production deploy)
 - Goal: frontend-only deploy входа в собственный public profile и profile-header UI.

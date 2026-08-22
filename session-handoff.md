@@ -1,7 +1,7 @@
-# Session handoff — 2026-08-22 F12 profile entry and header UI
+# Session handoff — 2026-08-22 финальное состояние публичного профиля
 
 ## Текущее состояние F12
-- F12 «Вход в публичный профиль и UI шапки» задеплоена на `https://mir.pod-solncem.ru`: code SHA `bdd8962`, backup `/root/backups/mps-f12-20260822T124402Z`. Авторизованный клик по avatar/name в desktop header и «Мой профиль» в mobile sheet ведёт на `/users/{own id}`. У гостя сохранён вход через существующую modal.
+- F11 «Публичный профиль, часть Б» и F12 «Вход в публичный профиль и UI шапки» задеплоены на `https://mir.pod-solncem.ru` и подтверждены Павлом вживую. Для F12: code SHA `bdd8962`, backup `/root/backups/mps-f12-20260822T124402Z`; авторизованный клик по avatar/name в desktop header и «Мой профиль» в mobile sheet ведёт на `/users/{own id}`. У гостя сохранён вход через существующую modal.
 - На собственной public profile есть «Редактировать профиль»: он переиспользует `Profile` modal без дублирования формы; logout остаётся там. У других пользователей прежняя follow/unfollow-кнопка. Добавлено `...` menu: copy canonical `/users/{id}` via `navigator.clipboard`, `navigator.share` с copy fallback, toast и Escape/outside close.
 - Визуально: компактная зона name/счётчики/actions/avatar, отдельная неинтерактивная строка «Посмотреть подписчиков · N», подчёркнутые tabs. Username и follower list не реализованы намеренно: public username отсутствует в схеме, а backend API отдаёт лишь counts.
 
@@ -9,10 +9,13 @@
 - RED: 2 теста упали до реализации (header navigation и owner menu/actions). GREEN targeted: 13 passed. Final frontend: 38 passed; `npm run build` — 49 modules. Final backend: 58 passed in 17.00s.
 - `./init.sh` вне sandbox повторно блокируется только внешним Hermes `pip check` (missing charset-normalizer for pdfminer-six/reportlab/requests); не менять Hermes в MPS scope.
 - Agent-browser skill прочитан для visual review, но binary не установлен; browser screenshot не выполнен. CSS/DOM композиция вручную сопоставлена с приложенными Substack screenshots.
-- Production: backend diff был пуст, поэтому `mps-backend` не рестартовался и оставался active. Production VITE values и generated bundle проверены; `deploy/smoke.sh` — `[OK]`; `/users/1` отдаёт SPA 200, served JS содержит owner edit/menu/copy UI. Буквальный authenticated click не выполнялся без пользовательской Telegram-сессии — токены не выводились и новые public smoke-аккаунты не создавались.
+- Production: backend diff был пуст, поэтому `mps-backend` не рестартовался и оставался active. Production VITE values и generated bundle проверены; `deploy/smoke.sh` — `[OK]`; `/users/1` отдаёт SPA 200, served JS содержит owner edit/menu/copy UI. Павел затем подтвердил скриншотом authenticated flow: переход по avatar/name, открытие существующей modal «Редактировать профиль» и copy-link из меню `...`.
 
-## Предстоящий шаг
-- Следующий scope: список подписчиков и username — отдельные планируемые пакеты. Полезный ручной post-deploy smoke на устройстве владельца: header avatar/name → `/users/{own id}` → «Редактировать профиль» → `...` → copy/share.
+## Возможный следующий шаг
+- Мелкая косметика: убрать дублирование «Посмотреть подписчиков · N» и `N подписчиков · N подписок`; это не срочно.
+- Полноценный список подписчиков — отдельный пакет: новый API endpoint и отдельный view, сознательно отложен.
+- Отдельно решить внешнюю сетевую блокировку email/Unisender.
+- Наполнить платформу реальным контентом, чтобы live-проверки Likes и авторских ссылок имели реальные карточки.
 
 # Предыдущий контекст — 2026-08-22 public profile, part B
 
