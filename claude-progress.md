@@ -9,7 +9,7 @@
 - Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15, I-16, I-18 и I-20 закрыты 2026-08-20. I-21 отложен до pre-launch юридической проверки. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
 - Auth/UI state: production build использует `https://mir.pod-solncem.ru/api/v1` и `Reg_Under_the_sun_bot`; закрыты найденные UI-проблемы login/profile (logout, avatar upload, золотой online-индикатор, toast поверх modal, email input). Telegram Login Widget и callback работают; role storage устойчиво читает legacy `ADMIN` и текущие строчные значения, что подтверждено live callback 200.
 - Email state: UnisenderGo transport использует официальный default `goapi.unisender.ru` (с возможностью override на go1/go2) и `X-API-KEY`; payload `message/recipients/body/subject/from_email` проверен mock-тестами. Production delivery сейчас заблокирована внешним TCP timeout до сети Unisender `31.184.200.*:443`: goapi и go1 недоступны, при этом ya.ru/google.com доступны, а local UFW/iptables outgoing не блокируют. Email-код и digest не работают до восстановления маршрута или смены транспорта/provider.
-- Next best action: диагностировать отсутствие лайков на опубликованных статьях — последний пункт из списка находок Павла; до диагностики не менять поток комментариев, CTA или carousel.
+- Next best action: UI лайков локально реализован и верифицирован; production deploy ожидает явного подтверждения Павла. Не менять Unisender transport: внешний сетевой блокер остаётся отдельно.
 
 ## Session Record
 
@@ -20,6 +20,15 @@
 - Verification: RED→GREEN покрыли pending/approved ветки и UI-feedback; чистая SQLite migration проверена. Полный backend pytest — 61 passed; frontend `npm test` — 15 suites / 51 passed; `npm run build` — success (110 modules). `./init.sh` остановился до MPS tests только на внешнем Hermes `pip check` из-за missing `charset-normalizer` у pdfminer-six/reportlab/requests.
 - Production: PostgreSQL upgraded to `20260822_0010`; backend updated/restarted and active; frontend rebuilt с проверенными production VITE API/bot values and deployed; `deploy/smoke.sh` passed. Live API verification toggled `comments_moderation_enabled` through `PATCH /admin/settings`, confirmed a new comment returns `approved` and appears in GET; final setting restored to `false`. Deployed revision `8f8978c`.
 - Next best action: read-only diagnosis of why likes are absent on published articles; this scope was not started in the session.
+
+### Session 41 — 2026-08-23 (Codex, F03 likes UI repair)
+- Goal: подключить давно готовый backend like-toggle к карточкам ленты и полной статье, не меняя API, БД или production.
+- Completed: добавлен `usePostLike`; `App` держит локальный `likes_count` по post id, поэтому успешный toggle немедленно обновляет и ленту, и открытую статью без reload. В Feed и ArticleComments добавлена доступная золотая кнопка-сердце со счётчиком. Гость открывает существующую modal «Войти» до вызова API.
+- Verification run: RED — targeted frontend suite упал ожидаемо: отсутствовал button `Нравится: 3` на полной статье. GREEN targeted — 3 files / 20 passed. Final frontend `npm test` — 15 files / 55 passed; `npm run build` — success, 110 modules. Full backend `python -m pytest tests -q --basetemp .pytest-likes-full` — 61 passed in 15.65s. Final `./init.sh` через Git Bash остановился только на внешнем Hermes `pip check` из-за missing `charset-normalizer` до MPS tests.
+- Evidence recorded: F03 `ui_likes_evidence` в feature_list.json; clean-state checklist и handoff обновлены.
+- Commits: pending `feat: подключить UI лайков к постам (карточка ленты + полная статья)`.
+- Known risks: production deploy и live authenticated click не выполнялись — ожидают отдельного подтверждения владельца. Unisender не менялся.
+- Next best action: после подтверждения выполнить frontend-only production rollout с backup, VITE/bundle checks, smoke и authenticated live like toggle.
 
 ### Session 39 — 2026-08-22 (Codex, feed filter heading production deploy)
 - Goal: убрать избыточные интерактивные табы «Все/Статьи», не меняя API и backend-типы публикаций.

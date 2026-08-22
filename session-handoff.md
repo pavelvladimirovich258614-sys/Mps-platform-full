@@ -1,4 +1,11 @@
-# Session handoff — 2026-08-22
+# Session handoff — 2026-08-23
+
+## Session 41 — 2026-08-23: likes UI локально готов, deploy не выполнялся
+
+- Причина устранена: backend `POST /api/v1/posts/{id}/like` и `likes_count` были готовы, но F09b никогда не подключал control к Feed/ArticleComments.
+- Frontend теперь использует `usePostLike`; `App` обновляет локальный счётчик без reload. Кнопка «♥ N» присутствует в карточке и на полной статье; guest-клик открывает существующую modal «Войти» и не вызывает API.
+- RED: отсутствующий `Нравится: 3` подтверждён. GREEN targeted — 20 passed; final frontend — 15 files / 55 passed; build — 110 modules; backend — 61 passed. `./init.sh` остановился до MPS tests только на известном Hermes `pip check` (missing charset-normalizer).
+- Код должен быть committed/pushed как `feat: подключить UI лайков к постам (карточка ленты + полная статья)`. Production deploy строго ожидает подтверждения Павла: frontend-only rollout, backup, production VITE bundle checks, smoke и authenticated live 3→4→3 toggle. Unisender не менять.
 
 ## Текущее подтверждённое состояние
 

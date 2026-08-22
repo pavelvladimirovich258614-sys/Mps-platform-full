@@ -47,6 +47,7 @@ type DetailResult = "ok" | "missing" | "network";
 type EmailRequestResult = "ok" | "failure";
 
 function installApi(detailResult: DetailResult = "ok", emailRequestResult: EmailRequestResult = "ok", currentUser: Record<string, unknown> | null = null, posts: ApiPost[] = [post]) {
+  let likesCount = post.likes_count;
   const fetchMock = vi.fn<typeof fetch>(async (input) => {
     const url = new URL(String(input));
     const path = url.pathname;
@@ -58,6 +59,10 @@ function installApi(detailResult: DetailResult = "ok", emailRequestResult: Email
       return jsonResponse(200, post);
     }
     if (path === "/api/v1/posts") return jsonResponse(200, posts);
+    if (path === "/api/v1/posts/17/like") {
+      likesCount = likesCount === post.likes_count ? likesCount + 1 : likesCount - 1;
+      return jsonResponse(200, { likes_count: likesCount });
+    }
     if (path === "/api/v1/posts/17/comments") return jsonResponse(200, []);
     if (path === "/api/v1/countries") return jsonResponse(200, [{ id: 1, name: "ОАЭ", topics_count: 0 }]);
     if (path === "/api/v1/countries/1/topics") return jsonResponse(200, []);
@@ -206,6 +211,31 @@ describe("App pathname routing", () => {
     await waitFor(() => expect(window.location.pathname).toBe("/posts/bali-guide"));
     expect(pushState).toHaveBeenCalledWith({}, "", "/posts/bali-guide");
     expect(await screen.findByRole("heading", { level: 1, name: post.title })).toBeTruthy();
+  });
+
+  it("toggles a post like locally for an authenticated reader", async () => {
+    setAccessToken("reader-access-token");
+    installApi("ok", "ok", {
+      id: 5, email: null, name: "Читатель", avatar_url: null, bio: null, role: "reader", is_anonymous: false,
+    });
+    render(<App />);
+
+    const like = await screen.findByRole("button", { name: "Нравится: 3" });
+    fireEvent.click(like);
+    expect(await screen.findByRole("button", { name: "Нравится: 4" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Нравится: 4" }));
+    expect(await screen.findByRole("button", { name: "Нравится: 3" })).toBeTruthy();
+  });
+
+  it("opens the login modal for a guest like without calling the like API", async () => {
+    const fetchMock = installApi();
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Нравится: 3" }));
+
+    expect(await screen.findByRole("dialog")).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([input]) => new URL(String(input)).pathname === "/api/v1/posts/17/like")).toBe(false);
   });
 
   it("pushes a shareable country URL after an internal country click", async () => {

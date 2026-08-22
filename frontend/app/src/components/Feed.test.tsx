@@ -3,16 +3,35 @@ import { describe, expect, it, vi } from "vitest";
 
 import { Feed } from "./Feed";
 
+const post = {
+  id: 17,
+  type: "article" as const,
+  title: "Гид по Бали",
+  slug: "bali-guide",
+  body: "Большой материал о путешествии.",
+  views: 12,
+  likes_count: 3,
+  shot_at: null,
+  author: { id: 7, name: "Мария", avatar_url: null },
+};
+
 const editorProps = {
   posts: [],
   loading: false,
   canCreate: true,
   onCreatePost: vi.fn().mockResolvedValue(undefined),
+  onToggleLike: vi.fn(),
   onOpenArticle: vi.fn(),
   onOpenProfile: vi.fn(),
 };
 
 describe("Feed composer modal", () => {
+  it("renders a like button and its count in a post card", () => {
+    render(<Feed {...editorProps} posts={[post]} onToggleLike={vi.fn()} />);
+
+    expect(screen.getByRole("button", { name: "Нравится: 3" })).toBeTruthy();
+  });
+
   it("keeps the composer out of the initial feed and opens it only by the compact action", () => {
     render(<Feed {...editorProps} />);
 

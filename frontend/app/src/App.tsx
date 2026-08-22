@@ -13,7 +13,7 @@ import { PublicProfile } from "./components/PublicProfile";
 import { QA } from "./components/QA";
 import { Reviews } from "./components/Reviews";
 import { Subscribe } from "./components/Subscribe";
-import { type ApiPost, useAuthorPosts, useAuth, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePosts, usePublicProfile, usePublicSettings } from "./hooks";
+import { type ApiPost, useAuthorPosts, useAuth, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostLike, usePosts, usePublicProfile, usePublicSettings } from "./hooks";
 import { pathForRoute, type PathRoute, routeFromPath } from "./router";
 
 function routeForPage(page: Page): PathRoute {
@@ -38,10 +38,12 @@ export function App() {
   );
   const [toast, setToast] = useState("");
   const [devRole, setDevRole] = useState<string | null>(null);
+  const [likesByPostId, setLikesByPostId] = useState<Record<number, number>>({});
 
   const auth = useAuth();
   const posts = usePosts();
   const postCreator = usePostCreator();
+  const postLike = usePostLike();
   const notifications = useNotifications();
   const online = useOnline();
   const publicSettings = usePublicSettings();
@@ -100,14 +102,27 @@ export function App() {
   };
 
   const openArticle = (post: ApiPost) => navigate({ page: "article", slug: post.slug });
+  const withLikesCount = (post: ApiPost): ApiPost => ({ ...post, likes_count: likesByPostId[post.id] ?? post.likes_count });
+  const toggleLike = async (post: ApiPost) => {
+    if (!auth.user) {
+      setOverlay("profile");
+      return;
+    }
+    try {
+      const result = await postLike.toggle(post.id);
+      setLikesByPostId((current) => ({ ...current, [post.id]: result.likes_count }));
+    } catch (cause) {
+      showError(cause instanceof Error ? cause.message : "Не удалось изменить лайк");
+    }
+  };
   const createPost = async (draft: Parameters<typeof postCreator.create>[0]) => {
     await postCreator.create(draft);
     await posts.reload();
   };
   const page: Page = route.page === "countries" && topicOpen ? "topic" : route.page;
   let content = null;
-  if (page === "feed") content = <Feed posts={posts.value ?? []} loading={posts.loading} canCreate={auth.user?.role === "editor" || auth.user?.role === "admin"} onCreatePost={createPost} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
-  if (page === "fishki") content = <Feed mode="fishki" posts={posts.value ?? []} loading={posts.loading} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
+  if (page === "feed") content = <Feed posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} canCreate={auth.user?.role === "editor" || auth.user?.role === "admin"} onCreatePost={createPost} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
+  if (page === "fishki") content = <Feed mode="fishki" posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
   if (page === "countries" || page === "topic") {
     content = (
       <Forum
@@ -123,7 +138,7 @@ export function App() {
     content = <main className="article-page"><div className="comment-skeleton"><i /><i /><i /></div></main>;
   }
   if (page === "article" && article.value) {
-    content = <ArticleComments article={article.value} commentsModerationEnabled={publicSettings.value?.comments_moderation_enabled ?? false} onBack={() => navigate({ page: "feed" })} onError={showError} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
+    content = <ArticleComments article={withLikesCount(article.value)} commentsModerationEnabled={publicSettings.value?.comments_moderation_enabled ?? false} onBack={() => navigate({ page: "feed" })} onError={showError} onOpenProfile={(userId) => navigate({ page: "profile", userId })} onToggleLike={toggleLike} />;
   }
   if (page === "article" && article.notFound) {
     content = (

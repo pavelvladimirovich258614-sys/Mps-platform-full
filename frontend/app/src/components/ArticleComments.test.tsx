@@ -27,6 +27,12 @@ describe("ArticleComments", () => {
     mocks.react.mockReset();
   });
 
+  it("renders a like button and its count on the full article", () => {
+    render(<ArticleComments article={article} commentsModerationEnabled={false} onBack={vi.fn()} onError={vi.fn()} onOpenProfile={vi.fn()} onToggleLike={vi.fn()} />);
+
+    expect(screen.getByRole("button", { name: "Нравится: 3" })).toBeTruthy();
+  });
+
   it("renders the tour CTA after the discussion section", () => {
     render(<ArticleComments article={article} commentsModerationEnabled={false} onBack={vi.fn()} onError={vi.fn()} onOpenProfile={vi.fn()} />);
 

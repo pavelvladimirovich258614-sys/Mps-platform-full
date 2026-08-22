@@ -28,7 +28,7 @@ vi.mock("../hooks", () => ({
 describe("author profile links", () => {
   it("opens the post author's public profile from Feed", () => {
     const onOpenProfile = vi.fn();
-    render(<Feed posts={[post]} loading={false} onOpenArticle={vi.fn()} onOpenProfile={onOpenProfile} />);
+    render(<Feed posts={[post]} loading={false} onToggleLike={vi.fn()} onOpenArticle={vi.fn()} onOpenProfile={onOpenProfile} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Автор: Мария" }));
     expect(onOpenProfile).toHaveBeenCalledWith(post.author.id);

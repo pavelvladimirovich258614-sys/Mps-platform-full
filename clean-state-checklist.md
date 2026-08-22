@@ -1,5 +1,14 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 41 local checkpoint — 2026-08-23
+
+- [x] RED подтверждён: article UI не содержал button `Нравится: 3`.
+- [x] GREEN targeted: 3 frontend files / 20 passed — controls в Feed и ArticleComments, authenticated toggle 3→4→3, guest login modal без POST.
+- [x] Full frontend: `npm test` — 15 files / 55 passed; `npm run build` — success, 110 modules.
+- [x] Full backend: `python -m pytest tests -q --basetemp .pytest-likes-full` — 61 passed in 15.65s.
+- [x] `./init.sh` через Git Bash остановился только на внешнем Hermes pip check (missing charset-normalizer) до MPS tests.
+- [x] Production deploy намеренно не выполнялся; ожидает подтверждения владельца.
+
 ## Session 40 final checkpoint — 2026-08-22
 
 - [x] F14 rich-text composer и связанные UX-правки задеплоены: modal вместо inline Feed composer, штатный TipTap `onUpdate` вместо ручного `setContent`, общий подзаголовок ленты, без `fishka` в composer, заголовок «Статьи» и CTA после комментариев.
