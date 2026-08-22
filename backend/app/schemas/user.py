@@ -38,4 +38,7 @@ class PublicProfileResponse(BaseModel):
     avatar_url: str | None
     bio: str | None
     posts_count: int
+    followers_count: int
+    following_count: int
+    is_following: bool
     countries: list[PublicProfileCountry]
