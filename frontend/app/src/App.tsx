@@ -18,6 +18,7 @@ import { pathForRoute, type PathRoute, routeFromPath } from "./router";
 
 function routeForPage(page: Page): PathRoute {
   if (page === "countries") return { page: "countries" };
+  if (page === "fishki") return { page: "fishki" };
   if (page === "reviews" || page === "subscribe" || page === "about" || page === "privacy" || page === "terms") {
     return { page };
   }
@@ -101,6 +102,7 @@ export function App() {
   const page: Page = route.page === "countries" && topicOpen ? "topic" : route.page;
   let content = null;
   if (page === "feed") content = <Feed posts={posts.value ?? []} loading={posts.loading} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
+  if (page === "fishki") content = <Feed mode="fishki" posts={posts.value ?? []} loading={posts.loading} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
   if (page === "countries" || page === "topic") {
     content = (
       <Forum

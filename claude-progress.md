@@ -4,14 +4,23 @@
 - Repository root directory: mps-platform/
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
-- Feature state: F01–F12 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; публичный профиль пользователя, части А и Б и вход в собственный public profile задеплоены. `./init.sh` остаётся заблокирован внешним Hermes `pip check`, но это не MPS feature gate.
+- Feature state: F01–F13 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; публичный профиль пользователя, части А и Б, вход в собственный public profile и отдельный раздел «Фишки» локально верифицированы. F13 ожидает отдельного production deploy confirmation. `./init.sh` остаётся заблокирован внешним Hermes `pip check`, но это не MPS feature gate.
 - Deploy state: платформа развёрнута и живая на `https://mir.pod-solncem.ru`. MPS использует отдельные PostgreSQL DB/role, Redis DB 2 и backend на `127.0.0.1:8001`; nginx, certbot, HSTS, systemd timers и PostgreSQL backup проверены на VPS.
 - Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15, I-16, I-18 и I-20 закрыты 2026-08-20. I-21 отложен до pre-launch юридической проверки. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
 - Auth/UI state: production build использует `https://mir.pod-solncem.ru/api/v1` и `Reg_Under_the_sun_bot`; закрыты найденные UI-проблемы login/profile (logout, avatar upload, золотой online-индикатор, toast поверх modal, email input). Telegram Login Widget и callback работают; role storage устойчиво читает legacy `ADMIN` и текущие строчные значения, что подтверждено live callback 200.
 - Email state: UnisenderGo transport использует официальный default `goapi.unisender.ru` (с возможностью override на go1/go2) и `X-API-KEY`; payload `message/recipients/body/subject/from_email` проверен mock-тестами. Production delivery сейчас заблокирована внешним TCP timeout до сети Unisender `31.184.200.*:443`: goapi и go1 недоступны, при этом ya.ru/google.com доступны, а local UFW/iptables outgoing не блокируют. Email-код и digest не работают до восстановления маршрута или смены транспорта/provider.
-- Next best action: выбрать отдельный следующий пакет: мелкая косметика счётчиков подписок, полноценный список подписчиков, устранение сетевой блокировки Unisender или наполнение платформы реальным контентом.
+- Next best action: после подтверждения Павла — frontend-only production deploy F13; затем выбрать отдельный пакет: мелкая косметика счётчиков подписок, полноценный список подписчиков, устранение сетевой блокировки Unisender или наполнение платформы реальным контентом.
 
 ## Session Record
+
+### Session 33 — 2026-08-22 (Codex, F13 «Фишки»)
+- Goal: вернуть отдельный раздел «Фишки» в навигацию и убрать из фильтра ленты вводящие в заблуждение вкладки фишек и видеообзоров.
+- Completed: добавлен shareable route `/fishki`; desktop sidebar помещает «Фишки» между «Страны» и «Отзывы», mobile sheet тоже содержит пункт, сохраняя прежние три быстрые нижние кнопки. Экран переиспользует Feed/PostCard и показывает только `type=tip`, включая существующие ссылки на автора. Фильтр основной ленты теперь содержит только «Все» и «Статьи». `video_review` не удалён: API, тип и карточка сохранены, UI-вкладка лишь скрыта до появления реального видеоконтента.
+- Verification run: RED — 2 F13 tests failed (route fallback, sidebar item absent). GREEN targeted — 11 passed; final frontend `npm test` — 40 passed; `npm run build` — 49 modules, success. Full backend pytest — 58 passed in 11.45s. `./init.sh` остановился только на внешнем Hermes `pip check`: missing `charset-normalizer` у `pdfminer-six`, `reportlab`, `requests`, до MPS tests.
+- Evidence recorded: feature_list.json → F13 passing.
+- Commits: `feat: раздел Фишки в сайдбаре + упрощение фильтра ленты`.
+- Known risks: определять видимость видео-tab по загруженной странице ленты ненадёжно; сознательно выбран предсказуемый UI-only hide. Возврат tab после появления реального video content — отдельный небольшой scope.
+- Next best action: дождаться подтверждения Павла на frontend-only production deploy F13; backend restart и migration не нужны.
 
 ### Session 32 — 2026-08-22 (Pavel, final production confirmation)
 - Goal: зафиксировать пользовательское подтверждение завершённых production F11 и F12.

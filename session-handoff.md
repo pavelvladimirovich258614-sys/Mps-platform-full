@@ -1,42 +1,19 @@
-# Session handoff — 2026-08-22 финальное состояние публичного профиля
+# Session handoff — 2026-08-22 F13 «Фишки»
 
-## Текущее состояние F12
-- F11 «Публичный профиль, часть Б» и F12 «Вход в публичный профиль и UI шапки» задеплоены на `https://mir.pod-solncem.ru` и подтверждены Павлом вживую. Для F12: code SHA `bdd8962`, backup `/root/backups/mps-f12-20260822T124402Z`; авторизованный клик по avatar/name в desktop header и «Мой профиль» в mobile sheet ведёт на `/users/{own id}`. У гостя сохранён вход через существующую modal.
-- На собственной public profile есть «Редактировать профиль»: он переиспользует `Profile` modal без дублирования формы; logout остаётся там. У других пользователей прежняя follow/unfollow-кнопка. Добавлено `...` menu: copy canonical `/users/{id}` via `navigator.clipboard`, `navigator.share` с copy fallback, toast и Escape/outside close.
-- Визуально: компактная зона name/счётчики/actions/avatar, отдельная неинтерактивная строка «Посмотреть подписчиков · N», подчёркнутые tabs. Username и follower list не реализованы намеренно: public username отсутствует в схеме, а backend API отдаёт лишь counts.
+## Текущее состояние
 
-## F12 верификация
-- RED: 2 теста упали до реализации (header navigation и owner menu/actions). GREEN targeted: 13 passed. Final frontend: 38 passed; `npm run build` — 49 modules. Final backend: 58 passed in 17.00s.
-- `./init.sh` вне sandbox повторно блокируется только внешним Hermes `pip check` (missing charset-normalizer for pdfminer-six/reportlab/requests); не менять Hermes в MPS scope.
-- Agent-browser skill прочитан для visual review, но binary не установлен; browser screenshot не выполнен. CSS/DOM композиция вручную сопоставлена с приложенными Substack screenshots.
-- Production: backend diff был пуст, поэтому `mps-backend` не рестартовался и оставался active. Production VITE values и generated bundle проверены; `deploy/smoke.sh` — `[OK]`; `/users/1` отдаёт SPA 200, served JS содержит owner edit/menu/copy UI. Павел затем подтвердил скриншотом authenticated flow: переход по avatar/name, открытие существующей modal «Редактировать профиль» и copy-link из меню `...`.
+- Локально завершена F13: отдельный shareable route `/fishki` использует существующий `Feed` и те же карточки/ссылки на авторов, но показывает только `type=tip`.
+- В desktop sidebar «Фишки» возвращены между «Страны» и «Отзывы». В mobile sheet пункт тоже есть; нижняя mobile nav сохранена как Лента / Страны / Отзывы / Ещё.
+- На главной ленте filters упрощены до «Все» и «Статьи». «Фишки» теперь отдельный раздел, а «Видеообзоры» временно скрыты только из UI. Backend `PostType.VIDEO_REVIEW`, API и карточка не изменялись.
+- Backend, миграции, `.env` и production не трогались.
 
-## Возможный следующий шаг
-- Мелкая косметика: убрать дублирование «Посмотреть подписчиков · N» и `N подписчиков · N подписок`; это не срочно.
-- Полноценный список подписчиков — отдельный пакет: новый API endpoint и отдельный view, сознательно отложен.
-- Отдельно решить внешнюю сетевую блокировку email/Unisender.
-- Наполнить платформу реальным контентом, чтобы live-проверки Likes и авторских ссылок имели реальные карточки.
+## Верификация F13
 
-# Предыдущий контекст — 2026-08-22 public profile, part B
+- RED: 2 frontend tests упали до реализации — `/fishki` возвращал feed, sidebar-пункт отсутствовал. GREEN targeted: 11 passed.
+- Final: frontend `npm test` — 40 passed; `npm run build` — 49 modules; full backend pytest — 58 passed in 11.45s.
+- `./init.sh` вне sandbox дошёл до внешнего Hermes pre-flight и остановился на missing `charset-normalizer` для `pdfminer-six`, `reportlab`, `requests`; MPS-код и зависимости не менялись.
 
-## Реализовано и задеплоено
-- F11 «Публичный профиль, часть Б» готова в четырёх коммитах: `ed9025d` (UserFollow/API), `dedc865` (UI счётчиков/подписки), `6c09ae4` (вкладка «Лайки»), `994c072` (ссылки на авторов).
-- Миграция `20260822_0009` создаёт `user_follows`: composite PK `follower_id/following_id`, CHECK против self-follow, FK CASCADE и индекс по `following_id`.
-- `GET /api/v1/users/{id}/profile` отдаёт real `followers_count`, `following_count`, `is_following`; POST/DELETE follow требуют JWT. Anonymous/banned profiles не раскрываются; duplicate follow = 409, self-follow = 422.
-- Public profile скрывает follow button на собственном профиле, выводит реальные счётчики и показывает published posts во вкладке «Лайки» через `GET /users/{id}/likes`.
-- Post DTO теперь содержит минимальный `author {id,name,avatar_url}`; имена в Feed и comments ведут на `/users/{id}`.
+## Следующий разрешённый шаг
 
-## Верификация
-- Follow RED -> GREEN: 7 профильных тестов; likes RED -> GREEN: 8; author API RED -> GREEN: 10 (posts+profile).
-- Fresh SQLite Alembic прошёл до `20260822_0009`; UserFollow DDL отдельно скомпилирован PostgreSQL dialect.
-- Рабочий `backend/.env` выровнен с official goapi default. Final backend без override: `58 passed in 11.41s`; frontend `36 passed`; `npm run build` успешен (49 modules).
-
-## Внешняя заметка о harness
-- `./init.sh` вне sandbox реально запущен, но остановился на внешнем Hermes `pip check`: отсутствует `charset-normalizer` для `pdfminer-six`, `reportlab`, `requests`. Не чинить Hermes-зависимости в MPS-задаче.
-- Это не блокирует F11: `feature_list.json` переведён в `passing` после чистого полного pytest.
-
-## Production
-- `https://mir.pod-solncem.ru` задеплоен единым rollout на `30d65de`. Backup перед deploy: `/root/backups/mps-f11-20260822T115405Z`. PostgreSQL миграция `20260822_0009 (head)` применена, `mps-backend` active/ready; frontend пересобран с проверенными production VITE values, без localhost API URL в assets; `deploy/smoke.sh` — `[OK]`.
-- Safe live API smoke: follow -> 201 и +1 счётчик; repeat -> 409; self-follow -> 422 (контракт F11, не 404/403); unfollow -> 200 и исходный счётчик. Два синтетических неперсональных профиля после проверки скрыты (`is_anonymous=true`).
-- В production сейчас 0 published posts и 0 approved comments. Поэтому live Likes/feed/comments карточки и буквальный click smoke автора не имеют fixture; контент искусственно не создавался. SPA route `/users/1` отвечает 200, а реальные rendered interactions покрыты локальными F11 frontend/API tests.
-- Unisender production TCP blocker сохраняется: не менять firewall или provider в рамках F11.
+- Дождаться отдельного подтверждения Павла на frontend-only production deploy F13. При deploy: собрать `frontend/app` с production `VITE_API_URL` и `VITE_TELEGRAM_BOT_USERNAME`, проверить их в bundle и отсутствие localhost URL, обновить только static `dist`, затем `deploy/smoke.sh`. Backend restart и Alembic не нужны.
+- После появления реальных опубликованных видеообзоров вернуть UI-tab отдельным небольшим scope. Не делать автопоказ по текущей странице ленты без надёжного API-признака.

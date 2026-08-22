@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { setAccessToken } from "./api/client";
 import { App } from "./App";
+import type { ApiPost } from "./hooks";
 
 const post = {
   id: 17,
@@ -14,6 +15,15 @@ const post = {
   likes_count: 3,
   shot_at: null,
   author: { id: 7, name: "Мария", avatar_url: "/media/maria.webp" },
+};
+
+const fishka = {
+  ...post,
+  id: 18,
+  type: "tip" as const,
+  title: "Как не переплатить за трансфер",
+  slug: "transfer-tip",
+  body: "Проверенная короткая фишка.",
 };
 
 const publicProfile = {
@@ -36,7 +46,7 @@ const jsonResponse = (status: number, body: unknown) => new Response(JSON.string
 type DetailResult = "ok" | "missing" | "network";
 type EmailRequestResult = "ok" | "failure";
 
-function installApi(detailResult: DetailResult = "ok", emailRequestResult: EmailRequestResult = "ok", currentUser: Record<string, unknown> | null = null) {
+function installApi(detailResult: DetailResult = "ok", emailRequestResult: EmailRequestResult = "ok", currentUser: Record<string, unknown> | null = null, posts: ApiPost[] = [post]) {
   const fetchMock = vi.fn<typeof fetch>(async (input) => {
     const url = new URL(String(input));
     const path = url.pathname;
@@ -47,7 +57,7 @@ function installApi(detailResult: DetailResult = "ok", emailRequestResult: Email
       if (detailResult === "network") throw new TypeError("Failed to fetch");
       return jsonResponse(200, post);
     }
-    if (path === "/api/v1/posts") return jsonResponse(200, [post]);
+    if (path === "/api/v1/posts") return jsonResponse(200, posts);
     if (path === "/api/v1/posts/17/comments") return jsonResponse(200, []);
     if (path === "/api/v1/countries") return jsonResponse(200, [{ id: 1, name: "ОАЭ", topics_count: 0 }]);
     if (path === "/api/v1/countries/1/topics") return jsonResponse(200, []);
@@ -108,6 +118,31 @@ describe("App pathname routing", () => {
       "https://mir.pod-solncem.ru/api/v1/users/7/profile",
       expect.any(Object),
     );
+  });
+
+  it("opens the dedicated Fishki route and renders only fishka cards", async () => {
+    window.history.replaceState({}, "", "/fishki");
+    installApi("ok", "ok", null, [post, fishka]);
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Фишки" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 2, name: fishka.title })).toBeTruthy();
+    expect(screen.queryByRole("heading", { level: 2, name: post.title })).toBeNull();
+  });
+
+  it("navigates to Fishki from the sidebar and leaves only two feed filters", async () => {
+    installApi("ok", "ok", null, [post, fishka]);
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Фишки/ }));
+    await waitFor(() => expect(window.location.pathname).toBe("/fishki"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Лента" }));
+    await waitFor(() => expect(window.location.pathname).toBe("/"));
+    const filters = document.querySelector(".feed-filters");
+    expect(filters).not.toBeNull();
+    expect(within(filters as HTMLElement).getAllByRole("button").map((button) => button.textContent)).toEqual(["Все", "Статьи"]);
   });
 
   it("opens the authenticated reader's public profile from the header and edits through the existing modal", async () => {

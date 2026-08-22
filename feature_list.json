@@ -253,6 +253,23 @@
       ],
       "evidence": "2026-08-22: RED — 2 F12 tests failed: header kept opening the edit modal and owner actions/menu were absent. GREEN targeted: `npm test -- src/App.routing.test.tsx src/components/PublicProfile.test.tsx` — 13 passed. Final: frontend `npm test` — 38 passed; `npm run build` — 49 modules, success; backend `python -m pytest tests -q --basetemp .pytest-f12-full` — 58 passed in 17.00s. `./init.sh` rerun outside sandbox stopped only at external Hermes pip check (missing charset-normalizer for pdfminer-six/reportlab/requests), before MPS tests. Production: frontend-only rollout at bdd8962; backup created; production VITE values and generated bundle verified; backend remained active without restart; deploy/smoke.sh [OK]; live /users/1 SPA and owner edit/menu/copy strings verified in published JS.",
       "notes": "Username handle и список подписчиков сознательно вне scope: User не хранит public username, а API отдаёт только follower count без списка. Header name/avatar and mobile My profile now open /users/{own id}; guests still open login modal. Owner edit reuses Profile modal; menu copy uses navigator.clipboard and share falls back to copy. Browser visual screenshot could not run because the locally available agent-browser skill has no installed executable; CSS/DOM composition was compared to the supplied Substack reference. Production frontend deployed 2026-08-22. Literal authenticated browser clicks require a user Telegram session, which was not available and no token or public test account was created."
+    },
+    {
+      "id": "F13",
+      "priority": 13,
+      "area": "frontend-navigation",
+      "title": "Раздел «Фишки» и упрощение фильтра ленты",
+      "user_visible_behavior": "В sidebar и мобильном меню есть отдельный раздел «Фишки» с опубликованными фишками; фильтр основной ленты содержит только «Все» и «Статьи». Видеообзоры остаются поддерживаемым типом публикаций, но не показываются отдельной вкладкой до появления реального контента.",
+      "status": "passing",
+      "verification": [
+        "RED/GREEN frontend tests: маршрут /fishki, переход из sidebar и показ только фишек",
+        "frontend: npm test",
+        "frontend: npm run build",
+        "backend: python -m pytest tests -q",
+        "./init.sh вне sandbox; внешний Hermes pip check фиксируется отдельно"
+      ],
+      "evidence": "2026-08-22: RED `npm test -- --run src/App.routing.test.tsx` вне sandbox — 2 failed: `/fishki` fallback в ленту, sidebar-пункт отсутствовал. GREEN targeted — 11 passed. Final frontend `npm test` — 40 passed; `npm run build` — 49 modules, success. Backend `python -m pytest tests -q --basetemp .pytest-f13-full` — 58 passed in 11.45s. `./init.sh` вне sandbox остановился до MPS tests только на внешнем Hermes pip check: missing charset-normalizer у pdfminer-six/reportlab/requests.",
+      "notes": "Выполнено 2026-08-22. Scope frontend-only: добавлен /fishki, sidebar и mobile sheet; существующий Feed переиспользует те же PostCard и author links, но показывает только type=tip. В основной ленте оставлены только filters «Все» и «Статьи». video_review API/type/card сохранены, UI tab временно скрыт до появления реального видеоконтента. Production deploy намеренно ожидает отдельного подтверждения."
     }
   ]
 }
