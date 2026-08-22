@@ -4,7 +4,7 @@
 - Repository root directory: mps-platform/
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
-- Feature state: F01–F10 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; публичный профиль пользователя, часть А (каркас и вкладка «Публикации») задеплоен; записей `in_progress` нет.
+- Feature state: F01–F10 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; публичный профиль пользователя, часть А задеплоен. F11 «Публичный профиль, часть Б» реализована локально, но формально остаётся `in_progress` до восстановления воспроизводимого общего harness: local `go1` конфликтует с historical Unisender respx mocks, а `./init.sh` блокируется внешним Hermes `pip check`.
 - Deploy state: платформа развёрнута и живая на `https://mir.pod-solncem.ru`. MPS использует отдельные PostgreSQL DB/role, Redis DB 2 и backend на `127.0.0.1:8001`; nginx, certbot, HSTS, systemd timers и PostgreSQL backup проверены на VPS.
 - Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15, I-16, I-18 и I-20 закрыты 2026-08-20. I-21 отложен до pre-launch юридической проверки. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
 - Auth/UI state: production build использует `https://mir.pod-solncem.ru/api/v1` и `Reg_Under_the_sun_bot`; закрыты найденные UI-проблемы login/profile (logout, avatar upload, золотой online-индикатор, toast поверх modal, email input). Telegram Login Widget и callback работают; role storage устойчиво читает legacy `ADMIN` и текущие строчные значения, что подтверждено live callback 200.
@@ -12,6 +12,14 @@
 - Next best action: email infrastructure — отдельно открыть тикет HostKey по selective egress timeout к Unisender и выбрать SMTP/alternate provider, если маршрут не восстановят; следующую продуктовую доработку согласовывать отдельно.
 
 ## Session Record
+
+### Session 28 — 2026-08-22 (Codex, public profile part B)
+- Goal: реализовать соцграф публичного профиля, реальную вкладку «Лайки» и переходы на автора, не выполняя production deploy.
+- Completed: UserFollow с составным PK, self-follow CHECK, FK CASCADE и индексом; Alembic `20260822_0009`; POST/DELETE follow с auth, 422 self-follow, 409 duplicate, 404 для anonymous/banned. Public profile отдаёт реальные followers/following counts и viewer-specific `is_following`. UI показывает счётчики и follow/unfollow только для чужого профиля. «Лайки» выводят только published posts пользователя. API post DTO содержит минимальный public author; автор кликабелен в Feed и comments.
+- Verification run: RED follow — 2 failed; GREEN profile package — 7 passed. SQLite clean Alembic upgrade до `20260822_0009`; PostgreSQL DDL compile проверяет PK/CHECK/CASCADE. Likes RED — 1 failed, GREEN — 8 profile tests. Author RED KeyError, GREEN posts+profile — 10 passed. Final frontend `npm test` — 36 passed; `npm run build` — 49 modules, success. Final backend with test-only `UNISENDER_GO_BASE_URL=goapi` — 58 passed in 11.31s.
+- Commits: `ed9025d` feat: UserFollow модель и API; `dedc865` feat: UI подписки и счетчиков; `6c09ae4` feat: вкладка Лайки публичного профиля; `994c072` feat: ссылки на профили авторов.
+- Known risks: normal local full pytest uses existing `go1` override, while 5 historical email/respx tests hard-code `goapi`; it fails independently of F11. `./init.sh` reached pre-flight and stopped on external Hermes packages missing `charset-normalizer` (`pdfminer-six`, `reportlab`, `requests`). Neither config nor Hermes dependencies were changed. Production is intentionally untouched.
+- Next best action: repair test isolation for Unisender and/or the external Hermes venv only in a separately approved scope, then repeat `./init.sh`; after Pavel’s approval, deploy F11 as one unit with normal backup/smoke workflow.
 
 ### Session 27 — 2026-08-22 (Codex, public profile production regressions)
 - Goal: завершить часть А публичного профиля и последовательно устранить найденные на production регрессии без ручных правок данных PostgreSQL и без раскрытия secrets.
