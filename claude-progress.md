@@ -4,14 +4,23 @@
 - Repository root directory: mps-platform/
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
-- Feature state: F01–F12 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; публичный профиль пользователя, части А и Б задеплоены, вход в собственный public profile готов локально. `./init.sh` остаётся заблокирован внешним Hermes `pip check`, но это не MPS feature gate.
+- Feature state: F01–F12 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; публичный профиль пользователя, части А и Б и вход в собственный public profile задеплоены. `./init.sh` остаётся заблокирован внешним Hermes `pip check`, но это не MPS feature gate.
 - Deploy state: платформа развёрнута и живая на `https://mir.pod-solncem.ru`. MPS использует отдельные PostgreSQL DB/role, Redis DB 2 и backend на `127.0.0.1:8001`; nginx, certbot, HSTS, systemd timers и PostgreSQL backup проверены на VPS.
 - Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15, I-16, I-18 и I-20 закрыты 2026-08-20. I-21 отложен до pre-launch юридической проверки. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
 - Auth/UI state: production build использует `https://mir.pod-solncem.ru/api/v1` и `Reg_Under_the_sun_bot`; закрыты найденные UI-проблемы login/profile (logout, avatar upload, золотой online-индикатор, toast поверх modal, email input). Telegram Login Widget и callback работают; role storage устойчиво читает legacy `ADMIN` и текущие строчные значения, что подтверждено live callback 200.
 - Email state: UnisenderGo transport использует официальный default `goapi.unisender.ru` (с возможностью override на go1/go2) и `X-API-KEY`; payload `message/recipients/body/subject/from_email` проверен mock-тестами. Production delivery сейчас заблокирована внешним TCP timeout до сети Unisender `31.184.200.*:443`: goapi и go1 недоступны, при этом ya.ru/google.com доступны, а local UFW/iptables outgoing не блокируют. Email-код и digest не работают до восстановления маршрута или смены транспорта/provider.
-- Next best action: после отдельного подтверждения — production deploy F12; список подписчиков и username-handle остаются самостоятельными задачами, email infrastructure — отдельный тикет HostKey.
+- Next best action: список подписчиков и username-handle остаются самостоятельными задачами; email infrastructure — отдельный тикет HostKey.
 
 ## Session Record
+
+### Session 31 — 2026-08-22 (Codex, F12 production deploy)
+- Goal: frontend-only deploy входа в собственный public profile и profile-header UI.
+- Completed: перед deploy создан backup `/root/backups/mps-f12-20260822T124402Z`; VPS fast-forwarded to `bdd8962`. Backend diff verified empty, поэтому `mps-backend` не перезапускался и всё время оставался active. Frontend rebuilt after positive checks of production `VITE_API_URL` and `VITE_TELEGRAM_BOT_USERNAME`; generated bundle contains both values and no localhost API URL.
+- Verification run: `deploy/smoke.sh` against `https://mir.pod-solncem.ru` — `[OK]`. Live `GET /users/1` returned SPA 200; served JS asset verified owner edit, actions menu and copy-link strings. Literal authenticated browser clicks were not run: no user Telegram session is available and no access token or new public smoke account was exposed/created.
+- Evidence recorded: feature_list.json → F12 production evidence.
+- Commits: code `bdd8962`; deployment record commit will follow.
+- Known risks: `navigator.clipboard`/`navigator.share` physical browser permissions require manual user-device smoke; no backend restart or migration was required.
+- Next best action: separate plan for followers list or username-handle, if prioritised.
 
 ### Session 30 — 2026-08-22 (Codex, F12 profile entry and header UI)
 - Goal: перевести вход из шапки на существующий public profile, переиспользовать настройки владельца и довести шапку по Substack-референсу без backend-расширений.
