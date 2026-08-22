@@ -4,7 +4,7 @@
 - Repository root directory: mps-platform/
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
-- Feature state: F01–F11 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; публичный профиль пользователя, часть А задеплоен, часть Б готова локально к единому согласованному deploy. `./init.sh` остаётся заблокирован внешним Hermes `pip check`, но это не MPS feature gate.
+- Feature state: F01–F11 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; публичный профиль пользователя, части А и Б задеплоены. `./init.sh` остаётся заблокирован внешним Hermes `pip check`, но это не MPS feature gate.
 - Deploy state: платформа развёрнута и живая на `https://mir.pod-solncem.ru`. MPS использует отдельные PostgreSQL DB/role, Redis DB 2 и backend на `127.0.0.1:8001`; nginx, certbot, HSTS, systemd timers и PostgreSQL backup проверены на VPS.
 - Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15, I-16, I-18 и I-20 закрыты 2026-08-20. I-21 отложен до pre-launch юридической проверки. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
 - Auth/UI state: production build использует `https://mir.pod-solncem.ru/api/v1` и `Reg_Under_the_sun_bot`; закрыты найденные UI-проблемы login/profile (logout, avatar upload, золотой online-индикатор, toast поверх modal, email input). Telegram Login Widget и callback работают; role storage устойчиво читает legacy `ADMIN` и текущие строчные значения, что подтверждено live callback 200.
@@ -12,6 +12,14 @@
 - Next best action: email infrastructure — отдельно открыть тикет HostKey по selective egress timeout к Unisender и выбрать SMTP/alternate provider, если маршрут не восстановят; следующую продуктовую доработку согласовывать отдельно.
 
 ## Session Record
+
+### Session 29 — 2026-08-22 (Codex, F11 production deploy)
+- Goal: единым rollout задеплоить соцграф, подписки, «Лайки» и ссылки на профили авторов.
+- Completed: origin/main и VPS обновлены до `30d65de`; перед изменением создан server-side backup `/root/backups/mps-f11-20260822T115405Z`. PostgreSQL Alembic upgraded `20260820_0008 -> 20260822_0009`; `mps-backend` restarted and readiness passed. Frontend rebuilt with production VITE API/bot variables verified inside generated assets; localhost API URL excluded from bundle; permissions on `dist` refreshed.
+- Verification run: `deploy/smoke.sh` against `https://mir.pod-solncem.ru` — `[OK]`; final VPS state: SHA `30d65de`, service active, Alembic `20260822_0009 (head)`, SPA `/users/1` — 200. Safe API smoke completed follow 201 with counter increment, duplicate 409, self-follow 422, unfollow 200 with decrement; both synthetic non-personal accounts were returned to anonymous state.
+- Production-data boundary: database currently has `0` published posts and `0` approved comments. Consequently no pre-existing live card can demonstrate the Likes tab or an author click from feed/comment; no production content or approved comments were created solely for smoke. Local F11 frontend/API tests remain the verification for those rendered interactions.
+- Known risk: manual Alembic invocation must load `/etc/mps-platform/backend.env`; without it it uses no production DATABASE_URL and fails authentication. The deployment command now used the systemd environment successfully. `./init.sh` external Hermes blocker is unchanged.
+- Next best action: seed/approve real editorial content through the normal product workflow, then perform a browser click smoke for Likes/feed/comments when fixtures exist.
 
 ### Session 28 — 2026-08-22 (Codex, public profile part B)
 - Goal: реализовать соцграф публичного профиля, реальную вкладку «Лайки» и переходы на автора, не выполняя production deploy.
