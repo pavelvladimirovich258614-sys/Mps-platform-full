@@ -4,7 +4,7 @@
 - Repository root directory: mps-platform/
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
-- Feature state: F01–F14 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; публичный профиль пользователя, части А и Б, вход в собственный public profile и отдельный раздел «Фишки» задеплоены. F14 rich-text редактор завершён локально и опубликован в GitHub, но production deploy ожидает отдельного подтверждения. `./init.sh` остаётся заблокирован внешним Hermes `pip check`, но это не MPS feature gate.
+- Feature state: F01–F14 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; публичный профиль пользователя, части А и Б, вход в собственный public profile, отдельный раздел «Фишки» и F14 rich-text редактор задеплоены. `./init.sh` остаётся заблокирован внешним Hermes `pip check`, но это не MPS feature gate.
 - Deploy state: платформа развёрнута и живая на `https://mir.pod-solncem.ru`. MPS использует отдельные PostgreSQL DB/role, Redis DB 2 и backend на `127.0.0.1:8001`; nginx, certbot, HSTS, systemd timers и PostgreSQL backup проверены на VPS.
 - Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15, I-16, I-18 и I-20 закрыты 2026-08-20. I-21 отложен до pre-launch юридической проверки. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
 - Auth/UI state: production build использует `https://mir.pod-solncem.ru/api/v1` и `Reg_Under_the_sun_bot`; закрыты найденные UI-проблемы login/profile (logout, avatar upload, золотой online-индикатор, toast поверх modal, email input). Telegram Login Widget и callback работают; role storage устойчиво читает legacy `ADMIN` и текущие строчные значения, что подтверждено live callback 200.
@@ -12,6 +12,15 @@
 - Next best action: выбрать отдельный пакет: мелкая косметика счётчиков подписок, полноценный список подписчиков, устранение сетевой блокировки Unisender или наполнение платформы реальным контентом.
 
 ## Session Record
+
+### Session 36 — 2026-08-22 (Codex, F14 production deploy)
+- Goal: единый production rollout backend sanitizer и TipTap frontend для F14.
+- Completed: rollback backup `/root/backups/mps-f14-20260822T140321Z`; VPS fast-forwarded `fff502a -> c549085`. `mps-backend` restarted; after one short startup refusal loopback `/api/v1/health` returned 200 and service stayed active. Frontend executed `npm ci` and `npm run build` using verified production VITE API/bot settings; bundle contains the required public values and no localhost API; dist permissions were refreshed for nginx.
+- Verification run: `deploy/smoke.sh` — `[OK] smoke passed: https://mir.pod-solncem.ru`. Direct authenticated HTTPS `POST /api/v1/posts` created a temporary draft with `<p>test</p><script>alert(1)</script>`; API returned exactly `<p>test</p>`, proving sanitization, and the draft was deleted by trap. A final DB read verified zero remaining F14 smoke drafts; exact VPS revision `c549085`, service active and live new JS bundle confirmed.
+- Evidence recorded: feature_list.json → F14 production evidence.
+- Commits: deployed code `c837e40`, verification checkpoint `c549085`; deployment record follows.
+- Known risks: no media upload/preview/autosave/embeds in this phase. npm ci reports 5 transitive audit findings; no forced dependency upgrade was applied in the rollout.
+- Next best action: manually log in as editor and create one real publication to evaluate the writing UX; media upload and advanced editor actions remain separate packages.
 
 ### Session 35 — 2026-08-22 (Codex, F14 базовый rich-text редактор)
 - Goal: добавить с нуля editor-only composer на TipTap и безопасный HTML pipeline для публикаций без миграции БД.

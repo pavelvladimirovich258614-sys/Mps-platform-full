@@ -7,7 +7,8 @@
 - [x] Frontend `npm test` — 44 passed; production `npm run build` — success (110 modules).
 - [x] Full backend pytest — 59 passed.
 - [x] `./init.sh` выполнен через Git Bash: MPS tests не стартовали только из-за внешнего Hermes pip check (missing charset-normalizer для pdfminer-six/reportlab/requests); F14 code/dependencies этого окружения не изменяет.
-- [x] F14 code commit `c837e40` pushed to origin/main; production deploy intentionally pending owner approval.
+- [x] F14 code commit `c837e40` pushed to origin/main.
+- [x] F14 production: rollback backup создан; VPS advanced to `c549085`; mps-backend active/readiness green; VITE production bundle verified; `deploy/smoke.sh` passed; direct HTTPS POST HTML sanitization verified and temporary draft cleanup confirmed.
 
 - [x] Audit I-18 и I-20 закрыты; I-21 документирован как отложенный до pre-launch юридической проверки.
 - [x] Legal page содержит утверждённые тексты Политики обработки персональных данных и Пользовательского соглашения; реквизиты остаются public settings, без статических секретов.
