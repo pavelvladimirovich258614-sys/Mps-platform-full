@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
@@ -9,6 +9,33 @@ import { EditorImageNode } from "./EditorImageNodeViews";
 import { ImageCarouselNode } from "./ImageCarouselNode";
 
 type RichTextEditorProps = { value: string; onChange: (html: string) => void };
+type ToolbarState = {
+  bold: boolean;
+  italic: boolean;
+  strike: boolean;
+  heading1: boolean;
+  heading2: boolean;
+  heading3: boolean;
+  bulletList: boolean;
+  orderedList: boolean;
+  blockquote: boolean;
+  link: boolean;
+};
+
+function getToolbarState(editor: Editor | null): ToolbarState {
+  return {
+    bold: editor?.isActive("bold") ?? false,
+    italic: editor?.isActive("italic") ?? false,
+    strike: editor?.isActive("strike") ?? false,
+    heading1: editor?.isActive("heading", { level: 1 }) ?? false,
+    heading2: editor?.isActive("heading", { level: 2 }) ?? false,
+    heading3: editor?.isActive("heading", { level: 3 }) ?? false,
+    bulletList: editor?.isActive("bulletList") ?? false,
+    orderedList: editor?.isActive("orderedList") ?? false,
+    blockquote: editor?.isActive("blockquote") ?? false,
+    link: editor?.isActive("link") ?? false,
+  };
+}
 
 type ToolbarButtonProps = { label: string; active?: boolean; disabled?: boolean; onClick: () => void; children: ReactNode };
 
@@ -54,6 +81,19 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
     editorProps: { attributes: { class: "rich-editor-canvas", role: "textbox", "aria-label": "Текст публикации" } },
     onUpdate: ({ editor: currentEditor }) => onChange(currentEditor.getHTML()),
   });
+  const [toolbarState, setToolbarState] = useState<ToolbarState>(() => getToolbarState(editor));
+
+  useEffect(() => {
+    if (!editor) return;
+    const syncToolbarState = () => setToolbarState(getToolbarState(editor));
+    syncToolbarState();
+    editor.on("selectionUpdate", syncToolbarState);
+    editor.on("transaction", syncToolbarState);
+    return () => {
+      editor.off("selectionUpdate", syncToolbarState);
+      editor.off("transaction", syncToolbarState);
+    };
+  }, [editor]);
 
   if (!editor) return null;
 
@@ -89,20 +129,20 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   return <section className="rich-editor" aria-label="Редактор публикации">
     <div className="rich-editor-toolbar" role="toolbar" aria-label="Форматирование текста">
       <div className="rich-editor-group">
-        <ToolbarButton label="Жирный" active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}>B</ToolbarButton>
-        <ToolbarButton label="Курсив" active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}>I</ToolbarButton>
-        <ToolbarButton label="Зачёркнутый" active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()}>S</ToolbarButton>
+        <ToolbarButton label="Жирный" active={toolbarState.bold} onClick={() => editor.chain().focus().toggleBold().run()}>B</ToolbarButton>
+        <ToolbarButton label="Курсив" active={toolbarState.italic} onClick={() => editor.chain().focus().toggleItalic().run()}>I</ToolbarButton>
+        <ToolbarButton label="Зачёркнутый" active={toolbarState.strike} onClick={() => editor.chain().focus().toggleStrike().run()}>S</ToolbarButton>
       </div>
       <div className="rich-editor-group">
-        {[1, 2, 3].map((level) => <ToolbarButton key={level} label={`Заголовок ${level}`} active={editor.isActive("heading", { level })} onClick={() => editor.chain().focus().toggleHeading({ level: level as 1 | 2 | 3 }).run()}>{`H${level}`}</ToolbarButton>)}
+        {[1, 2, 3].map((level) => <ToolbarButton key={level} label={`Заголовок ${level}`} active={toolbarState[`heading${level}` as "heading1" | "heading2" | "heading3"]} onClick={() => editor.chain().focus().toggleHeading({ level: level as 1 | 2 | 3 }).run()}>{`H${level}`}</ToolbarButton>)}
       </div>
       <div className="rich-editor-group">
-        <ToolbarButton label="Маркированный список" active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()}>•</ToolbarButton>
-        <ToolbarButton label="Нумерованный список" active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()}>1.</ToolbarButton>
-        <ToolbarButton label="Цитата" active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()}>❝</ToolbarButton>
+        <ToolbarButton label="Маркированный список" active={toolbarState.bulletList} onClick={() => editor.chain().focus().toggleBulletList().run()}>•</ToolbarButton>
+        <ToolbarButton label="Нумерованный список" active={toolbarState.orderedList} onClick={() => editor.chain().focus().toggleOrderedList().run()}>1.</ToolbarButton>
+        <ToolbarButton label="Цитата" active={toolbarState.blockquote} onClick={() => editor.chain().focus().toggleBlockquote().run()}>❝</ToolbarButton>
       </div>
       <div className="rich-editor-group">
-        <ToolbarButton label="Ссылка" active={editor.isActive("link")} onClick={toggleLink}>↗</ToolbarButton>
+        <ToolbarButton label="Ссылка" active={toolbarState.link} onClick={toggleLink}>↗</ToolbarButton>
         <ToolbarButton label="Вставить изображение" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
           <svg className="rich-editor-image-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <rect x="3" y="4" width="18" height="16" rx="2" />

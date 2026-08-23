@@ -4,23 +4,28 @@ import { describe, expect, it, vi } from "vitest";
 
 const setContent = vi.fn();
 const run = vi.fn();
+const on = vi.fn();
+const off = vi.fn();
 let onEditorUpdate: ((payload: { editor: { getHTML: () => string } }) => void) | undefined;
 const chain = {
   focus: () => chain,
   toggleBold: () => chain,
   run,
 };
+const mockEditor = {
+  chain: () => chain,
+  commands: { setContent },
+  getHTML: () => "<p><strong>привет мир</strong></p>",
+  isActive: () => false,
+  on,
+  off,
+};
 
 vi.mock("@tiptap/react", () => ({
   EditorContent: ({ onInput }: { onInput?: FormEventHandler<HTMLDivElement> }) => <div aria-label="Текст публикации" contentEditable onInput={onInput} role="textbox" />,
   useEditor: (options: { onUpdate?: (payload: { editor: { getHTML: () => string } }) => void }) => {
     onEditorUpdate = options.onUpdate;
-    return {
-      chain: () => chain,
-      commands: { setContent },
-      getHTML: () => "<p><strong>привет мир</strong></p>",
-      isActive: () => false,
-    };
+    return mockEditor;
   },
 }));
 

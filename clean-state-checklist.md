@@ -1,5 +1,16 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 51 F22 local completion — 2026-08-24
+
+- [x] F22 — единственная новая feature сессии; production deployment не выполнялся и ожидает отдельного approval.
+- [x] RED: `RichTextEditor.test.tsx` — 3 failed / 9 passed; B/I не синхронизировали aria-pressed после toggle, а H1 не сбрасывал active-state после cursor transition.
+- [x] GREEN targeted: `RichTextEditor.test.tsx` — 12 passed; проверены B/I selection→ordinary input без mark inheritance, H1-H3, bullet/ordered list, quote и link.
+- [x] F15 regression: `RichTextEditor`, `PostComposer`, `ArticleComments`, `App.routing` — 4 files / 36 passed; prefill, PATCH, delete confirmation и redirect сохранены.
+- [x] Full frontend: `npm test` — 15 files / 76 passed; `npm run build` — success, 114 modules, только standard Vite chunk-size warning.
+- [x] Full backend: Hermes venv `python -m pytest tests -q --color=no --basetemp .pytest-f22-full` — 65 passed in 17.56s; backend не менялся.
+- [x] Final `./init.sh` через корректный Hermes venv установил MPS requirements и остановился только на известном внешнем `pip check` missing charset-normalizer.
+- [x] `feature_list.json`, `claude-progress.md` и `session-handoff.md` обновлены; F22 marked passing, no dependency/database/API/production change.
+
 ## Session 50 F21 production closeout — 2026-08-24
 
 - [x] `ada1f52` pushed; local `main`, `origin/main` и VPS сверены на одном SHA.

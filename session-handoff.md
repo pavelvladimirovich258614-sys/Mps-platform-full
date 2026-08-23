@@ -2,13 +2,12 @@
 
 ## Verified final state — 2026-08-24
 
-Composer и карусель полностью функциональны и проверены вживую на production `https://mir.pod-solncem.ru` на revision `ada1f52`.
+F01–F22 passing локально; production остаётся на `ada1f52` без F22 до отдельного approval.
 
-- Editor/admin может создавать, редактировать (prefill + PATCH) и удалять опубликованные статьи (confirmation + DELETE/redirect).
-- TipTap загружает JPEG/PNG/WebP через `POST /api/v1/media`; nginx допускает multipart до 11m, backend сохраняет raw-file limit 10 MiB и 422-валидацию.
-- Повторные загрузки формируют одну карусель из нескольких изображений; она работает и в editor preview, и на опубликованной странице с Prev/Next/точками. Изображение или активный кадр удаляется крестиком.
-- Новые изображения всегда попадают в начало документа; последующие расширяют ту же leading-карусель независимо от позиции курсора. Текст статьи остаётся ниже.
-- F15–F21 прошли RED→GREEN, полные backend/frontend suites и production smoke; temporary production posts/media live-checks удалены.
+- Composer toolbar теперь реактивно обновляет B/I/S, H1–H3, списки, цитату и link по TipTap `selectionUpdate`/`transaction`. Bold/italic после перехода в обычный текст не наследуются новым вводом; toggle-команды и stored HTML не менялись.
+- F15 edit UX проверен регрессией: editor/admin получает prefill, PATCH, delete confirmation и redirect; `PostComposer`, `ArticleComments` и `App.routing` зелёные.
+- Composer/cарусель production-state прежний и подтверждён: media JPEG/PNG/WebP, 11m nginx ingress / 10 MiB backend limit, leading-карусель, edit/delete статей, likes/comments/profile.
+- F22 RED→GREEN; full frontend 15 files / 76 passed, build success (114 modules), backend 65 passed. `./init.sh` с корректным Hermes venv останавливается только на внешнем pip check missing charset-normalizer.
 
 ## Known unresolved boundary
 
@@ -16,4 +15,4 @@ Email по-прежнему заблокирован внешней сетью �
 
 ## Next step
 
-Следующий scope не определён. Выбор остаётся за Павлом при старте следующей сессии.
+Дождаться отдельного approval Павла для frontend-only deployment F22 и authenticated composer smoke. Следующий product scope отдельно выбирает Павел.

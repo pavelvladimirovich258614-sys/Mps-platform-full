@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,6 +9,24 @@ vi.mock("../api/client", () => ({ apiForm: mocks.upload }));
 import { RichTextEditor } from "./RichTextEditor";
 
 type EditorElement = HTMLElement & { editor: Editor };
+
+function textPosition(editor: Editor, text: string) {
+  let position = -1;
+  editor.state.doc.descendants((node, currentPosition) => {
+    if (node.isText && node.text === text) {
+      position = currentPosition;
+      return false;
+    }
+    return true;
+  });
+  if (position < 0) throw new Error(`Текст не найден: ${text}`);
+  return position;
+}
+
+function suppressJsdomSelectionScroll(editor: Editor) {
+  const view = editor.view as unknown as { scrollToSelection: () => void };
+  vi.spyOn(view, "scrollToSelection").mockImplementation(() => undefined);
+}
 
 describe("RichTextEditor", () => {
   beforeEach(() => {
@@ -32,6 +50,76 @@ describe("RichTextEditor", () => {
     expect(imageButton.textContent).not.toContain("▧");
 
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("does not leave bold active or apply it to normal text after the cursor leaves the bold selection", async () => {
+    const onChange = vi.fn();
+    render(<RichTextEditor value="<p>Жирный</p><p>Обычный</p>" onChange={onChange} />);
+    const canvas = screen.getByRole("textbox", { name: "Текст публикации" }) as EditorElement;
+    const editor = canvas.editor;
+    suppressJsdomSelectionScroll(editor);
+    const boldTextPosition = textPosition(editor, "Жирный");
+
+    act(() => editor.commands.setTextSelection({ from: boldTextPosition, to: boldTextPosition + "Жирный".length }));
+    fireEvent.click(screen.getByRole("button", { name: "Жирный" }));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Жирный" }).getAttribute("aria-pressed")).toBe("true"));
+    expect(onChange.mock.calls.at(-1)?.[0]).toContain("<strong>Жирный</strong>");
+
+    act(() => {
+      editor.commands.setTextSelection(textPosition(editor, "Обычный"));
+      editor.commands.insertContent("Новый ");
+    });
+
+    await waitFor(() => expect(onChange.mock.calls.at(-1)?.[0]).toContain("Обычный"));
+    expect(onChange.mock.calls.at(-1)?.[0]).not.toContain("<strong>Новый ");
+    expect(screen.getByRole("button", { name: "Жирный" }).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("does not leave italic active or apply it to normal text after the cursor leaves the italic selection", async () => {
+    const onChange = vi.fn();
+    render(<RichTextEditor value="<p>Курсив</p><p>Обычный</p>" onChange={onChange} />);
+    const canvas = screen.getByRole("textbox", { name: "Текст публикации" }) as EditorElement;
+    const editor = canvas.editor;
+    suppressJsdomSelectionScroll(editor);
+    const italicTextPosition = textPosition(editor, "Курсив");
+
+    act(() => editor.commands.setTextSelection({ from: italicTextPosition, to: italicTextPosition + "Курсив".length }));
+    fireEvent.click(screen.getByRole("button", { name: "Курсив" }));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Курсив" }).getAttribute("aria-pressed")).toBe("true"));
+    expect(onChange.mock.calls.at(-1)?.[0]).toContain("<em>Курсив</em>");
+
+    act(() => {
+      editor.commands.setTextSelection(textPosition(editor, "Обычный"));
+      editor.commands.insertContent("Новый ");
+    });
+
+    await waitFor(() => expect(onChange.mock.calls.at(-1)?.[0]).toContain("Обычный"));
+    expect(onChange.mock.calls.at(-1)?.[0]).not.toContain("<em>Новый ");
+    expect(screen.getByRole("button", { name: "Курсив" }).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("updates structural and link toolbar states as the cursor enters and leaves their content", async () => {
+    render(<RichTextEditor value={'<h1>Первый</h1><h2>Второй</h2><h3>Третий</h3><ul><li>Маркер</li></ul><ol><li>Номер</li></ol><blockquote>Цитата</blockquote><p><a href="https://example.test">Ссылка</a></p><p>Обычный</p>'} onChange={vi.fn()} />);
+    const editor = (screen.getByRole("textbox", { name: "Текст публикации" }) as EditorElement).editor;
+    const cases: Array<[string, string]> = [
+      ["Заголовок 1", "Первый"],
+      ["Заголовок 2", "Второй"],
+      ["Заголовок 3", "Третий"],
+      ["Маркированный список", "Маркер"],
+      ["Нумерованный список", "Номер"],
+      ["Цитата", "Цитата"],
+      ["Ссылка", "Ссылка"],
+    ];
+
+    for (const [label, text] of cases) {
+      const position = textPosition(editor, text) + (label === "Ссылка" ? 1 : 0);
+      act(() => editor.commands.setTextSelection(position));
+      await waitFor(() => expect(screen.getByRole("button", { name: label }).getAttribute("aria-pressed")).toBe("true"));
+      act(() => editor.commands.setTextSelection(textPosition(editor, "Обычный")));
+      await waitFor(() => expect(screen.getByRole("button", { name: label }).getAttribute("aria-pressed")).toBe("false"));
+    }
   });
 
   it("renders a stored carousel as one interactive editor slide", async () => {

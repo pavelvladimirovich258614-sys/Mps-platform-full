@@ -413,6 +413,25 @@
       ],
       "evidence": "2026-08-24: pre-code production diagnosis тем же access-token: первый валидный PNG 84 B -> 200; второй валидный PNG 7 692 467 B -> nginx HTML 413 Request Entity Too Large. Backend journal содержит только первый POST /media 200 и не содержит ошибок; nginx error/access logs подтверждают ingress reject до FastAPI, включая реальные bodies 1 961 787, 3 058 505 и 5 866 099 байт. MPS server block не задаёт client_max_body_size и использует default 1m; endpoint не rate-limited, input сбрасывается, JWT тот же. Диагностический media удалён. RED backend `python -m pytest tests/test_deploy_bootstrap.py -q --basetemp .pytest-f21-nginx-red` — 1 failed / 2 passed ожидаемо: отсутствовал client_max_body_size 11m. Backend media baseline после Windows WinError 5 retry outside sandbox — 7 passed: два последовательных POST одним access-token, второй валидный PNG >1 MiB, оба 200 и URL различны. RED frontend `npm test -- --run src/components/RichTextEditor.test.tsx` outside sandbox — 3 failed / 6 passed ожидаемо: middle, end и repeated-at-end вставки сериализовали media после текста. GREEN targeted frontend — 9 passed; GREEN backend/deploy — 10 passed. Related frontend regression RichTextEditor + RichTextContent + PostComposer — 3 files / 17 passed. Full backend `python -m pytest tests -q --color=no --basetemp .pytest-f21-full` — 65 passed in 19.54s. Full frontend `npm test` — 15 files / 73 passed. `npm run build` — success, 114 modules; только стандартный Vite chunk-size warning. Final `./init.sh` outside sandbox снова остановился до MPS tests только на согласованном внешнем Hermes pip check: missing charset-normalizer для pdfminer-six/reportlab/requests. Production не изменён.",
       "notes": "Fixed locally: deploy/nginx.conf задаёт client_max_body_size 11m, чтобы multipart запроса до 10 MiB проходил к неизменённой FastAPI-валидации и получал русский JSON 422 при превышении backend-лимита. RichTextEditor больше не зависит от selection: новый img вставляется в позицию 0, а непрерывная начальная группа img/imageCarousel разворачивается и собирается в одну карусель с новым кадром в конце; текст остаётся ниже. Удаление кадров, sanitizer, backend endpoint, database и dependencies не менялись. Production по-прежнему использует старую nginx-конфигурацию; применение template, nginx -t/reload и live upload smoke требуют отдельного подтверждения."
+    },
+    {
+      "id": "F22",
+      "priority": 22,
+      "area": "rich-text",
+      "title": "Синхронизация состояния форматирования TipTap",
+      "user_visible_behavior": "Кнопки B/I/S подсвечиваются только в тексте с соответствующим mark; после перехода в обычный текст новый ввод не наследует mark.",
+      "status": "passing",
+      "verification": [
+        "RED/GREEN: выделение текста, toggle bold/italic, переход в обычный текст и ввод без унаследованного mark",
+        "Регрессии: H1-H3, маркированный/нумерованный список, цитата и ссылка корректно сбрасывают active-состояние вне форматированного блока",
+        "F15 regression: PostComposer, ArticleComments и App.routing edit/prefill/PATCH/delete",
+        "cd frontend/app && npm test",
+        "cd frontend/app && npm run build",
+        "cd backend && python -m pytest tests -q",
+        "./init.sh вне sandbox с Hermes venv; известный внешний pip check charset-normalizer фиксируется отдельно"
+      ],
+      "evidence": "2026-08-24: RED `npm test -- --run src/components/RichTextEditor.test.tsx` — 3 failed / 9 passed: B and I remained aria-pressed=false after applying their mark and H1 remained active after cursor moved into an ordinary paragraph. GREEN targeted — 12 passed: bold/italic selections become active, typing after moving into ordinary text creates no inherited mark, and H1-H3, bullet/ordered list, quote and link update active state only at their real cursor position. Related F15 regression `RichTextEditor`, `PostComposer`, `ArticleComments`, `App.routing` — 4 files / 36 passed, including editor prefill, PATCH, delete confirmation and redirect. Full frontend `npm test` — 15 files / 76 passed. `npm run build` — success, 114 modules; standard chunk-size warning only. Full backend `python -m pytest tests -q --color=no --basetemp .pytest-f22-full` via the established Hermes venv — 65 passed in 17.56s. Final `./init.sh` via that venv installed MPS requirements and stopped only at the known external Hermes pip check: missing charset-normalizer for pdfminer-six/reportlab/requests; no MPS test failure occurred.",
+      "notes": "Fixed only toolbar reactivity: explicit editor selectionUpdate/transaction subscriptions recompute active state for marks, headings, lists, quote and link. Existing toggle commands and stored HTML remain unchanged. The transaction-ownership test mock now exposes stable on/off methods matching the editor lifecycle. Backend, API, dependencies, database and production deployment are unchanged; production awaits owner approval."
     }
   ]
 }
