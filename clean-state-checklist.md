@@ -10,6 +10,8 @@
 - [x] Final `./init.sh` outside sandbox stopped before MPS tests only at the known external Hermes pip check (missing charset-normalizer); F18 does not modify that environment.
 - [x] Scope is strict `figure[data-carousel="images"]` / `img[src,alt]`, custom TipTap grouping and an accessible React renderer. No new dependency, database change or production deployment.
 - [x] F19 is intentionally deferred: drag-and-drop, paste insertion, reorder and autoplay require separate product scope.
+- [x] Approved production rollout: `6ab2e40` pushed; VPS fast-forwarded `61ebd31 → 6ab2e40` after `mps-backup.service` Result=success. mps-backend restarted and loopback `/api/v1/health` returned ok; frontend remote `npm ci && npm run build` passed with production API/bot markers and no localhost API. Old dist is recoverable at `/root/backups/mps-frontend-f18-20260823T221000Z`; permissions refreshed and `deploy/smoke.sh` — `[OK]`.
+- [x] Authorized live API/browser smoke: three valid PNG uploads, then a published temporary article with `figure[data-carousel="images"]` and a separate img. Guest browser exposed carousel region, prev/next and dots; Next selected slide 2/second image and Previous restored slide 1/first image, while the ordinary img stayed outside carousel. Cleanup DELETE — 204; API GET — 404; exactly three smoke media files removed. No Telegram-authenticated browser session was available, so literal toolbar interaction is not claimed as browser-authenticated.
 
 ## Session 46 F17 local checkpoint — 2026-08-23
 
