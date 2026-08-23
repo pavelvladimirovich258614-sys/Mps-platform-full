@@ -2,6 +2,7 @@ from io import BytesIO
 import hashlib
 import hmac
 from pathlib import Path
+import random
 import time
 
 import httpx
@@ -40,6 +41,15 @@ def image_bytes(image_format: str) -> bytes:
     return data.getvalue()
 
 
+def png_larger_than_nginx_default() -> bytes:
+    width = height = 700
+    pixels = random.Random(21).randbytes(width * height * 3)
+    image = Image.frombytes("RGB", (width, height), pixels)
+    data = BytesIO()
+    image.save(data, format="PNG")
+    return data.getvalue()
+
+
 @pytest.mark.parametrize(
     ("image_format", "content_type", "filename"),
     [("JPEG", "image/jpeg", "image.jpg"), ("PNG", "image/png", "image.png"), ("WEBP", "image/webp", "image.webp")],
@@ -52,6 +62,28 @@ async def test_upload_supported_images(client, test_app, image_format, content_t
     )
     assert response.status_code == 200
     assert len(list(Path(test_app.state.settings.media_dir).iterdir())) == 1
+
+
+async def test_uploads_two_images_sequentially_with_same_token(client, test_app):
+    headers = await authorization(client)
+    second_image = png_larger_than_nginx_default()
+    assert 1024 * 1024 < len(second_image) < 10 * 1024 * 1024
+
+    first = await client.post(
+        "/api/v1/media",
+        headers=headers,
+        files={"file": ("first.png", image_bytes("PNG"), "image/png")},
+    )
+    second = await client.post(
+        "/api/v1/media",
+        headers=headers,
+        files={"file": ("second.png", second_image, "image/png")},
+    )
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert first.json()["url"] != second.json()["url"]
+    assert len(list(Path(test_app.state.settings.media_dir).iterdir())) == 2
 
 
 async def test_upload_rejects_invalid_image_and_large_file(client):

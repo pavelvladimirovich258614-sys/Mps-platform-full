@@ -394,6 +394,25 @@
       ],
       "evidence": "2026-08-23: production live-проверка F19 воспроизвела дефект: две последовательные toolbar-загрузки без ручного движения курсора оставляли только второй img. RED `npm test -- --run src/components/RichTextEditor.test.tsx -t \"groups two consecutive uploaded images\"` — 1 failed / 6 skipped ожидаемо: получен только `<img src=\"/media/two.webp\">`, отсутствовали figure и первый URL. GREEN той же командой — 1 passed / 6 skipped. Связанный targeted regression `RichTextEditor.test.tsx RichTextContent.test.tsx PostComposer.test.tsx` — 3 files / 16 passed; проверены singleton img, browser-like NodeSelection, 2/3 последовательных загрузки, middle-of-text и удаление одиночного/активного carousel image. Full frontend `npm test` — 15 files / 72 passed. `npm run build` — success, 114 modules; только стандартный Vite chunk-size warning. Full backend `python -m pytest tests -q --color=no --basetemp .pytest-f20-full` — 63 passed in 14.19s. Final `./init.sh` outside sandbox stopped before MPS tests only at the known external Hermes pip check: missing charset-normalizer for pdfminer-six/reportlab/requests. Production не изменён.",
       "notes": "Исправлено атомарно в одной TipTap chain: после setImage позиция берётся из `tr.selection.to`; впереди выбирается ближайшая text selection, а на конце документа используется существующий `GapCursor`. Затем прежний groupAdjacentImages объединяет соседние image/carousel blocks. Новых зависимостей нет; ImageCarouselNode, backend, sanitizer, database и published carousel UI не менялись. Production deploy требует отдельного подтверждения."
+    },
+    {
+      "id": "F21",
+      "priority": 21,
+      "area": "rich-text",
+      "title": "Надёжная повторная загрузка и изображения в начале статьи",
+      "user_visible_behavior": "Повторная загрузка изображения не завершается серверной ошибкой; изображения и единая карусель всегда располагаются перед текстом статьи независимо от позиции курсора.",
+      "status": "passing",
+      "verification": [
+        "Диагностика: точный HTTP-код и тело второго POST /api/v1/media, frontend request state и коррелирующие production backend logs",
+        "RED/GREEN: два последовательных media upload возвращают 200 и оба изображения отображаются без error toast",
+        "RED/GREEN: вставка при selection в середине/конце переносит изображение в начало документа и повторная вставка расширяет ту же начальную карусель",
+        "cd frontend/app && npm test",
+        "cd frontend/app && npm run build",
+        "cd backend && python -m pytest tests -q",
+        "./init.sh вне sandbox; известный внешний Hermes pip check фиксируется отдельно"
+      ],
+      "evidence": "2026-08-24: pre-code production diagnosis тем же access-token: первый валидный PNG 84 B -> 200; второй валидный PNG 7 692 467 B -> nginx HTML 413 Request Entity Too Large. Backend journal содержит только первый POST /media 200 и не содержит ошибок; nginx error/access logs подтверждают ingress reject до FastAPI, включая реальные bodies 1 961 787, 3 058 505 и 5 866 099 байт. MPS server block не задаёт client_max_body_size и использует default 1m; endpoint не rate-limited, input сбрасывается, JWT тот же. Диагностический media удалён. RED backend `python -m pytest tests/test_deploy_bootstrap.py -q --basetemp .pytest-f21-nginx-red` — 1 failed / 2 passed ожидаемо: отсутствовал client_max_body_size 11m. Backend media baseline после Windows WinError 5 retry outside sandbox — 7 passed: два последовательных POST одним access-token, второй валидный PNG >1 MiB, оба 200 и URL различны. RED frontend `npm test -- --run src/components/RichTextEditor.test.tsx` outside sandbox — 3 failed / 6 passed ожидаемо: middle, end и repeated-at-end вставки сериализовали media после текста. GREEN targeted frontend — 9 passed; GREEN backend/deploy — 10 passed. Related frontend regression RichTextEditor + RichTextContent + PostComposer — 3 files / 17 passed. Full backend `python -m pytest tests -q --color=no --basetemp .pytest-f21-full` — 65 passed in 19.54s. Full frontend `npm test` — 15 files / 73 passed. `npm run build` — success, 114 modules; только стандартный Vite chunk-size warning. Final `./init.sh` outside sandbox снова остановился до MPS tests только на согласованном внешнем Hermes pip check: missing charset-normalizer для pdfminer-six/reportlab/requests. Production не изменён.",
+      "notes": "Fixed locally: deploy/nginx.conf задаёт client_max_body_size 11m, чтобы multipart запроса до 10 MiB проходил к неизменённой FastAPI-валидации и получал русский JSON 422 при превышении backend-лимита. RichTextEditor больше не зависит от selection: новый img вставляется в позицию 0, а непрерывная начальная группа img/imageCarousel разворачивается и собирается в одну карусель с новым кадром в конце; текст остаётся ниже. Удаление кадров, sanitizer, backend endpoint, database и dependencies не менялись. Production по-прежнему использует старую nginx-конфигурацию; применение template, nginx -t/reload и live upload smoke требуют отдельного подтверждения."
     }
   ]
 }

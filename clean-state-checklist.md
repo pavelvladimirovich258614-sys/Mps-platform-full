@@ -1,5 +1,22 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 50 F21 local checkpoint — 2026-08-24
+
+- [x] F21 — единственная фича сессии; scope ограничен media ingress и начальной TipTap media-группой.
+- [x] Pre-code production diagnosis: один token, первый PNG 84 B — 200; второй валидный PNG 7 692 467 B — nginx HTML 413; backend увидел только первый 200 и не имел ошибок.
+- [x] Причина доказана nginx logs и active config: MPS server block использует default body limit 1m; rate limit, JWT/session и file-input reset исключены. Диагностический media очищен, backend active.
+- [x] RED nginx contract: `test_deploy_bootstrap.py` — 1 failed / 2 passed из-за отсутствующего `client_max_body_size 11m`.
+- [x] Backend media regression: два последовательных upload одним access-token, второй валидный PNG >1 MiB — оба 200; `test_media.py` — 7 passed.
+- [x] RED frontend: `RichTextEditor.test.tsx` — 3 failed / 6 passed; middle, end и repeated-at-end media находились после текста.
+- [x] GREEN targeted: frontend — 9 passed; backend/deploy — 10 passed. Related RichTextEditor/RichTextContent/PostComposer — 3 files / 17 passed.
+- [x] Full backend: `python -m pytest tests -q --color=no --basetemp .pytest-f21-full` — 65 passed in 19.54s.
+- [x] Full frontend: `npm test` — 15 files / 73 passed; `npm run build` — success, 114 modules, стандартный chunk-size warning.
+- [x] Final `./init.sh` outside sandbox остановился до MPS tests только на согласованном внешнем Hermes pip check missing charset-normalizer; полные MPS suites выполнены отдельно и зелёные.
+- [x] `deploy/nginx.conf` допускает 11m multipart request; backend raw-file limit 10 MiB и русский 422 не менялись.
+- [x] New image всегда вставляется в position 0; непрерывная leading img/carousel-группа flatten+append собирается в одну карусель, текст и image removal regression сохранены.
+- [x] Dependencies, database, sanitizer и backend endpoint не менялись; production nginx/frontend намеренно не применялись до отдельного approval.
+- [x] `feature_list.json`, `claude-progress.md`, `session-handoff.md` обновлены; drag/drop, paste, reorder и autoplay не начаты.
+
 ## Session 49 F20 local checkpoint — 2026-08-23
 
 - [x] F20 — единственная фича сессии; production deploy не выполнялся.

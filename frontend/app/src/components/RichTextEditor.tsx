@@ -3,9 +3,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import type { Editor } from "@tiptap/core";
-import { GapCursor } from "@tiptap/pm/gapcursor";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
-import { Selection } from "@tiptap/pm/state";
 import { apiForm } from "../api/client";
 import { EditorImageNode } from "./EditorImageNodeViews";
 import { ImageCarouselNode } from "./ImageCarouselNode";
@@ -18,39 +16,31 @@ function ToolbarButton({ label, active = false, disabled = false, onClick, child
   return <button type="button" className={active ? "rich-editor-action active" : "rich-editor-action"} aria-label={label} aria-pressed={active} disabled={disabled} onClick={onClick}>{children}</button>;
 }
 
-function groupAdjacentImages(editor: Editor) {
+function insertImageAtDocumentStart(editor: Editor, src: string, alt: string) {
   const { doc, schema } = editor.state;
   const carouselType = schema.nodes.imageCarousel;
   const imageType = schema.nodes.image;
   if (!carouselType || !imageType) return;
 
-  const replacements: { from: number; to: number; images: ProseMirrorNode[] }[] = [];
-  let runStart = -1;
-  let runEnd = -1;
-  let images: ProseMirrorNode[] = [];
-  const finishRun = () => {
-    if (images.length >= 2) replacements.push({ from: runStart, to: runEnd, images });
-    runStart = -1;
-    runEnd = -1;
-    images = [];
-  };
+  const images: ProseMirrorNode[] = [];
+  let leadingMediaEnd = 0;
+  let readingLeadingMedia = true;
 
   doc.forEach((node, offset) => {
-    const isImageRunNode = node.type === imageType || node.type === carouselType;
-    if (!isImageRunNode) {
-      finishRun();
+    if (!readingLeadingMedia) return;
+    if (node.type === imageType) images.push(node);
+    else if (node.type === carouselType) node.forEach((image) => images.push(image));
+    else {
+      readingLeadingMedia = false;
       return;
     }
-    if (runStart < 0) runStart = offset;
-    runEnd = offset + node.nodeSize;
-    if (node.type === imageType) images.push(node);
-    else node.forEach((image) => images.push(image));
+    leadingMediaEnd = offset + node.nodeSize;
   });
-  finishRun();
 
-  if (!replacements.length) return;
+  const uploadedImage = imageType.create({ src, alt });
   const transaction = editor.state.tr;
-  replacements.reverse().forEach((replacement) => transaction.replaceWith(replacement.from, replacement.to, carouselType.create(null, replacement.images)));
+  if (leadingMediaEnd === 0) transaction.insert(0, uploadedImage);
+  else transaction.replaceWith(0, leadingMediaEnd, carouselType.create(null, [...images, uploadedImage]));
   editor.view.dispatch(transaction);
 }
 
@@ -88,14 +78,7 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
       const form = new FormData();
       form.append("file", file);
       const uploaded = await apiForm<{ url: string }>("/media", "POST", form);
-      editor.chain().setImage({ src: uploaded.url, alt: file.name }).command(({ tr }) => {
-        const positionAfterImage = tr.selection.to;
-        const resolvedAfterImage = tr.doc.resolve(positionAfterImage);
-        const forwardTextSelection = Selection.findFrom(resolvedAfterImage, 1, true);
-        tr.setSelection(forwardTextSelection ?? new GapCursor(resolvedAfterImage));
-        return true;
-      }).run();
-      groupAdjacentImages(editor);
+      insertImageAtDocumentStart(editor, uploaded.url, file.name);
     } catch (cause) {
       setUploadError(cause instanceof Error ? cause.message : "Не удалось загрузить изображение");
     } finally {

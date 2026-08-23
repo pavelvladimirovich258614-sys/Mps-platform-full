@@ -27,3 +27,11 @@ def test_digest_unit_uses_the_production_service_account_and_environment() -> No
     assert "User=mps" in unit
     assert "Group=mps" in unit
     assert "EnvironmentFile=/etc/mps-platform/backend.env" in unit
+
+
+def test_production_nginx_allows_media_multipart_overhead() -> None:
+    config = (ROOT / "deploy" / "nginx.conf").read_text(encoding="utf-8")
+
+    # FastAPI validates the raw file at 10 MiB, so nginx must admit the
+    # slightly larger multipart request and let the endpoint return JSON.
+    assert "client_max_body_size 11m;" in config

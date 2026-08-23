@@ -1,7 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Editor } from "@tiptap/core";
-import { NodeSelection } from "@tiptap/pm/state";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ upload: vi.fn() }));
 
@@ -11,30 +10,11 @@ import { RichTextEditor } from "./RichTextEditor";
 
 type EditorElement = HTMLElement & { editor: Editor };
 
-function reproduceBrowserImageNodeSelection(editor: Editor) {
-  const originalChain = editor.chain.bind(editor);
-  editor.chain = (() => {
-    const chain = originalChain();
-    const originalSetImage = chain.setImage.bind(chain);
-    chain.setImage = ((options) => {
-      originalSetImage(options);
-      chain.command(({ tr }) => {
-        let insertedImagePosition = -1;
-        tr.doc.descendants((node, position) => {
-          if (node.type.name === "image") insertedImagePosition = position;
-        });
-        if (insertedImagePosition >= 0) {
-          tr.setSelection(NodeSelection.create(tr.doc, insertedImagePosition));
-        }
-        return true;
-      });
-      return chain;
-    }) as typeof chain.setImage;
-    return chain;
-  }) as typeof editor.chain;
-}
-
 describe("RichTextEditor", () => {
+  beforeEach(() => {
+    mocks.upload.mockReset();
+  });
+
   it("exposes the approved base formatting controls and emits HTML", () => {
     const onChange = vi.fn();
     render(<RichTextEditor value="<p>Черновик</p>" onChange={onChange} />);
@@ -123,7 +103,7 @@ describe("RichTextEditor", () => {
     expect(onChange.mock.calls.at(-1)?.[0]).not.toContain("<figure");
   });
 
-  it("inserts an image in the middle without losing surrounding text", async () => {
+  it("inserts an image before all text even when the selection is in the middle", async () => {
     mocks.upload.mockResolvedValue({ url: "/media/middle.webp" });
     const onChange = vi.fn();
     render(<RichTextEditor value="<p>ДоПосле</p>" onChange={onChange} />);
@@ -143,8 +123,24 @@ describe("RichTextEditor", () => {
     const html = onChange.mock.calls.at(-1)?.[0] as string;
     expect(html).toContain("До");
     expect(html).toContain("После");
-    expect(html.indexOf("До")).toBeLessThan(html.indexOf('/media/middle.webp'));
-    expect(html.indexOf('/media/middle.webp')).toBeLessThan(html.indexOf("После"));
+    expect(html.indexOf('/media/middle.webp')).toBeLessThan(html.indexOf("До"));
+  });
+
+  it("inserts an image before all text even when the selection is at the end", async () => {
+    mocks.upload.mockResolvedValue({ url: "/media/end.webp" });
+    const onChange = vi.fn();
+    render(<RichTextEditor value="<p>Начало</p><p>Конец</p>" onChange={onChange} />);
+    const editor = (screen.getByRole("textbox", { name: "Текст публикации" }) as EditorElement).editor;
+    editor.commands.setTextSelection(editor.state.doc.content.size - 1);
+
+    fireEvent.change(screen.getByLabelText("Выбрать изображение"), {
+      target: { files: [new File(["end"], "end.webp", { type: "image/webp" })] },
+    });
+
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith(expect.stringContaining('src="/media/end.webp"')));
+    const html = onChange.mock.calls.at(-1)?.[0] as string;
+    expect(html.indexOf('/media/end.webp')).toBeLessThan(html.indexOf("Начало"));
+    expect(html).toContain("Конец");
   });
 
   it("groups two consecutive uploaded images into the carousel node but keeps one image ordinary", async () => {
@@ -153,13 +149,17 @@ describe("RichTextEditor", () => {
     render(<RichTextEditor value="<p>Черновик</p>" onChange={onChange} />);
     const input = screen.getByLabelText("Выбрать изображение");
     const imageButton = screen.getByRole("button", { name: "Вставить изображение" });
-    reproduceBrowserImageNodeSelection((screen.getByRole("textbox", { name: "Текст публикации" }) as EditorElement).editor);
+    const editor = (screen.getByRole("textbox", { name: "Текст публикации" }) as EditorElement).editor;
+    editor.commands.setTextSelection(editor.state.doc.content.size - 1);
 
     fireEvent.click(imageButton);
     fireEvent.change(input, { target: { files: [new File(["one"], "one.webp", { type: "image/webp" })] } });
     await waitFor(() => expect(onChange).toHaveBeenCalledWith(expect.stringContaining('src="/media/one.webp"')));
-    expect(onChange.mock.calls.at(-1)?.[0]).not.toContain("<figure");
+    const oneImageHtml = onChange.mock.calls.at(-1)?.[0] as string;
+    expect(oneImageHtml).not.toContain("<figure");
+    expect(oneImageHtml.indexOf('/media/one.webp')).toBeLessThan(oneImageHtml.indexOf("Черновик"));
 
+    editor.commands.setTextSelection(editor.state.doc.content.size - 1);
     fireEvent.click(imageButton);
     fireEvent.change(input, { target: { files: [new File(["two"], "two.webp", { type: "image/webp" })] } });
     await waitFor(() => expect(mocks.upload).toHaveBeenCalledTimes(2));
@@ -167,7 +167,10 @@ describe("RichTextEditor", () => {
     expect(twoImageHtml).toContain('<figure data-carousel="images">');
     expect(twoImageHtml).toContain('src="/media/one.webp"');
     expect(twoImageHtml).toContain('src="/media/two.webp"');
+    expect(twoImageHtml.match(/<figure/g)).toHaveLength(1);
+    expect(twoImageHtml.indexOf("<figure")).toBeLessThan(twoImageHtml.indexOf("Черновик"));
 
+    editor.commands.setTextSelection(editor.state.doc.content.size - 1);
     fireEvent.click(imageButton);
     fireEvent.change(input, { target: { files: [new File(["three"], "three.webp", { type: "image/webp" })] } });
     await waitFor(() => expect(onChange.mock.calls.at(-1)?.[0]).toContain('src="/media/three.webp"'));
@@ -176,6 +179,9 @@ describe("RichTextEditor", () => {
     expect(threeImageHtml).toContain('src="/media/one.webp"');
     expect(threeImageHtml).toContain('src="/media/two.webp"');
     expect(threeImageHtml).toContain('src="/media/three.webp"');
+    expect(threeImageHtml.match(/<figure/g)).toHaveLength(1);
+    expect(threeImageHtml.indexOf("<figure")).toBeLessThan(threeImageHtml.indexOf("Черновик"));
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("shows an upload error and keeps the editor usable", async () => {
