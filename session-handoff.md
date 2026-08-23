@@ -5,7 +5,7 @@
 - Причина устранена: backend `POST /api/v1/posts/{id}/like` и `likes_count` были готовы, но F09b никогда не подключал control к Feed/ArticleComments.
 - Frontend теперь использует `usePostLike`; `App` обновляет локальный счётчик без reload. Кнопка «♥ N» присутствует в карточке и на полной статье; guest-клик открывает существующую modal «Войти» и не вызывает API.
 - RED: отсутствующий `Нравится: 3` подтверждён. GREEN targeted — 20 passed; final frontend — 15 files / 55 passed; build — 110 modules; backend — 61 passed. `./init.sh` остановился до MPS tests только на известном Hermes `pip check` (missing charset-normalizer).
-- Код должен быть committed/pushed как `feat: подключить UI лайков к постам (карточка ленты + полная статья)`. Production deploy строго ожидает подтверждения Павла: frontend-only rollout, backup, production VITE bundle checks, smoke и authenticated live 3→4→3 toggle. Unisender не менять.
+- Код `d042d46` уже задеплоен frontend-only: VPS fast-forwarded `8f8978c → d042d46`; rollback static dist — `/root/backups/mps-frontend-likes-20260823T001009Z`. Production VITE values verified in build, localhost API absent; `deploy/smoke.sh` — `[OK]`; served `index-DNKgKGJH.js` содержит marker лайков и production API; `mps-backend` остался active. Следующий шаг — только ручной authenticated live 3→4→3 toggle Павла. Unisender не менять.
 
 ## Текущее подтверждённое состояние
 

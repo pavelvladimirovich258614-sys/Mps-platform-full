@@ -5,11 +5,11 @@
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
 - Feature state: F01–F14 passing; все три этапа F09 (`F09a1`, `F09a2`, `F09b`) passing; публичный профиль пользователя, части А и Б, вход в собственный public profile, отдельный раздел «Фишки» и F14 TipTap rich-text editor задеплоены. F14 включает modal composer, исправление ввода пробела в Bold через штатный `onUpdate`, обновлённый общий подзаголовок ленты, только тип «Статья» в composer, единый заголовок «Статьи» и CTA после комментариев. Премодерация комментариев теперь переключается setting `comments_moderation_enabled`, по умолчанию выключена; editor/admin может изменить её через `PATCH /admin/settings`. `./init.sh` остаётся заблокирован внешним Hermes `pip check`, но это не MPS feature gate.
-- Deploy state: платформа развёрнута и живая на `https://mir.pod-solncem.ru`, production revision `8f8978c`. Миграция `20260822_0010` применена на PostgreSQL; `mps-backend` active; `comments_moderation_enabled=false`; последняя frontend-сборка создана с production VITE API/bot values и `deploy/smoke.sh` прошёл. MPS использует отдельные PostgreSQL DB/role, Redis DB 2 и backend на `127.0.0.1:8001`; nginx, certbot, HSTS, systemd timers и PostgreSQL backup проверены на VPS.
+- Deploy state: платформа развёрнута и живая на `https://mir.pod-solncem.ru`, production revision `d042d46` для UI лайков. Миграция `20260822_0010` применена на PostgreSQL; `mps-backend` active; `comments_moderation_enabled=false`; последняя frontend-сборка создана с production VITE API/bot values, served bundle `index-DNKgKGJH.js` содержит marker лайков и `deploy/smoke.sh` прошёл. MPS использует отдельные PostgreSQL DB/role, Redis DB 2 и backend на `127.0.0.1:8001`; nginx, certbot, HSTS, systemd timers и PostgreSQL backup проверены на VPS.
 - Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15, I-16, I-18 и I-20 закрыты 2026-08-20. I-21 отложен до pre-launch юридической проверки. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
 - Auth/UI state: production build использует `https://mir.pod-solncem.ru/api/v1` и `Reg_Under_the_sun_bot`; закрыты найденные UI-проблемы login/profile (logout, avatar upload, золотой online-индикатор, toast поверх modal, email input). Telegram Login Widget и callback работают; role storage устойчиво читает legacy `ADMIN` и текущие строчные значения, что подтверждено live callback 200.
 - Email state: UnisenderGo transport использует официальный default `goapi.unisender.ru` (с возможностью override на go1/go2) и `X-API-KEY`; payload `message/recipients/body/subject/from_email` проверен mock-тестами. Production delivery сейчас заблокирована внешним TCP timeout до сети Unisender `31.184.200.*:443`: goapi и go1 недоступны, при этом ya.ru/google.com доступны, а local UFW/iptables outgoing не блокируют. Email-код и digest не работают до восстановления маршрута или смены транспорта/provider.
-- Next best action: UI лайков локально реализован и верифицирован; production deploy ожидает явного подтверждения Павла. Не менять Unisender transport: внешний сетевой блокер остаётся отдельно.
+- Next best action: UI лайков задеплоен; при следующей авторизованной браузерной сессии Павла вручную подтвердить live toggle 3→4→3. Не менять Unisender transport: внешний сетевой блокер остаётся отдельно.
 
 ## Session Record
 
@@ -29,6 +29,15 @@
 - Commits: pending `feat: подключить UI лайков к постам (карточка ленты + полная статья)`.
 - Known risks: production deploy и live authenticated click не выполнялись — ожидают отдельного подтверждения владельца. Unisender не менялся.
 - Next best action: после подтверждения выполнить frontend-only production rollout с backup, VITE/bundle checks, smoke и authenticated live like toggle.
+
+### Session 42 — 2026-08-23 (Codex, likes UI frontend-only production deploy)
+- Goal: по явному подтверждению владельца пересобрать и опубликовать UI лайков без изменения backend.
+- Completed: текущий DNS production VPS revalidated; preflight подтвердил old revision `8f8978c`, backend active, `.env.production` с production VITE values и `dist`. VPS fast-forwarded до `d042d46`; old dist moved to `/root/backups/mps-frontend-likes-20260823T001009Z`; `npm ci` и `npm run build` completed (110 modules), both production VITE values were verified in `dist`, and localhost API string was absent. `chmod -R a+rX dist` applied. Backend was not restarted.
+- Verification run: `/usr/bin/bash deploy/smoke.sh` with `BASE_URL=https://mir.pod-solncem.ru` — `[OK]`. Served nginx asset `/assets/index-DNKgKGJH.js` contains `Нравится:` and `https://mir.pod-solncem.ru/api/v1`, without localhost API; remote revision `d042d46`, `mps-backend` active.
+- Evidence recorded: F03 ui_likes_evidence, handoff and clean-state checklist updated.
+- Commits: implementation `d042d46`; deployment checkpoint pending.
+- Known risks: no authenticated production browser account/session was used, so live visual/click confirmation remains owner-hand-off. Unisender untouched.
+- Next best action: Pavel signs in and confirms one real like toggle; if needed, record that manual result without modifying backend.
 
 ### Session 39 — 2026-08-22 (Codex, feed filter heading production deploy)
 - Goal: убрать избыточные интерактивные табы «Все/Статьи», не меняя API и backend-типы публикаций.

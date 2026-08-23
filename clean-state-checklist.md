@@ -8,6 +8,8 @@
 - [x] Full backend: `python -m pytest tests -q --basetemp .pytest-likes-full` — 61 passed in 15.65s.
 - [x] `./init.sh` через Git Bash остановился только на внешнем Hermes pip check (missing charset-normalizer) до MPS tests.
 - [x] Production deploy намеренно не выполнялся; ожидает подтверждения владельца.
+- [x] После подтверждения production frontend-only rollout выполнен: VPS `8f8978c → d042d46`, rollback `/root/backups/mps-frontend-likes-20260823T001009Z`, VITE API/bot verified, localhost API absent, nginx-readable dist refreshed; backend не перезапускался.
+- [x] `deploy/smoke.sh` — `[OK]`; served `/assets/index-DNKgKGJH.js` содержит `Нравится:` и production API; `mps-backend` active.
 
 ## Session 40 final checkpoint — 2026-08-22
 
