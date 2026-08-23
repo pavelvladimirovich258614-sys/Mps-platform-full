@@ -3,7 +3,9 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import type { Editor } from "@tiptap/core";
+import { GapCursor } from "@tiptap/pm/gapcursor";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import { Selection } from "@tiptap/pm/state";
 import { apiForm } from "../api/client";
 import { EditorImageNode } from "./EditorImageNodeViews";
 import { ImageCarouselNode } from "./ImageCarouselNode";
@@ -86,7 +88,13 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
       const form = new FormData();
       form.append("file", file);
       const uploaded = await apiForm<{ url: string }>("/media", "POST", form);
-      editor.chain().setImage({ src: uploaded.url, alt: file.name }).run();
+      editor.chain().setImage({ src: uploaded.url, alt: file.name }).command(({ tr }) => {
+        const positionAfterImage = tr.selection.to;
+        const resolvedAfterImage = tr.doc.resolve(positionAfterImage);
+        const forwardTextSelection = Selection.findFrom(resolvedAfterImage, 1, true);
+        tr.setSelection(forwardTextSelection ?? new GapCursor(resolvedAfterImage));
+        return true;
+      }).run();
       groupAdjacentImages(editor);
     } catch (cause) {
       setUploadError(cause instanceof Error ? cause.message : "Не удалось загрузить изображение");

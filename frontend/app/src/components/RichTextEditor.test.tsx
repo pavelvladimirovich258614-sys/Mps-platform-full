@@ -1,4 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { Editor } from "@tiptap/core";
+import { NodeSelection } from "@tiptap/pm/state";
 import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ upload: vi.fn() }));
@@ -6,6 +8,31 @@ const mocks = vi.hoisted(() => ({ upload: vi.fn() }));
 vi.mock("../api/client", () => ({ apiForm: mocks.upload }));
 
 import { RichTextEditor } from "./RichTextEditor";
+
+type EditorElement = HTMLElement & { editor: Editor };
+
+function reproduceBrowserImageNodeSelection(editor: Editor) {
+  const originalChain = editor.chain.bind(editor);
+  editor.chain = (() => {
+    const chain = originalChain();
+    const originalSetImage = chain.setImage.bind(chain);
+    chain.setImage = ((options) => {
+      originalSetImage(options);
+      chain.command(({ tr }) => {
+        let insertedImagePosition = -1;
+        tr.doc.descendants((node, position) => {
+          if (node.type.name === "image") insertedImagePosition = position;
+        });
+        if (insertedImagePosition >= 0) {
+          tr.setSelection(NodeSelection.create(tr.doc, insertedImagePosition));
+        }
+        return true;
+      });
+      return chain;
+    }) as typeof chain.setImage;
+    return chain;
+  }) as typeof editor.chain;
+}
 
 describe("RichTextEditor", () => {
   it("exposes the approved base formatting controls and emits HTML", () => {
@@ -93,6 +120,31 @@ describe("RichTextEditor", () => {
     await waitFor(() => expect(mocks.upload).toHaveBeenCalled());
     expect(mocks.upload).toHaveBeenCalledWith("/media", "POST", expect.any(FormData));
     await waitFor(() => expect(onChange).toHaveBeenCalledWith(expect.stringContaining('src="/media/sea.webp"')));
+    expect(onChange.mock.calls.at(-1)?.[0]).not.toContain("<figure");
+  });
+
+  it("inserts an image in the middle without losing surrounding text", async () => {
+    mocks.upload.mockResolvedValue({ url: "/media/middle.webp" });
+    const onChange = vi.fn();
+    render(<RichTextEditor value="<p>ДоПосле</p>" onChange={onChange} />);
+    const editor = (screen.getByRole("textbox", { name: "Текст публикации" }) as EditorElement).editor;
+    let textPosition = -1;
+    editor.state.doc.descendants((node, position) => {
+      if (node.isText && node.text === "ДоПосле") textPosition = position;
+    });
+    editor.commands.setTextSelection(textPosition + "До".length);
+
+    fireEvent.click(screen.getByRole("button", { name: "Вставить изображение" }));
+    fireEvent.change(screen.getByLabelText("Выбрать изображение"), {
+      target: { files: [new File(["middle"], "middle.webp", { type: "image/webp" })] },
+    });
+
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith(expect.stringContaining('src="/media/middle.webp"')));
+    const html = onChange.mock.calls.at(-1)?.[0] as string;
+    expect(html).toContain("До");
+    expect(html).toContain("После");
+    expect(html.indexOf("До")).toBeLessThan(html.indexOf('/media/middle.webp'));
+    expect(html.indexOf('/media/middle.webp')).toBeLessThan(html.indexOf("После"));
   });
 
   it("groups two consecutive uploaded images into the carousel node but keeps one image ordinary", async () => {
@@ -100,19 +152,30 @@ describe("RichTextEditor", () => {
     const onChange = vi.fn();
     render(<RichTextEditor value="<p>Черновик</p>" onChange={onChange} />);
     const input = screen.getByLabelText("Выбрать изображение");
+    const imageButton = screen.getByRole("button", { name: "Вставить изображение" });
+    reproduceBrowserImageNodeSelection((screen.getByRole("textbox", { name: "Текст публикации" }) as EditorElement).editor);
 
+    fireEvent.click(imageButton);
     fireEvent.change(input, { target: { files: [new File(["one"], "one.webp", { type: "image/webp" })] } });
     await waitFor(() => expect(onChange).toHaveBeenCalledWith(expect.stringContaining('src="/media/one.webp"')));
     expect(onChange.mock.calls.at(-1)?.[0]).not.toContain("<figure");
 
+    fireEvent.click(imageButton);
     fireEvent.change(input, { target: { files: [new File(["two"], "two.webp", { type: "image/webp" })] } });
-    await waitFor(() => expect(onChange.mock.calls.at(-1)?.[0]).toContain('<figure data-carousel="images">'));
-    expect(onChange.mock.calls.at(-1)?.[0]).toContain('src="/media/one.webp"');
-    expect(onChange.mock.calls.at(-1)?.[0]).toContain('src="/media/two.webp"');
+    await waitFor(() => expect(mocks.upload).toHaveBeenCalledTimes(2));
+    const twoImageHtml = onChange.mock.calls.at(-1)?.[0] as string;
+    expect(twoImageHtml).toContain('<figure data-carousel="images">');
+    expect(twoImageHtml).toContain('src="/media/one.webp"');
+    expect(twoImageHtml).toContain('src="/media/two.webp"');
 
+    fireEvent.click(imageButton);
     fireEvent.change(input, { target: { files: [new File(["three"], "three.webp", { type: "image/webp" })] } });
     await waitFor(() => expect(onChange.mock.calls.at(-1)?.[0]).toContain('src="/media/three.webp"'));
-    expect(onChange.mock.calls.at(-1)?.[0]).toContain('<figure data-carousel="images">');
+    const threeImageHtml = onChange.mock.calls.at(-1)?.[0] as string;
+    expect(threeImageHtml).toContain('<figure data-carousel="images">');
+    expect(threeImageHtml).toContain('src="/media/one.webp"');
+    expect(threeImageHtml).toContain('src="/media/two.webp"');
+    expect(threeImageHtml).toContain('src="/media/three.webp"');
   });
 
   it("shows an upload error and keeps the editor usable", async () => {

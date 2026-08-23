@@ -376,6 +376,24 @@
       ],
       "evidence": "2026-08-23: диагностика выполнена до изменения кода. На production временно загружены два JPEG 1200x800: оба POST /media -> 200, media GET -> 200 image/jpeg; временная статья -> 201. Guest browser подтвердил mounted React region, real img naturalWidth/naturalHeight 1200x800, applied carousel CSS (border/padding, relative stage, absolute arrows), две точки и смену src по Next. Это исключило backend/SSR/sanitizer/served CSS и локализовало дефект в composer: ImageCarouselNode не имел NodeView, поэтому дочерние img получали обычный block layout. Cleanup: DELETE 204, post GET 404, оба media удалены и GET -> 404. RED `npm test -- --run src/components/RichTextEditor.test.tsx src/components/RichTextContent.test.tsx src/components/PostComposer.test.tsx` вне sandbox — 3 files failed, 6 failed / 9 passed: отсутствовали SVG icon, editor carousel NodeView/delete controls, carousel падал после удаления активного последнего индекса, select оставался. GREEN targeted — 3 files / 15 passed. Full frontend `npm test` — 15 files / 71 passed. `npm run build` — success, 114 modules; только стандартное предупреждение Vite о chunk >500 kB. Full backend `python -m pytest tests -q --color=no --basetemp .pytest-f19-full` — 63 passed in 16.62s. Final `./init.sh` outside sandbox stopped before MPS tests only at the known external Hermes pip check: missing charset-normalizer for pdfminer-six/reportlab/requests. Backend, sanitizer, dependencies, database and production deploy were not changed.",
       "notes": "Composer now uses React NodeViews for a real single-slide carousel preview and standalone images. TipTap keeps its required hidden contentDOM for document ownership, while visible editor UI reuses ImageCarousel controls; getHTML serialization remains only figure[data-carousel=images] with img children. Every visible editor image has an accessible remove control. Removing from a two-image carousel unwraps the remaining image; 3+ keeps a carousel; surrounding text is preserved. Toolbar uses an inline dependency-free picture SVG. The single-option publication type select is removed and PostDraft remains internally fixed to article. Drag-and-drop, paste, reorder and autoplay remain out of scope. Production deploy requires separate approval."
+    },
+    {
+      "id": "F20",
+      "priority": 20,
+      "area": "rich-text",
+      "title": "Стабильная последовательная вставка изображений в composer",
+      "user_visible_behavior": "Повторное нажатие «Вставить изображение» добавляет новый файл сразу после предыдущего без ручного перемещения курсора; два соседних изображения автоматически образуют карусель.",
+      "status": "passing",
+      "verification": [
+        "RED/GREEN: две последовательные загрузки через toolbar без перемещения selection сохраняют оба img и формируют figure[data-carousel=images]",
+        "Регрессии: одиночный img, вставка в середину текста и удаление через крестик с сохранением окружающего контента",
+        "cd frontend/app && npm test",
+        "cd frontend/app && npm run build",
+        "cd backend && python -m pytest tests -q",
+        "./init.sh вне sandbox; известный внешний Hermes pip check фиксируется отдельно"
+      ],
+      "evidence": "2026-08-23: production live-проверка F19 воспроизвела дефект: две последовательные toolbar-загрузки без ручного движения курсора оставляли только второй img. RED `npm test -- --run src/components/RichTextEditor.test.tsx -t \"groups two consecutive uploaded images\"` — 1 failed / 6 skipped ожидаемо: получен только `<img src=\"/media/two.webp\">`, отсутствовали figure и первый URL. GREEN той же командой — 1 passed / 6 skipped. Связанный targeted regression `RichTextEditor.test.tsx RichTextContent.test.tsx PostComposer.test.tsx` — 3 files / 16 passed; проверены singleton img, browser-like NodeSelection, 2/3 последовательных загрузки, middle-of-text и удаление одиночного/активного carousel image. Full frontend `npm test` — 15 files / 72 passed. `npm run build` — success, 114 modules; только стандартный Vite chunk-size warning. Full backend `python -m pytest tests -q --color=no --basetemp .pytest-f20-full` — 63 passed in 14.19s. Final `./init.sh` outside sandbox stopped before MPS tests only at the known external Hermes pip check: missing charset-normalizer for pdfminer-six/reportlab/requests. Production не изменён.",
+      "notes": "Исправлено атомарно в одной TipTap chain: после setImage позиция берётся из `tr.selection.to`; впереди выбирается ближайшая text selection, а на конце документа используется существующий `GapCursor`. Затем прежний groupAdjacentImages объединяет соседние image/carousel blocks. Новых зависимостей нет; ImageCarouselNode, backend, sanitizer, database и published carousel UI не менялись. Production deploy требует отдельного подтверждения."
     }
   ]
 }

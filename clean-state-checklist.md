@@ -1,5 +1,20 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 49 F20 local checkpoint — 2026-08-23
+
+- [x] F20 — единственная фича сессии; production deploy не выполнялся.
+- [x] RED targeted: browser-like NodeSelection + две последовательные toolbar-загрузки — 1 failed / 6 skipped; текущий HTML содержал только второй img, без figure и первого URL.
+- [x] GREEN targeted той же командой — 1 passed / 6 skipped.
+- [x] Related regression: `RichTextEditor.test.tsx`, `RichTextContent.test.tsx`, `PostComposer.test.tsx` — 3 files / 16 passed.
+- [x] Проверены одиночный img, middle-of-text, 2/3 последовательные uploads, standalone delete и carousel-frame delete.
+- [x] Full frontend: `npm test` — 15 files / 72 passed; `npm run build` — success, 114 modules, только стандартный Vite chunk-size warning.
+- [x] Full backend: `python -m pytest tests -q --color=no --basetemp .pytest-f20-full` — 63 passed in 14.19s; backend не менялся.
+- [x] Final `./init.sh` outside sandbox stopped before MPS tests only at the known external Hermes pip check (missing charset-normalizer); project suites were run separately and passed.
+- [x] Fix ограничен `RichTextEditor`: setImage + text selection/GapCursor в одной chain, затем прежний groupAdjacentImages; новых dependencies нет.
+- [x] `ImageCarouselNode`, sanitizer, database и production не менялись.
+- [x] `feature_list.json` валиден; F20 evidence, `claude-progress.md` и `session-handoff.md` обновлены.
+- [x] Drag-and-drop, paste, reorder и autoplay не начаты.
+
 ## Session 48 F19 local checkpoint — 2026-08-23
 
 - [x] Диагностика до кода: два временных production JPEG upload — 200, media GET — 200 image/jpeg и 1200x800; published React carousel region/CSS/Next работают. Причина stacking локализована в composer без ImageCarouselNode NodeView.
