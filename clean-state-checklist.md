@@ -1,5 +1,14 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 50 F21 production closeout — 2026-08-24
+
+- [x] `ada1f52` pushed; local `main`, `origin/main` и VPS сверены на одном SHA.
+- [x] Active nginx config получил `client_max_body_size 11m`; backup создан, `nginx -t` прошёл, выполнен graceful reload. `mps-backend` не перезапускался и остался active.
+- [x] Frontend production build собран с проверенными VITE API/bot markers и без localhost API; `deploy/smoke.sh` — `[OK]`.
+- [x] Live editor/admin smoke: PNG 4.32 MB и 3.63 MB получили media 200 без 413, создали одну leading-карусель; published Next переключил второй слайд.
+- [x] Temporary post удалён через DELETE 204 с redirect, оба созданных media-файла и локальные test files удалены; browser session/cookie очищены.
+- [x] Полные local suites в финальном checkpoint: backend 65 passed; frontend 15 files / 73 passed; `npm run build` success. `./init.sh` блокируется только внешним Hermes `pip check` missing charset-normalizer.
+
 ## Session 50 F21 local checkpoint — 2026-08-24
 
 - [x] F21 — единственная фича сессии; scope ограничен media ingress и начальной TipTap media-группой.
