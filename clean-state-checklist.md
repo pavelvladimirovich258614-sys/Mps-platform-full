@@ -1,5 +1,14 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 46 F17 local checkpoint — 2026-08-23
+
+- [x] RED: `python -m pytest tests/test_media.py -q --basetemp .pytest-f17-red` — 1 expected failure; valid-signature/MIME truncated PNG lazy-loaded successfully until `image.save()` raised Pillow `OSError: image file is truncated` outside validation.
+- [x] GREEN targeted: `python -m pytest tests/test_media.py -q --basetemp .pytest-f17-green-2` — 6 passed; corrupted PNG returns `422 «Некорректное изображение»` and leaves no media file.
+- [x] Full backend: `python -m pytest tests -q --basetemp .pytest-f17-full` — 62 passed in 16.95s.
+- [x] Final `./init.sh` outside sandbox stopped before MPS tests only on known external Hermes `pip check` (missing charset-normalizer); F17 does not alter that environment.
+- [x] Scope only `backend/app/api/media.py` validation and `backend/tests/test_media.py`; frontend, dependencies, database and F14 Phase 3 untouched.
+- [x] Production backend intentionally unchanged; F17 deploy awaits separate owner approval.
+
 ## Session 45 F16 local checkpoint — 2026-08-23
 
 - [x] Backend contract read before UI work: authenticated `POST /api/v1/media` accepts JPEG/PNG/WebP up to 10 MiB, returns `{url}`, invalid/oversized input returns 422; backend unchanged.

@@ -70,6 +70,22 @@ async def test_upload_rejects_invalid_image_and_large_file(client):
     assert large.status_code == 422
 
 
+async def test_upload_rejects_truncated_png_with_valid_mime(client, test_app):
+    headers = await authorization(client)
+    truncated_png = image_bytes("PNG")[:-24]
+
+    response = await client.post(
+        "/api/v1/media",
+        headers=headers,
+        files={"file": ("truncated.png", truncated_png, "image/png")},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Некорректное изображение"
+    media_dir = Path(test_app.state.settings.media_dir)
+    assert not media_dir.exists() or list(media_dir.iterdir()) == []
+
+
 async def test_upload_requires_authentication(client):
     response = await client.post(
         "/api/v1/media",
