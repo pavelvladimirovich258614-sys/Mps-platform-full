@@ -1,5 +1,16 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 47 F18 local checkpoint — 2026-08-23
+
+- [x] RED backend: `python -m pytest tests/test_posts.py -q --basetemp .pytest-f18-red` — 1 expected failure: nh3 removed unsupported `figure[data-carousel]`, while the imgs remained.
+- [x] RED frontend: `npm test -- --run src/components/RichTextContent.test.tsx src/components/RichTextEditor.test.tsx` — 3 expected failures: no carousel controls, no strict carousel markup after sanitize and no grouping of two uploaded images.
+- [x] GREEN targeted: backend `test_posts.py` — 4 passed; frontend — 2 files / 9 passed, including singleton preservation, carousel navigation and strict client sanitization.
+- [x] Full backend: `python -m pytest tests -q --color=no --basetemp .pytest-f18-full-confirm` — 63 passed in 18.97s.
+- [x] Full frontend: `npm test` — 15 files / 67 passed; `npm run build` — success, 113 modules (standard Vite chunk-size warning only).
+- [x] Final `./init.sh` outside sandbox stopped before MPS tests only at the known external Hermes pip check (missing charset-normalizer); F18 does not modify that environment.
+- [x] Scope is strict `figure[data-carousel="images"]` / `img[src,alt]`, custom TipTap grouping and an accessible React renderer. No new dependency, database change or production deployment.
+- [x] F19 is intentionally deferred: drag-and-drop, paste insertion, reorder and autoplay require separate product scope.
+
 ## Session 46 F17 local checkpoint — 2026-08-23
 
 - [x] RED: `python -m pytest tests/test_media.py -q --basetemp .pytest-f17-red` — 1 expected failure; valid-signature/MIME truncated PNG lazy-loaded successfully until `image.save()` raised Pillow `OSError: image file is truncated` outside validation.

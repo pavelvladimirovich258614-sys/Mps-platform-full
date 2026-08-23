@@ -51,5 +51,14 @@ async def test_rich_text_body_uses_the_explicit_allowlist_on_create_and_patch(cl
  assert patched.status_code == 200
  assert patched.json()["body"] == '<h2>Обновлено</h2><img src="https://cdn.example/next.jpg" alt="Далее">Убрать'
 
+async def test_rich_text_body_allows_only_the_strict_image_carousel_markup(client, test_app):
+ editor = await token(client, test_app, True)
+ body = '<figure data-carousel="images" class="evil" style="display:none" onclick="alert(1)" data-extra="x"><img src="/media/one.webp" alt="Первое" onclick="alert(1)"><img src="/media/two.webp" alt="Второе" style="display:none"></figure><script>alert(1)</script>'
+
+ created = await client.post("/api/v1/posts", json={"type": "article", "title": "Карусель", "body": body, "status": "published"}, headers=editor)
+
+ assert created.status_code == 201
+ assert created.json()["body"] == '<figure data-carousel="images"><img src="/media/one.webp" alt="Первое"><img src="/media/two.webp" alt="Второе"></figure>'
+
 def test_slugify_cyrillic_edge_letters():
  assert slugify("Щука, южная Ялта и ёлка") == "shchuka-yuzhnaya-yalta-i-yolka"

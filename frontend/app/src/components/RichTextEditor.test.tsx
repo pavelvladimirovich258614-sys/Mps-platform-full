@@ -39,6 +39,26 @@ describe("RichTextEditor", () => {
     await waitFor(() => expect(onChange).toHaveBeenCalledWith(expect.stringContaining('src="/media/sea.webp"')));
   });
 
+  it("groups two consecutive uploaded images into the carousel node but keeps one image ordinary", async () => {
+    mocks.upload.mockResolvedValueOnce({ url: "/media/one.webp" }).mockResolvedValueOnce({ url: "/media/two.webp" }).mockResolvedValueOnce({ url: "/media/three.webp" });
+    const onChange = vi.fn();
+    render(<RichTextEditor value="<p>Черновик</p>" onChange={onChange} />);
+    const input = screen.getByLabelText("Выбрать изображение");
+
+    fireEvent.change(input, { target: { files: [new File(["one"], "one.webp", { type: "image/webp" })] } });
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith(expect.stringContaining('src="/media/one.webp"')));
+    expect(onChange.mock.calls.at(-1)?.[0]).not.toContain("<figure");
+
+    fireEvent.change(input, { target: { files: [new File(["two"], "two.webp", { type: "image/webp" })] } });
+    await waitFor(() => expect(onChange.mock.calls.at(-1)?.[0]).toContain('<figure data-carousel="images">'));
+    expect(onChange.mock.calls.at(-1)?.[0]).toContain('src="/media/one.webp"');
+    expect(onChange.mock.calls.at(-1)?.[0]).toContain('src="/media/two.webp"');
+
+    fireEvent.change(input, { target: { files: [new File(["three"], "three.webp", { type: "image/webp" })] } });
+    await waitFor(() => expect(onChange.mock.calls.at(-1)?.[0]).toContain('src="/media/three.webp"'));
+    expect(onChange.mock.calls.at(-1)?.[0]).toContain('<figure data-carousel="images">');
+  });
+
   it("shows an upload error and keeps the editor usable", async () => {
     mocks.upload.mockRejectedValue(new Error("Файл превышает 10 МБ"));
     render(<RichTextEditor value="<p>Черновик</p>" onChange={vi.fn()} />);

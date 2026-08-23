@@ -338,6 +338,24 @@
       ],
       "evidence": "2026-08-23: F16 production smoke reproduced the defect. RED `python -m pytest tests/test_media.py -q --basetemp .pytest-f17-red` — 1 failed as expected: truncated PNG retained a valid signature, filename and image/png MIME, but lazy Pillow decoding raised OSError: image file is truncated from image.save outside the validation branch. GREEN `python -m pytest tests/test_media.py -q --basetemp .pytest-f17-green-2` — 6 passed: endpoint returns 422 «Некорректное изображение» and creates no media file. Full backend `python -m pytest tests -q --basetemp .pytest-f17-full` — 62 passed in 16.95s. Final `./init.sh` outside sandbox stopped before MPS tests only at the known external Hermes pip check: missing charset-normalizer for pdfminer-six/reportlab/requests. Production backend-only deploy approved: 35f6914 pushed and VPS fast-forwarded ca0880f -> 35f6914; mps-backend restart became ready on polling attempt 2 and stayed active; deploy/smoke.sh [OK]. Authorized live media smoke: valid-signature/MIME truncated PNG returned 422 «Некорректное изображение» without changing media file count; valid JPEG, PNG and WebP each returned 200. The three resulting test media files were deleted and file count restored.",
       "notes": "Fixed and deployed: image.load() forces Pillow decoding inside the existing validation branch before thumbnail/save; OSError and UnidentifiedImageError map to the existing Russian 422. This prevents the broken bytes from reaching image.save and avoids a partial media file. Scope only backend validation/error mapping; TipTap, frontend, drag-and-drop, paste and carousel do not change."
+    },
+    {
+      "id": "F18",
+      "priority": 18,
+      "area": "rich-text",
+      "title": "Карусель нескольких изображений в статьях",
+      "user_visible_behavior": "Две или более подряд добавленных иллюстрации отображаются в опубликованной статье как доступная карусель; одиночное изображение остаётся обычной иллюстрацией.",
+      "status": "passing",
+      "verification": [
+        "RED/GREEN: grouping adjacent images, ordinary single image and interactive published carousel",
+        "RED/GREEN: sanitizer permits only approved carousel markup and rejects XSS attributes",
+        "cd frontend/app && npm test",
+        "cd frontend/app && npm run build",
+        "cd backend && python -m pytest tests -q",
+        "./init.sh вне sandbox; известный внешний Hermes pip check фиксируется отдельно"
+      ],
+      "evidence": "2026-08-23: RED backend `python -m pytest tests/test_posts.py -q --basetemp .pytest-f18-red` — 1 expected failure: nh3 removed figure[data-carousel], retaining only the two imgs. RED frontend `npm test -- --run src/components/RichTextContent.test.tsx src/components/RichTextEditor.test.tsx` — 3 expected failures: no carousel region/controls, no retained strict carousel markup and no TipTap grouping. GREEN targeted: backend test_posts 4 passed; frontend 2 files / 9 passed. Full backend `python -m pytest tests -q --color=no --basetemp .pytest-f18-full-confirm` — 63 passed in 18.97s. Full frontend `npm test` — 15 files / 67 passed. `npm run build` — success, 113 modules; only the standard Vite chunk-size warning. Final `./init.sh` outside sandbox stopped before MPS tests only at the known external Hermes pip check: missing charset-normalizer for pdfminer-six/reportlab/requests.",
+      "notes": "Implemented minimal accessible carousel: only figure[data-carousel=images] with two or more direct img[src,alt] is a carousel; a lone img remains ordinary. Backend nh3 and frontend DOMPurify allow only figure[data-carousel] and img[src,alt], rejecting class, style, handlers and other data attributes. Repeated toolbar uploads merge adjacent images/carousel blocks into the ImageCarousel TipTap node. Published content uses previous/next controls and dots with platform gold styling; no dependency was added. F19 remains a separate future decision: drag-and-drop, paste insertion, reorder and autoplay are deliberately out of scope. No production deploy was performed; await separate approval."
     }
   ]
 }

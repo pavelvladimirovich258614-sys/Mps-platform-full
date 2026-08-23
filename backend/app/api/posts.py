@@ -10,8 +10,8 @@ from app.models.user import Role, User
 from app.schemas.post import PostPatch, PostWrite
 
 router=APIRouter(prefix="/posts",tags=["posts"])
-POST_BODY_TAGS = {"p", "br", "strong", "em", "s", "h1", "h2", "h3", "ul", "ol", "li", "blockquote", "a", "img"}
-POST_BODY_ATTRIBUTES = {"a": {"href"}, "img": {"src", "alt"}}
+POST_BODY_TAGS = {"p", "br", "strong", "em", "s", "h1", "h2", "h3", "ul", "ol", "li", "blockquote", "a", "img", "figure"}
+POST_BODY_ATTRIBUTES = {"a": {"href"}, "img": {"src", "alt"}, "figure": {"data-carousel"}}
 
 def clean_post_body(body: str) -> str:
     return nh3.clean(body, tags=POST_BODY_TAGS, attributes=POST_BODY_ATTRIBUTES)
