@@ -15,12 +15,12 @@
 
 ### Session 44 — 2026-08-23 (Codex, F15 posts editing/deletion UI)
 - Goal: добавить frontend UI редактирования и удаления уже опубликованной статьи, не меняя F03 backend contract.
-- Completed: editor/admin видит «Редактировать»/«Удалить» только на полной статье. Edit modal повторно использует TipTap composer с title/type/body; «Сохранить изменения» отправляет PATCH и обновляет локальную статью на текущем slug URL. Delete modal требует подтверждения текста «Это действие нельзя отменить», затем DELETE 204 reloads feed and routes to `/`. Reader, premium и guest actions не видят.
+- Completed: editor/admin видит «Редактировать»/«Удалить» только на полной статье. Edit modal повторно использует TipTap composer с title/type/body; «Сохранить изменения» отправляет PATCH и обновляет локальную статью на текущем slug URL. Delete modal требует подтверждения текста «Это действие нельзя отменить», затем DELETE 204 reloads feed and routes to `/`. Reader, premium и guest actions не видят. Frontend-only production rollout `8255d55` опубликован без restart backend.
 - Verification run: RED targeted — 3 expected failures (prefill absent, management actions absent). GREEN targeted — 3 files / 24 passed. Full frontend `npm test` — 15 files / 61 passed; `npm run build` — 110 modules, success. Full backend `python -m pytest tests -q --basetemp .pytest-f15-full` — 61 passed in 14.11s. Final `./init.sh` stopped only at external Hermes pip check missing charset-normalizer before MPS tests.
-- Evidence recorded: F15 marked passing in feature_list.json; session-handoff and clean-state checklist updated.
-- Commits: локальный F15 commit создан; production deploy intentionally not performed.
-- Known risks: title PATCH deliberately keeps existing slug URL because backend does not regenerate slug; no production rollout or authenticated live click without separate owner approval.
-- Next best action: after separate production approval, make frontend-only rollout with backup, production VITE/bundle checks and smoke; otherwise start F14 Phase 2 image upload in a new feature/session.
+- Evidence recorded: F15 marked passing in feature_list.json; rollback `/root/backups/mps-frontend-f15-rollback-20260823T124845Z`; served bundle has F15 marker and production API without localhost; deploy/smoke passed. Authorized temporary editor/admin API smoke created a marked post (201), PATCH returned 200 and preserved slug with updated body, DELETE returned 204, GET then returned 404.
+- Commits: source `8255d55` pushed; production evidence checkpoint pending.
+- Known risks: title PATCH deliberately keeps existing slug URL because backend does not regenerate slug. Production UI role/modal behavior is covered by the served bundle and frontend tests; no interactive Telegram/email browser session was available. VPS has pre-existing/unattributed untracked `.deploy-backups/`, `frontend/app/.env.production`, `venv.py310.failed/` and `\\/`; they were not modified or cleaned.
+- Next best action: F14 Phase 2 image upload in a new feature/session. Do not touch the noted VPS untracked paths without separate investigation/approval.
 
 ### Session 43 — 2026-08-23 (Codex, final state checkpoint)
 - Completed: F14 rich-text composer полностью на production (modal composer, Bold-space hotfix), его UI-серия (подзаголовок, без `fishka`, единый «Статьи», CTA после comments), configurable comments moderation default-off и UI лайков в Feed/article с local toggle.

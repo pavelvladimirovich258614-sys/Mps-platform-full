@@ -8,6 +8,8 @@
 - [x] Full backend: `python -m pytest tests -q --basetemp .pytest-f15-full` — 61 passed in 14.11s.
 - [x] `./init.sh` вне sandbox снова остановился до MPS tests только на внешнем Hermes `pip check` (missing charset-normalizer).
 - [x] Backend, database and production intentionally unchanged; F15 deploy waits for separate owner approval.
+- [x] Approved frontend-only production rollout: VPS at `8255d55`, rollback `/root/backups/mps-frontend-f15-rollback-20260823T124845Z`, served F15/API markers verified, localhost absent, backend active and `deploy/smoke.sh` passed.
+- [x] Authorized temporary editor/admin API smoke: create 201, PATCH 200 with same slug/body update, DELETE 204 and GET 404 after cleanup.
 
 ## Session 43 final checkpoint — 2026-08-23
 
