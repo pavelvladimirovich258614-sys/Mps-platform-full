@@ -1,20 +1,14 @@
 # Session handoff — 2026-08-23
 
-## Session 41 — 2026-08-23: likes UI локально готов, deploy не выполнялся
+## Подтверждённое состояние
 
-- Причина устранена: backend `POST /api/v1/posts/{id}/like` и `likes_count` были готовы, но F09b никогда не подключал control к Feed/ArticleComments.
-- Frontend теперь использует `usePostLike`; `App` обновляет локальный счётчик без reload. Кнопка «♥ N» присутствует в карточке и на полной статье; guest-клик открывает существующую modal «Войти» и не вызывает API.
-- RED: отсутствующий `Нравится: 3` подтверждён. GREEN targeted — 20 passed; final frontend — 15 files / 55 passed; build — 110 modules; backend — 61 passed. `./init.sh` остановился до MPS tests только на известном Hermes `pip check` (missing charset-normalizer).
-- Код `d042d46` уже задеплоен frontend-only: VPS fast-forwarded `8f8978c → d042d46`; rollback static dist — `/root/backups/mps-frontend-likes-20260823T001009Z`. Production VITE values verified in build, localhost API absent; `deploy/smoke.sh` — `[OK]`; served `index-DNKgKGJH.js` содержит marker лайков и production API; `mps-backend` остался active. Следующий шаг — только ручной authenticated live 3→4→3 toggle Павла. Unisender не менять.
+- Production `https://mir.pod-solncem.ru`: frontend code revision `d042d46`; likes UI deployed; `deploy/smoke.sh` passed; `mps-backend` remained active.
+- F14 complete: TipTap modal composer, Bold-space fix through `onUpdate`, safe HTML pipeline; UI series deployed (new subtitle, no `fishka` option, one «Статьи» heading, CTA after comments).
+- `comments_moderation_enabled=false` by default and admin-configurable; likes appear in Feed and full article, authenticated toggle updates locally without reload, guest opens login modal.
+- Do not touch Unisender: external network timeout is a separate known blocker.
 
-## Текущее подтверждённое состояние
+## Вечерний backlog — строго по порядку
 
-- Production: `https://mir.pod-solncem.ru`, revision `8f8978c`; frontend развёрнут с production `VITE_API_URL` и `VITE_TELEGRAM_BOT_USERNAME`, `mps-backend` active, `deploy/smoke.sh` прошёл.
-- F14 завершён и задеплоен: TipTap rich-text composer доступен editor/admin через modal, а не показывается inline в ленте. Bold-space regression устранён штатным TipTap `onUpdate`; серверная nh3 allowlist и клиентская DOMPurify-защита сохраняются.
-- Последующие UI-правки задеплоены: общий подзаголовок ленты, удаление `fishka` из composer, единый заголовок «Статьи» вместо фильтра и CTA «Подобрать тур в боте» после комментариев на полной статье.
-- Миграция `20260822_0010` применена на production PostgreSQL. `comments_moderation_enabled=false`: новые комментарии сразу `approved` и видны через GET. Admin может переключать policy через `PATCH /admin/settings`; при `true` UI подтверждает отправку на проверку. Reviews не менялись.
-- Локальная финальная верификация для этого пакета: SQLite migration clean, backend pytest — 61 passed, frontend — 15 suites / 51 tests passed, `npm run build` success. `./init.sh` по-прежнему останавливается на внешнем Hermes `pip check` из-за missing `charset-normalizer`, не из-за MPS.
-
-## Следующий шаг — только диагностика лайков
-
-Диагностировать отсутствие лайков на опубликованных статьях — последний не начатый пункт из списка находок Павла. Начать read-only: воспроизвести UI/API-путь, проверить запрос/ответ, состояние `post_likes` и правила видимости. Не менять комментарии, CTA, carousel или бизнес-логику лайков без подтверждённой причины и отдельного плана.
+1. Добавить frontend UI для редактирования и удаления уже опубликованной статьи. Composer сейчас поддерживает только создание; existing-post editing is absent in frontend.
+2. F14 Phase 2: добавить загрузку изображений в composer. Backend `POST /api/v1/media` уже готов с F03; F14 nh3 allowlist already permits `img[src,alt]`; frontend upload control is absent.
+3. F14 Phase 3: карусель из нескольких изображений — отдельная сессия только после завершения Phase 2.

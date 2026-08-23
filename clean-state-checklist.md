@@ -1,5 +1,13 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 43 final checkpoint — 2026-08-23
+
+- [x] F14 production state recorded: modal composer, Bold-space `onUpdate` fix and full UI-fix series.
+- [x] Comments moderation remains default-off and admin-configurable; reviews untouched.
+- [x] Likes UI deployed in Feed and full article; local authenticated toggle and guest login interception have regression coverage.
+- [x] Production code revision `d042d46`: VITE values/bundle marker verified, smoke passed, backend remained active.
+- [x] Evening backlog is recorded in `session-handoff.md`: edit/delete UI, Phase 2 image upload, then Phase 3 carousel.
+
 ## Session 41 local checkpoint — 2026-08-23
 
 - [x] RED подтверждён: article UI не содержал button `Нравится: 3`.
