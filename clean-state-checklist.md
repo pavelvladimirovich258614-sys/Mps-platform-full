@@ -7,7 +7,9 @@
 - [x] Full backend: `python -m pytest tests -q --basetemp .pytest-f17-full` — 62 passed in 16.95s.
 - [x] Final `./init.sh` outside sandbox stopped before MPS tests only on known external Hermes `pip check` (missing charset-normalizer); F17 does not alter that environment.
 - [x] Scope only `backend/app/api/media.py` validation and `backend/tests/test_media.py`; frontend, dependencies, database and F14 Phase 3 untouched.
-- [x] Production backend intentionally unchanged; F17 deploy awaits separate owner approval.
+- [x] Production backend was intentionally unchanged until the separately approved F17 rollout.
+- [x] Approved backend-only production rollout: `35f6914` pushed; VPS fast-forwarded `ca0880f → 35f6914`; `mps-backend` restarted, loopback health ready on attempt 2 and `deploy/smoke.sh` — `[OK]`.
+- [x] Authorized live media smoke: valid-signature/MIME truncated PNG → `422 «Некорректное изображение»` with unchanged media file count; valid JPEG/PNG/WebP each → 200. Exact three test media files were removed and file count restored.
 
 ## Session 45 F16 local checkpoint — 2026-08-23
 
