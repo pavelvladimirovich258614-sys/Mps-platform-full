@@ -1,5 +1,16 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 45 F16 local checkpoint — 2026-08-23
+
+- [x] Backend contract read before UI work: authenticated `POST /api/v1/media` accepts JPEG/PNG/WebP up to 10 MiB, returns `{url}`, invalid/oversized input returns 422; backend unchanged.
+- [x] RED подтверждён: RichTextEditor image button/input отсутствовали (3 expected failures); RichTextContent published-image rendering already passed (3 tests).
+- [x] GREEN targeted: 2 frontend files / 6 passed — toolbar, FormData upload, current-selection img insertion, local error alert without reset, published img rendering.
+- [x] Full frontend: `npm test` — 15 files / 64 passed; `npm run build` — success, 111 modules.
+- [x] Full backend: `python -m pytest tests -q --basetemp .pytest-f16-full` — 61 passed in 12.31s.
+- [x] Final `./init.sh` outside sandbox stopped before MPS tests only on the known external Hermes `pip check` (missing charset-normalizer); F16 does not modify that environment.
+- [x] `@tiptap/extension-image` 3.30.2 added as approved official TipTap extension; drag-and-drop, paste and carousel intentionally remain separate.
+- [x] Backend, database and production intentionally unchanged; F16 deploy awaits separate owner approval.
+
 ## Session 44 F15 local checkpoint — 2026-08-23
 
 - [x] RED подтверждён: composer не предзаполнялся, edit/delete controls отсутствовали.

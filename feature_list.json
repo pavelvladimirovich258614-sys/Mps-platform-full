@@ -305,6 +305,23 @@
       ],
       "evidence": "2026-08-23: RED `npm test -- --run src/components/ArticleComments.test.tsx src/components/PostComposer.test.tsx src/App.routing.test.tsx` — 3 failed as expected: composer did not prefill title, management buttons were absent, editor flow could not open. GREEN targeted — 3 files / 24 passed: controls only editor/admin, hidden guest/reader/premium, prefilled title/type/body, PATCH exact payload, DELETE not called before confirmation and redirects after 204. Full frontend `npm test` — 15 files / 61 passed; `npm run build` — success, 110 modules. Full backend `python -m pytest tests -q --basetemp .pytest-f15-full` — 61 passed in 14.11s. Final `./init.sh` outside sandbox stopped before MPS tests only at the known external Hermes pip check: missing charset-normalizer for pdfminer-six/reportlab/requests. Production: `8255d55` deployed frontend-only; backend unchanged and stayed active; rollback bundle `/root/backups/mps-frontend-f15-rollback-20260823T124845Z`; production Vite API/bot verified in bundle, localhost absent; `deploy/smoke.sh` passed. Authorized temporary editor/admin HTTPS smoke: POST 201, PATCH 200 with same slug and updated body, DELETE 204, subsequent GET 404.",
       "notes": "Backend F03 contract verified before frontend work: PATCH /posts/{id} and DELETE /posts/{id} require editor or admin, without author restriction; PATCH is partial and DELETE returns 204 No Content. Production deployed frontend-only. VPS working tree also contains untracked `.deploy-backups/`, `frontend/app/.env.production`, `venv.py310.failed/` and a directory named `\\/`; observed only, intentionally not cleaned in F15."
+    },
+    {
+      "id": "F16",
+      "priority": 16,
+      "area": "rich-text",
+      "title": "Загрузка изображений в TipTap composer",
+      "user_visible_behavior": "Editor/admin выбирает JPEG, PNG или WebP в composer; после успешной загрузки изображение вставляется в текущую позицию TipTap и отображается в публикации. Ошибка загрузки остаётся понятной и не ломает редактор.",
+      "status": "passing",
+      "verification": [
+        "RED/GREEN frontend tests: upload toolbar control, successful img insertion, upload error notice and rich image rendering",
+        "cd frontend/app && npm test",
+        "cd frontend/app && npm run build",
+        "cd backend && python -m pytest tests -q",
+        "./init.sh вне sandbox; известный внешний Hermes pip check фиксируется отдельно"
+      ],
+      "evidence": "2026-08-23: backend F03 contract verified before frontend work: POST /api/v1/media requires authentication, accepts JPEG/PNG/WebP up to 10 MiB, creates a 1600px thumbnail and returns {url: /media/<uuid>.<ext>}; invalid MIME, invalid image and oversized input return 422. RED `npm test -- --run src/components/RichTextEditor.test.tsx src/components/RichTextContent.test.tsx` — RichTextContent 3 passed and RichTextEditor 3 failed as expected because the image button and file input were absent. GREEN targeted — 2 files / 6 passed: toolbar control, FormData POST /media, img insertion, error alert and published-image rendering. Full frontend `npm test` — 15 files / 64 passed; `npm run build` — successful, 111 modules. Full backend `python -m pytest tests -q --basetemp .pytest-f16-full` — 61 passed in 12.31s. Final `./init.sh` outside sandbox stopped before MPS tests only at the known external Hermes pip check: missing charset-normalizer for pdfminer-six/reportlab/requests.",
+      "notes": "Scope: one file selected from the TipTap toolbar in create and edit composer; @tiptap/extension-image 3.30.2 is the approved official TipTap extension. The editor posts FormData through existing apiForm, inserts the returned URL at its current selection, and keeps an upload error as a local alert. Existing nh3/DOMPurify img[src,alt] pipeline renders the published image. Drag-and-drop, paste and multi-image carousel remain separate work. npm install reported existing transitive audit findings; no audit fix was applied outside F16 scope. Production deploy intentionally awaits separate owner approval."
     }
   ]
 }

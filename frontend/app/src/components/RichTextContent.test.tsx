@@ -24,4 +24,10 @@ describe("RichTextContent", () => {
     expect(container.querySelector("strong")).toBeNull();
     expect(container.querySelector("script")).toBeNull();
   });
+
+  it("renders an uploaded relative media image in a published article", () => {
+    render(<RichTextContent html={'<p>Маршрут</p><img src="/media/sea.webp" alt="Море">'} />);
+
+    expect(screen.getByRole("img", { name: "Море" }).getAttribute("src")).toBe("/media/sea.webp");
+  });
 });
