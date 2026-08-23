@@ -1,5 +1,14 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 44 F15 local checkpoint — 2026-08-23
+
+- [x] RED подтверждён: composer не предзаполнялся, edit/delete controls отсутствовали.
+- [x] GREEN targeted: 3 frontend файла / 24 passed — visibility editor/admin vs guest/reader/premium, prefill, PATCH payload, delete confirmation/redirect.
+- [x] Full frontend: `npm test` — 15 files / 61 passed; `npm run build` — success, 110 modules.
+- [x] Full backend: `python -m pytest tests -q --basetemp .pytest-f15-full` — 61 passed in 14.11s.
+- [x] `./init.sh` вне sandbox снова остановился до MPS tests только на внешнем Hermes `pip check` (missing charset-normalizer).
+- [x] Backend, database and production intentionally unchanged; F15 deploy waits for separate owner approval.
+
 ## Session 43 final checkpoint — 2026-08-23
 
 - [x] F14 production state recorded: modal composer, Bold-space `onUpdate` fix and full UI-fix series.

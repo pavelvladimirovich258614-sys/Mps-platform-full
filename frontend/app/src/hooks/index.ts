@@ -41,6 +41,7 @@ export function useAuth() {
 
 export const usePosts = () => useResource(() => api<ApiPost[]>("/posts"), []);
 export const usePostCreator = () => ({ create: (post: PostDraft) => apiJson<ApiPost>("/posts", "POST", post) });
+export const usePostEditor = () => ({ update: (postId: number, post: PostDraft) => apiJson<ApiPost>(`/posts/${postId}`, "PATCH", post), remove: (postId: number) => apiJson<void>(`/posts/${postId}`, "DELETE") });
 export const usePostLike = () => ({ toggle: (postId: number) => apiJson<{ likes_count: number }>(`/posts/${postId}/like`, "POST") });
 export const useAuthorPosts = (authorId?: number) => useResource(() => authorId ? api<ApiPost[]>(`/posts?author_id=${authorId}`) : Promise.resolve([]), [authorId]);
 export const useLikedPosts = (userId?: number) => useResource(() => userId ? api<ApiPost[]>(`/users/${userId}/likes`) : Promise.resolve([]), [userId]);
@@ -93,7 +94,7 @@ export function usePost(slug?: string) {
     void reload();
     return () => { requestVersion.current += 1; };
   }, [reload]);
-  return { value, loading, error, notFound, reload };
+  return { value, loading, error, notFound, reload, setValue };
 }
 export const useReviews = () => { const resource = useResource(() => api<Review[]>("/reviews"), []); const create = async (body: Omit<Review, "id" | "status" | "photo_url">) => apiJson<Review>("/reviews", "POST", body); return { ...resource, create }; };
 export const useSubscribe = () => ({ subscribe: (email: string) => apiJson<{ email: string; confirmed: boolean }>("/subscribe", "POST", { email }) });

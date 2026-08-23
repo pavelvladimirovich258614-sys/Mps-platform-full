@@ -33,6 +33,21 @@ describe("ArticleComments", () => {
     expect(screen.getByRole("button", { name: "Нравится: 3" })).toBeTruthy();
   });
 
+  it("shows edit and delete controls only to editor/admin and confirms deletion", () => {
+    const onDelete = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = render(<ArticleComments article={article} commentsModerationEnabled={false} onBack={vi.fn()} onError={vi.fn()} onOpenProfile={vi.fn()} onToggleLike={vi.fn()} canManage onDelete={onDelete} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "Удалить публикацию" }).textContent).toContain("Это действие нельзя отменить");
+    fireEvent.click(screen.getByRole("button", { name: "Подтвердить удаление" }));
+    expect(onDelete).toHaveBeenCalledWith(article);
+
+    rerender(<ArticleComments article={article} commentsModerationEnabled={false} onBack={vi.fn()} onError={vi.fn()} onOpenProfile={vi.fn()} onToggleLike={vi.fn()} canManage={false} />);
+    expect(screen.queryByRole("button", { name: "Редактировать" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Удалить" })).toBeNull();
+  });
+
   it("renders the tour CTA after the discussion section", () => {
     render(<ArticleComments article={article} commentsModerationEnabled={false} onBack={vi.fn()} onError={vi.fn()} onOpenProfile={vi.fn()} />);
 

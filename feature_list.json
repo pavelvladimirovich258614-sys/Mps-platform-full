@@ -288,6 +288,23 @@
       ],
       "evidence": "2026-08-22: RED backend `python -m pytest tests/test_posts.py -q --basetemp .pytest-f14-red-backend` — 1 failed as expected: default nh3 retained disallowed <code>. GREEN targeted backend — 3 passed. RED frontend — 2 suites failed because RichTextContent/RichTextEditor did not exist; composer RED likewise failed for absent PostComposer. GREEN targeted — 4 passed. Final frontend `npm test` — 44 passed; `npm run build` — successful, 110 modules. Full backend `python -m pytest tests -q --basetemp .pytest-f14-full` — 59 passed in 12.65s. `./init.sh` via Git Bash stopped before MPS tests only at external Hermes pip check: missing charset-normalizer for pdfminer-six/reportlab/requests. Code commit c837e40 pushed to origin/main. Production deploy 2026-08-22: rollback backup `/root/backups/mps-f14-20260822T140321Z`; VPS fast-forwarded fff502a -> c549085; mps-backend restarted and loopback health returned 200; frontend rebuilt with verified VITE API/bot values and no localhost URL; deploy/smoke.sh [OK]. Direct HTTPS POST /posts draft with `<p>test</p><script>alert(1)</script>` returned body exactly `<p>test</p>` and automatic cleanup was independently verified.",
       "notes": "Scope: TipTap composer только для Editor/admin, явный nh3 allowlist p/br/strong/em/s/h1-h3/ul/ol/li/blockquote/a[href]/img[src,alt], client-side DOMPurify and legacy plaintext compatibility. Media upload remains out of scope. Visual browser verification was attempted after reading agent-browser skill, but the agent-browser CLI is not installed in this environment; composition is covered by DOM tests and build, with no false visual claim. npm install reported 5 transitive audit findings; no audit fix was applied because it is outside F14 scope. Production deploy completed on c549085."
+    },
+    {
+      "id": "F15",
+      "priority": 15,
+      "area": "posts-editing",
+      "title": "Редактирование и удаление опубликованной статьи",
+      "user_visible_behavior": "Editor/admin на полной статье видит действия «Редактировать» и «Удалить»: редактирование открывает предзаполненный TipTap composer и сохраняет PATCH, удаление требует подтверждения и после DELETE возвращает в ленту.",
+      "status": "passing",
+      "verification": [
+        "RED/GREEN frontend tests: role visibility, prefilled edit composer, PATCH payload, delete confirmation and redirect",
+        "cd frontend/app && npm test",
+        "cd frontend/app && npm run build",
+        "cd backend && python -m pytest tests -q",
+        "./init.sh вне sandbox; известный внешний Hermes pip check фиксируется отдельно"
+      ],
+      "evidence": "2026-08-23: RED `npm test -- --run src/components/ArticleComments.test.tsx src/components/PostComposer.test.tsx src/App.routing.test.tsx` — 3 failed as expected: composer did not prefill title, management buttons were absent, editor flow could not open. GREEN targeted — 3 files / 24 passed: controls only editor/admin, hidden guest/reader/premium, prefilled title/type/body, PATCH exact payload, DELETE not called before confirmation and redirects after 204. Full frontend `npm test` — 15 files / 61 passed; `npm run build` — success, 110 modules. Full backend `python -m pytest tests -q --basetemp .pytest-f15-full` — 61 passed in 14.11s. Final `./init.sh` outside sandbox stopped before MPS tests only at the known external Hermes pip check: missing charset-normalizer for pdfminer-six/reportlab/requests.",
+      "notes": "Backend F03 contract verified before frontend work: PATCH /posts/{id} and DELETE /posts/{id} require editor or admin, without author restriction; PATCH is partial and DELETE returns 204 No Content. Scope frontend-only; production deploy deliberately not performed and requires separate owner approval."
     }
   ]
 }

@@ -48,7 +48,7 @@ type EmailRequestResult = "ok" | "failure";
 
 function installApi(detailResult: DetailResult = "ok", emailRequestResult: EmailRequestResult = "ok", currentUser: Record<string, unknown> | null = null, posts: ApiPost[] = [post]) {
   let likesCount = post.likes_count;
-  const fetchMock = vi.fn<typeof fetch>(async (input) => {
+  const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
     const url = new URL(String(input));
     const path = url.pathname;
     if (path === "/api/v1/users/7/profile") return jsonResponse(200, publicProfile);
@@ -63,6 +63,8 @@ function installApi(detailResult: DetailResult = "ok", emailRequestResult: Email
       likesCount = likesCount === post.likes_count ? likesCount + 1 : likesCount - 1;
       return jsonResponse(200, { likes_count: likesCount });
     }
+    if (path === "/api/v1/posts/17" && init?.method === "PATCH") return jsonResponse(200, { ...post, ...JSON.parse(String(init.body)) });
+    if (path === "/api/v1/posts/17" && init?.method === "DELETE") return new Response(null, { status: 204 });
     if (path === "/api/v1/posts/17/comments") return jsonResponse(200, []);
     if (path === "/api/v1/countries") return jsonResponse(200, [{ id: 1, name: "ОАЭ", topics_count: 0 }]);
     if (path === "/api/v1/countries/1/topics") return jsonResponse(200, []);
@@ -236,6 +238,45 @@ describe("App pathname routing", () => {
 
     expect(await screen.findByRole("dialog")).toBeTruthy();
     expect(fetchMock.mock.calls.some(([input]) => new URL(String(input)).pathname === "/api/v1/posts/17/like")).toBe(false);
+  });
+
+  it.each([
+    ["guest", null],
+    ["reader", { id: 5, email: null, name: "Читатель", avatar_url: null, bio: null, role: "reader", is_anonymous: false }],
+    ["premium", { id: 5, email: null, name: "Премиум", avatar_url: null, bio: null, role: "premium", is_anonymous: false }],
+  ])("hides article management controls from %s", async (_role, currentUser) => {
+    window.history.replaceState({}, "", "/posts/bali-guide");
+    if (currentUser) setAccessToken("non-editor-access-token");
+    installApi("ok", "ok", currentUser);
+    const view = render(<App />);
+
+    await screen.findByRole("heading", { level: 1, name: post.title });
+    expect(screen.queryByRole("button", { name: "Редактировать" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Удалить" })).toBeNull();
+    view.unmount();
+  });
+
+  it("lets an editor patch an article and delete it only after confirmation", async () => {
+    window.history.replaceState({}, "", "/posts/bali-guide");
+    setAccessToken("editor-access-token");
+    const fetchMock = installApi("ok", "ok", {
+      id: 5, email: null, name: "Редактор", avatar_url: null, bio: null, role: "editor", is_anonymous: false,
+    });
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Редактировать" }));
+    expect(await screen.findByRole("dialog", { name: "Редактирование публикации" })).toBeTruthy();
+    expect((screen.getByLabelText("Заголовок публикации") as HTMLInputElement).value).toBe(post.title);
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить изменения" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([input, init]) => new URL(String(input)).pathname === "/api/v1/posts/17" && (init as RequestInit).method === "PATCH")).toBe(true));
+    const patchCall = fetchMock.mock.calls.find(([input, init]) => new URL(String(input)).pathname === "/api/v1/posts/17" && (init as RequestInit).method === "PATCH");
+    expect(JSON.parse(String((patchCall?.[1] as RequestInit).body))).toEqual({ title: post.title, type: "article", body: post.body, status: "published" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
+    expect(fetchMock.mock.calls.some(([input, init]) => new URL(String(input)).pathname === "/api/v1/posts/17" && (init as RequestInit).method === "DELETE")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Подтвердить удаление" }));
+    await waitFor(() => expect(window.location.pathname).toBe("/"));
+    expect(fetchMock.mock.calls.some(([input, init]) => new URL(String(input)).pathname === "/api/v1/posts/17" && (init as RequestInit).method === "DELETE")).toBe(true);
   });
 
   it("pushes a shareable country URL after an internal country click", async () => {

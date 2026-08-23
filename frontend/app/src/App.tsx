@@ -9,11 +9,12 @@ import { Layout, type Page } from "./components/Layout";
 import { Legal, type LegalKind } from "./components/Legal";
 import { Notifications } from "./components/Notifications";
 import { Profile } from "./components/Profile";
+import { PostComposer } from "./components/PostComposer";
 import { PublicProfile } from "./components/PublicProfile";
 import { QA } from "./components/QA";
 import { Reviews } from "./components/Reviews";
 import { Subscribe } from "./components/Subscribe";
-import { type ApiPost, useAuthorPosts, useAuth, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostLike, usePosts, usePublicProfile, usePublicSettings } from "./hooks";
+import { type ApiPost, useAuthorPosts, useAuth, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, usePublicProfile, usePublicSettings } from "./hooks";
 import { pathForRoute, type PathRoute, routeFromPath } from "./router";
 
 function routeForPage(page: Page): PathRoute {
@@ -39,10 +40,12 @@ export function App() {
   const [toast, setToast] = useState("");
   const [devRole, setDevRole] = useState<string | null>(null);
   const [likesByPostId, setLikesByPostId] = useState<Record<number, number>>({});
+  const [editingPost, setEditingPost] = useState<ApiPost | null>(null);
 
   const auth = useAuth();
   const posts = usePosts();
   const postCreator = usePostCreator();
+  const postEditor = usePostEditor();
   const postLike = usePostLike();
   const notifications = useNotifications();
   const online = useOnline();
@@ -119,6 +122,21 @@ export function App() {
     await postCreator.create(draft);
     await posts.reload();
   };
+  const updatePost = async (post: ApiPost, draft: Parameters<typeof postEditor.update>[1]) => {
+    const updated = await postEditor.update(post.id, draft);
+    article.setValue(updated);
+    setEditingPost(null);
+    await posts.reload();
+  };
+  const deletePost = async (post: ApiPost) => {
+    try {
+      await postEditor.remove(post.id);
+      await posts.reload();
+      navigate({ page: "feed" });
+    } catch (cause) {
+      showError(cause instanceof Error ? cause.message : "Не удалось удалить публикацию");
+    }
+  };
   const page: Page = route.page === "countries" && topicOpen ? "topic" : route.page;
   let content = null;
   if (page === "feed") content = <Feed posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} canCreate={auth.user?.role === "editor" || auth.user?.role === "admin"} onCreatePost={createPost} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
@@ -138,7 +156,7 @@ export function App() {
     content = <main className="article-page"><div className="comment-skeleton"><i /><i /><i /></div></main>;
   }
   if (page === "article" && article.value) {
-    content = <ArticleComments article={withLikesCount(article.value)} commentsModerationEnabled={publicSettings.value?.comments_moderation_enabled ?? false} onBack={() => navigate({ page: "feed" })} onError={showError} onOpenProfile={(userId) => navigate({ page: "profile", userId })} onToggleLike={toggleLike} />;
+    content = <ArticleComments article={withLikesCount(article.value)} commentsModerationEnabled={publicSettings.value?.comments_moderation_enabled ?? false} onBack={() => navigate({ page: "feed" })} onError={showError} onOpenProfile={(userId) => navigate({ page: "profile", userId })} onToggleLike={toggleLike} canManage={auth.user?.role === "editor" || auth.user?.role === "admin"} onEdit={setEditingPost} onDelete={deletePost} />;
   }
   if (page === "article" && article.notFound) {
     content = (
@@ -258,7 +276,15 @@ export function App() {
             onPrivacy={() => openPage("privacy")}
           />
         )}
-        {toast && <div className="toast" role="alert">{toast}</div>}
+      {toast && <div className="toast" role="alert">{toast}</div>}
+      {editingPost && (
+        <div className="modal-backdrop composer-modal-backdrop" role="dialog" aria-modal="true" aria-label="Редактирование публикации" onMouseDown={() => setEditingPost(null)}>
+          <section className="composer-modal" onMouseDown={(event) => event.stopPropagation()}>
+            <button type="button" className="round-close" aria-label="Закрыть" onClick={() => setEditingPost(null)}>×</button>
+            <PostComposer initialPost={{ id: editingPost.id, title: editingPost.title, type: "article", body: editingPost.body, status: "published" }} onUpdate={(draft) => updatePost(editingPost, draft)} />
+          </section>
+        </div>
+      )}
       </Layout>
       {import.meta.env.DEV && auth.user && (
         <label className="dev-role-switch">
