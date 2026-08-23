@@ -9,7 +9,6 @@ type PostComposerProps = { onCreate?: (post: PostDraft) => Promise<void>; initia
 export function PostComposer({ onCreate, initialPost, onUpdate }: PostComposerProps) {
   const editing = Boolean(initialPost);
   const [title, setTitle] = useState(initialPost?.title ?? "");
-  const [type, setType] = useState<PostDraft["type"]>(initialPost?.type ?? "article");
   const [body, setBody] = useState(initialPost?.body ?? "<p></p>");
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
@@ -19,7 +18,7 @@ export function PostComposer({ onCreate, initialPost, onUpdate }: PostComposerPr
     setSaving(true);
     setNotice("");
     try {
-      const draft = { title: title.trim(), type, body, status };
+      const draft: PostDraft = { title: title.trim(), type: "article", body, status };
       if (editing) {
         await onUpdate?.({ ...draft, status: "published" });
         setNotice("Изменения сохранены");
@@ -37,7 +36,6 @@ export function PostComposer({ onCreate, initialPost, onUpdate }: PostComposerPr
   return <section className="post-composer" aria-labelledby="post-composer-title">
     <div className="post-composer-heading"><p>Для редактора</p><h2 id="post-composer-title">{editing ? "Редактировать публикацию" : "Создать публикацию"}</h2></div>
     <label className="post-composer-title"><span>Заголовок публикации</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Заголовок" /></label>
-    <label className="post-composer-type"><span>Тип публикации</span><select value={type} onChange={(event) => setType(event.target.value as PostDraft["type"])}><option value="article">Статья</option></select></label>
     <RichTextEditor value={body} onChange={setBody} />
     <div className="post-composer-actions"><span aria-live="polite">{notice}</span><div>{editing ? <button type="button" className="primary-button" disabled={saving || !title.trim()} onClick={() => void save("published")}>Сохранить изменения</button> : <><button type="button" className="panel-button" disabled={saving || !title.trim()} onClick={() => void save("draft")}>Сохранить черновик</button><button type="button" className="primary-button" disabled={saving || !title.trim()} onClick={() => void save("published")}>Опубликовать</button></>}</div></div>
   </section>;

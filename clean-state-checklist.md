@@ -1,5 +1,18 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 48 F19 local checkpoint — 2026-08-23
+
+- [x] Диагностика до кода: два временных production JPEG upload — 200, media GET — 200 image/jpeg и 1200x800; published React carousel region/CSS/Next работают. Причина stacking локализована в composer без ImageCarouselNode NodeView.
+- [x] Временная production-диагностика очищена: article DELETE — 204, post GET — 404, ровно два созданных media-файла удалены и GET — 404.
+- [x] RED targeted: три frontend test-файла — 6 failed / 9 passed; отсутствовали editor NodeView/delete, picture SVG и удаление select, reusable carousel падал при сокращении активного списка.
+- [x] GREEN targeted: `RichTextEditor.test.tsx`, `RichTextContent.test.tsx`, `PostComposer.test.tsx` — 3 files / 15 passed.
+- [x] Full frontend: `npm test` — 15 files / 71 passed; `npm run build` — success, 114 modules, только стандартный Vite chunk-size warning.
+- [x] Full backend: `python -m pytest tests -q --color=no --basetemp .pytest-f19-full` — 63 passed in 16.62s; backend/SSR/sanitizer не менялись.
+- [x] Final `./init.sh` outside sandbox stopped before MPS tests only at the known external Hermes pip check (missing charset-normalizer); F19 не меняет это внешнее окружение.
+- [x] Stored HTML остаётся только `figure[data-carousel="images"]` + `img`; editor-only NodeView markup и hidden contentDOM не сериализуются.
+- [x] Dependencies/database/production deploy не менялись; F19 production rollout ожидает отдельного подтверждения владельца.
+- [x] Drag-and-drop, paste, reorder и autoplay не начаты и остаются отдельным будущим scope.
+
 ## Session 47 F18 local checkpoint — 2026-08-23
 
 - [x] RED backend: `python -m pytest tests/test_posts.py -q --basetemp .pytest-f18-red` — 1 expected failure: nh3 removed unsupported `figure[data-carousel]`, while the imgs remained.

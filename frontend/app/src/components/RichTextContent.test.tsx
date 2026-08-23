@@ -48,6 +48,22 @@ describe("RichTextContent", () => {
     expect(screen.getByRole("img", { name: "Одинокое" })).toBeTruthy();
   });
 
+  it("keeps a real slide visible when a reusable carousel loses its active image", () => {
+    const { rerender } = render(
+      <RichTextContent html={'<figure data-carousel="images"><img src="/media/one.webp" alt="Первое"><img src="/media/two.webp" alt="Второе"><img src="/media/three.webp" alt="Третье"></figure>'} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Слайд 3" }));
+    expect(screen.getByRole("img", { name: "Третье" })).toBeTruthy();
+
+    rerender(
+      <RichTextContent html={'<figure data-carousel="images"><img src="/media/one.webp" alt="Первое"><img src="/media/two.webp" alt="Второе"></figure>'} />,
+    );
+
+    expect(screen.getByRole("region", { name: "Карусель изображений" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Второе" }).getAttribute("src")).toBe("/media/two.webp");
+  });
+
   it("keeps only the approved carousel attribute after the client sanitization boundary", () => {
     const safeHtml = sanitizeRichTextHtml('<figure data-carousel="images" class="evil" style="display:none" onclick="alert(1)" data-extra="x"><img src="/media/one.webp" alt="Первое" onclick="alert(1)"><img src="/media/two.webp" alt="Второе" style="display:none"></figure>');
     const container = document.createElement("div");

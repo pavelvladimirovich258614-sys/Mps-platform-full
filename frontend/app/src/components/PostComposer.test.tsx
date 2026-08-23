@@ -12,8 +12,8 @@ describe("PostComposer", () => {
     const onCreate = vi.fn().mockResolvedValue(undefined);
     render(<PostComposer onCreate={onCreate} />);
 
-    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual(["Статья"]);
-    expect(screen.queryByRole("option", { name: "Фишка" })).toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.queryByText("Тип публикации")).toBeNull();
     fireEvent.change(screen.getByLabelText("Заголовок публикации"), { target: { value: "Мой маршрут" } });
     fireEvent.click(screen.getByRole("button", { name: "Заполнить текст публикации" }));
     fireEvent.click(screen.getByRole("button", { name: "Опубликовать" }));

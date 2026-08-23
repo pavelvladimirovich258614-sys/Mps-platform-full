@@ -1,16 +1,16 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
-import Image from "@tiptap/extension-image";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import type { Editor } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { apiForm } from "../api/client";
+import { EditorImageNode } from "./EditorImageNodeViews";
 import { ImageCarouselNode } from "./ImageCarouselNode";
 
 type RichTextEditorProps = { value: string; onChange: (html: string) => void };
 
-type ToolbarButtonProps = { label: string; active?: boolean; disabled?: boolean; onClick: () => void; children: string };
+type ToolbarButtonProps = { label: string; active?: boolean; disabled?: boolean; onClick: () => void; children: ReactNode };
 
 function ToolbarButton({ label, active = false, disabled = false, onClick, children }: ToolbarButtonProps) {
   return <button type="button" className={active ? "rich-editor-action active" : "rich-editor-action"} aria-label={label} aria-pressed={active} disabled={disabled} onClick={onClick}>{children}</button>;
@@ -57,7 +57,7 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   const [uploadError, setUploadError] = useState("");
   const [uploading, setUploading] = useState(false);
   const editor = useEditor({
-    extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false }), Link.configure({ openOnClick: false, autolink: false }), Image.configure({ allowBase64: false }), ImageCarouselNode],
+    extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false }), Link.configure({ openOnClick: false, autolink: false }), EditorImageNode.configure({ allowBase64: false }), ImageCarouselNode],
     content: value,
     editorProps: { attributes: { class: "rich-editor-canvas", role: "textbox", "aria-label": "Текст публикации" } },
     onUpdate: ({ editor: currentEditor }) => onChange(currentEditor.getHTML()),
@@ -112,7 +112,13 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
       </div>
       <div className="rich-editor-group">
         <ToolbarButton label="Ссылка" active={editor.isActive("link")} onClick={toggleLink}>↗</ToolbarButton>
-        <ToolbarButton label="Вставить изображение" disabled={uploading} onClick={() => fileInputRef.current?.click()}>▧</ToolbarButton>
+        <ToolbarButton label="Вставить изображение" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+          <svg className="rich-editor-image-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <rect x="3" y="4" width="18" height="16" rx="2" />
+            <circle cx="8.5" cy="9" r="1.5" />
+            <path d="m5 17 4.5-4.5 3.2 3.2 2.3-2.3 4 3.6" />
+          </svg>
+        </ToolbarButton>
       </div>
     </div>
     <input ref={fileInputRef} className="rich-editor-file-input" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Выбрать изображение" onChange={(event) => void uploadImage(event)} />

@@ -20,9 +20,65 @@ describe("RichTextEditor", () => {
     expect(screen.getByRole("button", { name: "Нумерованный список" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Ссылка" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Цитата" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Вставить изображение" })).toBeTruthy();
+    const imageButton = screen.getByRole("button", { name: "Вставить изображение" });
+    expect(imageButton.querySelector("svg")).not.toBeNull();
+    expect(imageButton.textContent).not.toContain("▧");
 
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("renders a stored carousel as one interactive editor slide", async () => {
+    render(
+      <RichTextEditor
+        value={'<p>До карусели</p><figure data-carousel="images"><img src="/media/one.webp" alt="Первое"><img src="/media/two.webp" alt="Второе"></figure><p>После карусели</p>'}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByRole("region", { name: "Карусель изображений" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Первое" })).toBeTruthy();
+    expect(screen.queryByRole("img", { name: "Второе" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Следующее изображение" }));
+    expect(screen.getByRole("img", { name: "Второе" }).getAttribute("src")).toBe("/media/two.webp");
+  });
+
+  it("removes one standalone image without changing surrounding text", async () => {
+    const onChange = vi.fn();
+    render(
+      <RichTextEditor
+        value={'<p>Текст до</p><img src="/media/sea.webp" alt="Море"><p>Текст после</p>'}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Удалить изображение: Море" }));
+
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    const html = onChange.mock.calls.at(-1)?.[0] as string;
+    expect(html).toContain("Текст до");
+    expect(html).toContain("Текст после");
+    expect(html).not.toContain("/media/sea.webp");
+  });
+
+  it("unwraps a two-image carousel when the active image is removed", async () => {
+    const onChange = vi.fn();
+    render(
+      <RichTextEditor
+        value={'<p>До</p><figure data-carousel="images"><img src="/media/one.webp" alt="Первое"><img src="/media/two.webp" alt="Второе"></figure><p>После</p>'}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Удалить изображение: Первое" }));
+
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    const html = onChange.mock.calls.at(-1)?.[0] as string;
+    expect(html).not.toContain("<figure");
+    expect(html).not.toContain("/media/one.webp");
+    expect(html).toContain('src="/media/two.webp"');
+    expect(html).toContain("До");
+    expect(html).toContain("После");
   });
 
   it("uploads an image and inserts its media URL into the TipTap document", async () => {
