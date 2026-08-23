@@ -9,7 +9,10 @@
 - [x] Full backend: `python -m pytest tests -q --basetemp .pytest-f16-full` — 61 passed in 12.31s.
 - [x] Final `./init.sh` outside sandbox stopped before MPS tests only on the known external Hermes `pip check` (missing charset-normalizer); F16 does not modify that environment.
 - [x] `@tiptap/extension-image` 3.30.2 added as approved official TipTap extension; drag-and-drop, paste and carousel intentionally remain separate.
-- [x] Backend, database and production intentionally unchanged; F16 deploy awaits separate owner approval.
+- [x] Backend and database intentionally unchanged before the separately approved frontend-only rollout.
+- [x] Approved production rollout: `7a793f0` pushed; VPS fast-forwarded `8255d55 → 7a793f0`; backend diff empty and `mps-backend` remained active. Remote `npm ci && npm run build` verified production API/bot bundle markers and localhost absence; rollback `/root/backups/mps-frontend-f16-20260823T131817Z`; `deploy/smoke.sh` — `[OK]`.
+- [x] Authorized live API/browser evidence: valid Pillow PNG upload — 200; temporary published article rendered exactly one guest-browser img; invalid MIME — 422 with Russian detail; cleanup DELETE — 204, subsequent GET — 404. Live authenticated toolbar/toast click could not run because no editor/admin browser session was available; local DOM regression and served toolbar marker remain the evidence for that UI path.
+- [x] Separate F03 contract discrepancy recorded, not fixed: corrupted bytes declared `image/png` return 500 from Pillow rather than the documented 422.
 
 ## Session 44 F15 local checkpoint — 2026-08-23
 
