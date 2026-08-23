@@ -2,7 +2,7 @@
 # init.sh — старт сессии проекта МПС. Агент запускает это ПЕРВЫМ.
 set -e
 
-INSTALL_CMD="pip install -r backend/requirements.txt -q"
+INSTALL_CMD="python -m pip install -r backend/requirements.txt -q"
 VERIFY_CMD="python -m pytest tests -q"
 START_CMD="uvicorn app.main:app --reload --port 8000 --app-dir backend"
 
