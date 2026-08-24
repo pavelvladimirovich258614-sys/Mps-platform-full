@@ -2,18 +2,22 @@
 
 ## Verified final state — 2026-08-24
 
-F01–F24 passing локально. F24 не pushed и не deployed; для production требуется approval, потому что есть PostgreSQL-миграция и backend change.
+Полный цикл F15–F24 завершён и deployed на `https://mir.pod-solncem.ru`; local `main`, `origin/main` и VPS синхронизированы на `9872364655cb…`.
 
-- F24: только автор draft может получить свой список или содержимое. `GET /posts/drafts` возвращает id/title/updated_at; `GET /posts/drafts/{id}` — полный контент. Другой editor/admin получает 404 для чужого draft. Published F15 visibility/editing rules remain unchanged.
-- `posts.updated_at` is Alembic head `20260824_0011`. PATCH draft→published now assigns `published_at`, so the post enters the public feed and future digest selection.
-- `/drafts` is shown only to editor/admin; it lists title/date, opens the existing F15 composer modal with prefill, keeps the newly created draft ID and PATCHes later Save Draft/Publish actions instead of creating duplicates.
-- F24 RED→GREEN: backend list absent then 5 targeted passed; additional published_at RED then 5 passed; frontend list/PATCH RED then 2 files / 21 targeted passed. Full frontend: 15 files / 84 passed; build: 115 modules success; full backend: 66 passed. Alembic history confirms head.
-- `init.sh` installs MPS requirements then stops only at the unrelated global Hermes/desktop pip check. Do not change external dependencies; full MPS suites are green separately.
+- F15: редактирование и удаление опубликованных статей — composer prefill, PATCH, confirmation и redirect.
+- F16–F21: загрузка изображений, validation, leading image carousel, удаление кадров, многократная загрузка без потери первого изображения и nginx ingress limit 11 MiB.
+- F22: TipTap toolbar B/I/S (и formatter controls) реактивно пересчитывает active state по `selectionUpdate`/`transaction`.
+- F23: Bold/Italic/Strike имеют `inclusive: false`; форматирование сбрасывается сразу на правой границе mark. Это осознанно отличается от стандартного поведения Word/Google Docs; ввод внутри mark и shortcuts не сломаны.
+- F24: приватные черновики автора — `GET /posts/drafts`, `GET /posts/drafts/{id}`, `posts.updated_at`, draft→published через PATCH с `published_at`; composer сохраняет id первого draft и обновляет тот же Post, а не создаёт дубликат. Черновики видит только их автор.
+- F24 deploy: PostgreSQL backup создан и проверен, Alembic достиг `20260824_0011`, `mps-backend` restarted/healthy, frontend rebuilt с production VITE variables, served F24 bundle и `deploy/smoke.sh` verified. Live own-draft smoke: POST 201, list/detail 200, PATCH publish 200, post подтверждён в public feed, cleanup DELETE 204.
+- `init.sh` использует `python -m pip`; MPS requirements устанавливаются корректно. Остановка на global Hermes/desktop `pip check` остаётся внешней проблемой и не относится к MPS.
 
 ## Known unresolved boundary
 
 Email remains blocked by the external Unisender/HostKey network path. Do not change email transport, credentials, firewall or VPS networking without Pavel's separate decision.
 
-## Next step
+## Follow-up only when scope is approved
 
-Await owner approval to push/deploy F24. Deployment must back up PostgreSQL, apply Alembic `20260824_0011`, restart `mps-backend`, rebuild frontend with verified production VITE values, run `deploy/smoke.sh`, then use an authorized temporary editor draft to check own-list/detail, foreign 404, PATCH draft save, publish-to-feed and cleanup.
+Foreign-draft access returns 404 in F24 automated tests. Live production verification не проводилась: на production был только один editor/admin, поэтому не создавалась вторая тестовая учётная запись. Если появится вторая тестовая editor/admin учётная запись, повторить живой smoke чужого draft → 404; это не блокирует закрытый F24 scope.
+
+Новый продуктовый scope выбирает Павел.
