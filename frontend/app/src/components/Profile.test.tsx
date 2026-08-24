@@ -26,10 +26,21 @@ const props = {
 };
 
 describe("Profile", () => {
-  it("uses browser email semantics before requesting a login code", () => {
-    const view = render(<Profile user={null} {...props} />);
+  it("temporarily hides email login and keeps Telegram Login functional", async () => {
+    vi.stubEnv("VITE_TELEGRAM_BOT_USERNAME", "pod_solncem_bot");
+    const onTelegramLogin = vi.fn().mockResolvedValue(undefined);
+    const view = render(<Profile user={null} {...props} onTelegramLogin={onTelegramLogin} />);
 
-    expect(view.getByPlaceholderText("Электронная почта").getAttribute("type")).toBe("email");
+    expect(view.queryByPlaceholderText("Электронная почта")).toBeNull();
+    expect(view.queryByPlaceholderText("Код из письма")).toBeNull();
+    expect(view.queryByRole("button", { name: "Получить код" })).toBeNull();
+    expect(view.queryByText(/коду из письма/i)).toBeNull();
+
+    const script = view.container.querySelector<HTMLScriptElement>("script[data-telegram-login]");
+    expect(script?.dataset.telegramLogin).toBe("pod_solncem_bot");
+    window.__mpsTelegramAuth?.({ id: 42, first_name: "Павел", auth_date: 1_725_000_000, hash: "signed-hash" });
+    await waitFor(() => expect(onTelegramLogin).toHaveBeenCalledWith({ id: 42, first_name: "Павел", auth_date: 1_725_000_000, hash: "signed-hash" }));
+    vi.unstubAllEnvs();
   });
 
   it("synchronizes existing profile fields when login changes user without unmounting", () => {

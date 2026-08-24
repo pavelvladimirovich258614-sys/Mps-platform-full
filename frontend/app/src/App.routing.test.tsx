@@ -44,9 +44,8 @@ const jsonResponse = (status: number, body: unknown) => new Response(JSON.string
 });
 
 type DetailResult = "ok" | "missing" | "network";
-type EmailRequestResult = "ok" | "failure";
 
-function installApi(detailResult: DetailResult = "ok", emailRequestResult: EmailRequestResult = "ok", currentUser: Record<string, unknown> | null = null, posts: ApiPost[] = [post]) {
+function installApi(detailResult: DetailResult = "ok", currentUser: Record<string, unknown> | null = null, posts: ApiPost[] = [post]) {
   let likesCount = post.likes_count;
   const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
     const url = new URL(String(input));
@@ -70,11 +69,6 @@ function installApi(detailResult: DetailResult = "ok", emailRequestResult: Email
     if (path === "/api/v1/countries/1/topics") return jsonResponse(200, []);
     if (path === "/api/v1/online") return jsonResponse(200, []);
     if (path === "/api/v1/notifications") return jsonResponse(200, { items: [] });
-    if (path === "/api/v1/auth/email/request") {
-      return emailRequestResult === "failure"
-        ? jsonResponse(502, { detail: "Не удалось отправить код. Попробуйте ещё раз позже" })
-        : new Response(null, { status: 204 });
-    }
     if (path === "/api/v1/me" && currentUser) return jsonResponse(200, currentUser);
     if (path === "/api/v1/me" || path === "/api/v1/auth/refresh") {
       return jsonResponse(401, { detail: "Требуется авторизация" });
@@ -129,7 +123,7 @@ describe("App pathname routing", () => {
 
   it("opens the dedicated Fishki route and renders only fishka cards", async () => {
     window.history.replaceState({}, "", "/fishki");
-    installApi("ok", "ok", null, [post, fishka]);
+    installApi("ok", null, [post, fishka]);
 
     render(<App />);
 
@@ -139,7 +133,7 @@ describe("App pathname routing", () => {
   });
 
   it("navigates to Fishki from the sidebar and leaves one inactive article heading", async () => {
-    installApi("ok", "ok", null, [post, fishka]);
+    installApi("ok", null, [post, fishka]);
     render(<App />);
 
     fireEvent.click(await screen.findByRole("button", { name: /Фишки/ }));
@@ -155,7 +149,7 @@ describe("App pathname routing", () => {
 
   it("opens the authenticated reader's public profile from the header and edits through the existing modal", async () => {
     setAccessToken("reader-access-token");
-    installApi("ok", "ok", {
+    installApi("ok", {
       id: 7, email: null, name: "Мария", avatar_url: "/media/maria.webp", bio: "Пишу о путешествиях.", role: "reader", is_anonymous: false,
     });
     render(<App />);
@@ -216,17 +210,17 @@ describe("App pathname routing", () => {
     expect(screen.queryByText("Публикация не найдена")).toBeNull();
   });
 
-  it("renders an email delivery error while the Profile modal remains open", async () => {
-    installApi("ok", "failure");
+  it("shows a Telegram-only login modal without an email path", async () => {
+    installApi();
     render(<App />);
 
     fireEvent.click(screen.getByRole("button", { name: "Войти" }));
-    fireEvent.change(screen.getByPlaceholderText("Электронная почта"), { target: { value: "reader@example.test" } });
-    fireEvent.click(screen.getByRole("button", { name: "Получить код" }));
 
-    // jsdom verifies the error flow, while toast layering is verified manually on live production.
-    expect((await screen.findByRole("alert")).textContent).toContain("Не удалось отправить код. Попробуйте ещё раз позже");
     expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.queryByPlaceholderText("Электронная почта")).toBeNull();
+    expect(screen.queryByPlaceholderText("Код из письма")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Получить код" })).toBeNull();
+    expect(screen.queryByText(/коду из письма/i)).toBeNull();
   });
 
   it("pushes a shareable article URL after an internal feed click", async () => {
@@ -243,7 +237,7 @@ describe("App pathname routing", () => {
 
   it("toggles a post like locally for an authenticated reader", async () => {
     setAccessToken("reader-access-token");
-    installApi("ok", "ok", {
+    installApi("ok", {
       id: 5, email: null, name: "Читатель", avatar_url: null, bio: null, role: "reader", is_anonymous: false,
     });
     render(<App />);
@@ -273,7 +267,7 @@ describe("App pathname routing", () => {
   ])("hides article management controls from %s", async (_role, currentUser) => {
     window.history.replaceState({}, "", "/posts/bali-guide");
     if (currentUser) setAccessToken("non-editor-access-token");
-    installApi("ok", "ok", currentUser);
+    installApi("ok", currentUser);
     const view = render(<App />);
 
     await screen.findByRole("heading", { level: 1, name: post.title });
@@ -285,7 +279,7 @@ describe("App pathname routing", () => {
   it("lets an editor patch an article and delete it only after confirmation", async () => {
     window.history.replaceState({}, "", "/posts/bali-guide");
     setAccessToken("editor-access-token");
-    const fetchMock = installApi("ok", "ok", {
+    const fetchMock = installApi("ok", {
       id: 5, email: null, name: "Редактор", avatar_url: null, bio: null, role: "editor", is_anonymous: false,
     });
     render(<App />);

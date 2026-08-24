@@ -504,6 +504,24 @@
       ],
       "evidence": "2026-08-24: RED `npm test -- --run src/components/PostComposer.test.tsx` — 3 expected failures / 4 passed: successful draft save, publish and PATCH did not invoke the absent onClose callback; the server-error scenario also exposed the pre-existing unhandled rejected promise. GREEN targeted `npm test -- --run src/components/PostComposer.test.tsx src/components/Feed.test.tsx src/App.routing.test.tsx` — 3 files / 28 passed: successful POST draft/publish and PATCH draft/article invoke onClose, while rejected server request leaves the composer rendered with its error. Full frontend `npm test` — 15 files / 89 passed. `npm run build` — success, 115 modules; standard Vite chunk-size warning only; production API/bot markers present and localhost API absent. Full backend `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp D:\\AI\\tmp\\mps-f26-full-backend` — 70 passed in 20.79s. Final `./init.sh` installed MPS requirements and stopped only at unrelated external Hermes/desktop global pip-check conflicts; MPS suites were separately green.",
       "notes": "Fixed only the confirmed close path: PostComposer calls optional onClose only after its awaited POST/PATCH has resolved; its error catch preserves the open modal and error notice. Feed forwards onClose to reset composerOpen; App forwards it for edit mode to clear editingPost, so draft/article PATCH closes too. Point 2 (draft-list click) was not reproduced in source or tests: Drafts onClick → GET /posts/drafts/{id} → setEditingPost → prefilled edit modal remains covered; it needs a repeat live authenticated browser check after the separately approved F26 deploy. No backend, API, database, dependency or production change."
+    },
+    {
+      "id": "F27",
+      "priority": 27,
+      "area": "auth",
+      "title": "Временное отключение email-входа в интерфейсе",
+      "user_visible_behavior": "Гостевая модалка входа показывает только Telegram Login; форма email-кода и связанные тексты не вводят пользователя в заблуждение, при этом backend email API сохраняется для быстрого возврата.",
+      "status": "passing",
+      "verification": [
+        "RED/GREEN frontend: в login modal нет email-поля, кода или кнопки получения кода; Telegram Login отображается и передаёт payload",
+        "Backend regression baseline: POST /auth/email/request и POST /auth/email/verify остаются покрыты и доступны",
+        "cd frontend/app && npm test",
+        "cd frontend/app && npm run build",
+        "cd backend && python -m pytest tests -q",
+        "./init.sh вне sandbox; внешний Hermes pip check фиксируется отдельно"
+      ],
+      "evidence": "2026-08-24: RED `npm test -- --run src/components/Profile.test.tsx src/App.routing.test.tsx` — 2 expected failures / 19 passed: both login UI contracts found the visible `input[type=email]`. GREEN targeted `npm test -- --run src/components/Profile.test.tsx src/components/TelegramLogin.test.tsx src/App.routing.test.tsx` — 3 files / 23 passed: no email field, code field, email CTA or email-copy; the official Telegram widget loads and forwards its signed callback payload. Backend baseline `D:\\Python312\\python.exe -m pytest tests/test_auth.py -q --color=no --basetemp D:\\AI\\tmp\\mps-f27-auth-baseline` — 6 passed, including request and verify endpoints. Full frontend `npm test` — 15 files / 89 passed. `npm run build` — success, 115 modules; standard Vite chunk-size warning only; production API/bot markers present and localhost API absent. Full backend `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp D:\\AI\\tmp\\mps-f27-full-backend` — 70 passed in 17.36s. Final `./init.sh` installed MPS requirements and stopped only at unrelated external Hermes/desktop global pip-check conflicts; MPS suites were separately green.",
+      "notes": "Temporary frontend-only change: `EMAIL_LOGIN_ENABLED = false` hides the email form and texts while preserving its callbacks, hook methods and backend API. Re-enable the flag only after the external Unisender/HostKey email infrastructure is repaired and delivery has been re-verified. Backend endpoint, transport, credentials, subscription email and production configuration were not changed."
     }
   ]
 }

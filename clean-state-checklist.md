@@ -1,5 +1,17 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 57 F27 local completion — 2026-08-24
+
+- [x] F27 — единственная новая feature сессии; production deploy не выполнялся.
+- [x] Scope: guest `Profile` UI only. `EMAIL_LOGIN_ENABLED = false` временно скрывает email input, code input, CTA и email-copy; Telegram Login остаётся единственным visible path. Backend, transport, credentials, subscription email и network configuration не менялись.
+- [x] RED frontend: `Profile.test.tsx` + `App.routing.test.tsx` — 2 expected failures / 19 passed; оба нашли текущее visible `input[type=email]`.
+- [x] GREEN targeted: `Profile`, `TelegramLogin`, `App.routing` — 3 files / 23 passed. Profile confirms no email fields/texts and official widget script forwards signed payload; routing confirms login modal has no email path.
+- [x] Backend regression baseline: `D:\Python312\python.exe -m pytest tests/test_auth.py -q --color=no --basetemp D:\AI\tmp\mps-f27-auth-baseline` — 6 passed; request/verify email endpoints remain available.
+- [x] Full frontend: `npm test` — 15 files / 89 passed; `npm run build` — success, 115 modules, only standard Vite chunk-size warning. Built bundle confirms production API/bot markers and no localhost API.
+- [x] Full backend (unchanged): `D:\Python312\python.exe -m pytest tests -q --color=no --basetemp D:\AI\tmp\mps-f27-full-backend` — 70 passed in 17.36s.
+- [x] Final `./init.sh` installed MPS requirements and stopped only on agreed external Hermes/desktop global `pip check`; MPS suites were run separately and green.
+- [x] `feature_list.json`, `claude-progress.md` and `session-handoff.md` updated. Re-enable email only after Unisender/HostKey delivery repair and real verification; production waits for separate approval and Telegram browser smoke by Pavel.
+
 ## Session 56 F26 local completion — 2026-08-24
 
 - [x] F26 — единственная новая feature сессии; production deploy не выполнялся.

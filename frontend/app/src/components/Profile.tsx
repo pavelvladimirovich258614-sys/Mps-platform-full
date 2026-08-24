@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import type { User } from "../hooks";
 import { TelegramLogin, type TelegramAuthData } from "./TelegramLogin";
 
+// Re-enable after the external Unisender/HostKey delivery path is repaired.
+const EMAIL_LOGIN_ENABLED = false;
+
 type ProfileProps = {
   user: User | null;
   onClose: () => void;
@@ -33,7 +36,7 @@ export function Profile({ user, onClose, onRequestCode, onVerifyCode, onTelegram
   const verify = async () => { try { await onVerifyCode(email, code); } catch (cause) { onError(cause instanceof Error ? cause.message : "Не удалось войти"); } };
 
   if (!user) {
-    return <div className="modal-backdrop" role="dialog" aria-modal="true" onMouseDown={onClose}><section className="profile-modal" onMouseDown={(event) => event.stopPropagation()}><h2>Войти</h2><p className="page-description">Войдите по коду из письма, чтобы писать и сохранять ответы.</p><div className="form-grid"><input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Электронная почта" />{sent && <input value={code} onChange={(event) => setCode(event.target.value)} placeholder="Код из письма" inputMode="numeric" />}</div><div className="form-actions"><button className="panel-button" onClick={sent ? verify : request}>{sent ? "Подтвердить" : "Получить код"}</button></div><div className="telegram-reading">или <TelegramLogin botUsername={import.meta.env.VITE_TELEGRAM_BOT_USERNAME ?? ""} onAuth={onTelegramLogin} onError={onError} /></div></section></div>;
+    return <div className="modal-backdrop" role="dialog" aria-modal="true" onMouseDown={onClose}><section className="profile-modal" onMouseDown={(event) => event.stopPropagation()}><h2>Войти</h2><p className="page-description">Войдите через Telegram, чтобы писать и сохранять ответы.</p>{EMAIL_LOGIN_ENABLED && <><div className="form-grid"><input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Электронная почта" />{sent && <input value={code} onChange={(event) => setCode(event.target.value)} placeholder="Код из письма" inputMode="numeric" />}</div><div className="form-actions"><button className="panel-button" onClick={sent ? verify : request}>{sent ? "Подтвердить" : "Получить код"}</button></div></>}<div className="telegram-reading"><TelegramLogin botUsername={import.meta.env.VITE_TELEGRAM_BOT_USERNAME ?? ""} onAuth={onTelegramLogin} onError={onError} /></div></section></div>;
   }
 
   const save = async () => { try { await onUpdate({ name, bio, is_anonymous: anonymous }); onClose(); } catch (cause) { onError(cause instanceof Error ? cause.message : "Не удалось сохранить профиль"); } };

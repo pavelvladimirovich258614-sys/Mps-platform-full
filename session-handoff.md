@@ -2,7 +2,7 @@
 
 ## Verified local state — 2026-08-24
 
-F01–F26 are recorded as passing. F25 is deployed at `e1a35f3`; F26 is local-only and awaits separate frontend rollout approval.
+F01–F27 are recorded as passing. F26 is deployed at `2be15d5`; F27 is local-only and awaits separate frontend rollout approval.
 
 - The reported upload failure was not a PNG/JPEG regression. Current composer chain remains `onChange → apiForm(POST /media) → insertImageAtDocumentStart`; existing PNG baseline passed.
 - The actual cause for iPhone photos was HEIC/HEIF being excluded by both the native file picker `accept` list and the backend MIME allowlist. The UI now accepts JPEG, PNG, WebP, HEIC, HEIF and AVIF.
@@ -16,6 +16,17 @@ F01–F26 are recorded as passing. F25 is deployed at `e1a35f3`; F26 is local-on
 - Fix: PostComposer invokes optional `onClose` only after successful awaited POST/PATCH, catches server errors into the existing notice, and never closes on error. Feed forwards the callback to reset `composerOpen`; App clears `editingPost` for article/draft edit mode.
 - Fresh evidence: RED `PostComposer.test.tsx` — 3 expected failures / 4 passed; GREEN targeted `PostComposer`, `Feed`, `App.routing` — 28 passed. Full frontend — 15 files / 89 passed; build success (production API/bot markers present, localhost API absent). Full backend — 70 passed in 20.79s. `./init.sh` stopped only on the known external global Hermes/desktop pip check.
 - The reported draft-list click issue was not reproduced in code or tests: `Drafts` click → GET `/posts/drafts/{id}` → `setEditingPost` → prefilled edit modal is covered. Do not change that flow. Repeat the authenticated live browser check only after an approved F26 deployment.
+
+## F26 production evidence
+
+F26 frontend-only rollout fast-forwarded VPS `e1a35f3 → 2be15d5`. Rollback copy: `/root/backups/mps-frontend-f26-20260824T133425Z`. Production frontend rebuilt with verified VITE markers, served asset returned 200, and `deploy/smoke.sh` passed; `mps-backend` remained active and was not restarted. An isolated browser session was guest-only, so authenticated modal-close and draft-click checks remain unverified in live browser.
+
+## F27 local completion
+
+- Root cause: production email delivery remains externally blocked by the Unisender/HostKey network path, while the UI still presented a working-looking code form.
+- Fix: `Profile.tsx` has a documented `EMAIL_LOGIN_ENABLED = false`. It hides email input, code input, CTA and email-copy; Telegram Login remains the sole visible guest authentication path. The email callbacks, `useAuth` methods and backend endpoints are intentionally retained.
+- Fresh evidence: RED `Profile` + `App.routing` — 2 expected failures / 19 passed; GREEN targeted `Profile`, `TelegramLogin`, `App.routing` — 23 passed. `test_auth.py` — 6 passed, proving email request/verify remain available. Full frontend — 15 files / 89 passed; build success (production API/bot markers present, localhost API absent). Full backend — 70 passed in 17.36s. `./init.sh` stopped only on the known external Hermes/desktop pip check.
+- Production is intentionally unchanged. After separately approved deploy, Pavel must confirm Telegram login in a real account; Codex has no test Telegram account. Re-enable email only by changing the flag after repair and real delivery verification.
 
 ## Production evidence (F25)
 
