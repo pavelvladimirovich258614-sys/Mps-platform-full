@@ -248,6 +248,21 @@ describe("RichTextEditor", () => {
     expect(onChange.mock.calls.at(-1)?.[0]).not.toContain("<figure");
   });
 
+  it("offers modern phone formats and keeps the PNG upload request and insertion contract", async () => {
+    mocks.upload.mockResolvedValue({ url: "/media/phone.webp" });
+    const onChange = vi.fn();
+    render(<RichTextEditor value="<p>Черновик</p>" onChange={onChange} />);
+
+    const input = screen.getByLabelText("Выбрать изображение") as HTMLInputElement;
+    expect(input.accept).toBe("image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif");
+    fireEvent.change(input, {
+      target: { files: [new File(["png"], "sea.png", { type: "image/png" })] },
+    });
+
+    await waitFor(() => expect(mocks.upload).toHaveBeenCalledWith("/media", "POST", expect.any(FormData)));
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith(expect.stringContaining('src="/media/phone.webp"')));
+  });
+
   it("inserts an image before all text even when the selection is in the middle", async () => {
     mocks.upload.mockResolvedValue({ url: "/media/middle.webp" });
     const onChange = vi.fn();

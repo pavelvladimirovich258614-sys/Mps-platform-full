@@ -163,7 +163,7 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
         </ToolbarButton>
       </div>
     </div>
-    <input ref={fileInputRef} className="rich-editor-file-input" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Выбрать изображение" onChange={(event) => void uploadImage(event)} />
+    <input ref={fileInputRef} className="rich-editor-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif" aria-label="Выбрать изображение" onChange={(event) => void uploadImage(event)} />
     {uploadError && <p className="rich-editor-upload-error" role="alert">{uploadError}</p>}
     <EditorContent editor={editor} />
   </section>;

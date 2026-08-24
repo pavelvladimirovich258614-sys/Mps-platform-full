@@ -8,6 +8,7 @@ import time
 import httpx
 import pytest
 from PIL import Image
+from pillow_heif import from_pillow
 
 
 def telegram_payload():
@@ -41,6 +42,13 @@ def image_bytes(image_format: str) -> bytes:
     return data.getvalue()
 
 
+def heif_bytes(format_name: str) -> bytes:
+    image = Image.new("RGB", (20, 20), color="red")
+    data = BytesIO()
+    from_pillow(image).save(data, format=format_name)
+    return data.getvalue()
+
+
 def png_larger_than_nginx_default() -> bytes:
     width = height = 700
     pixels = random.Random(21).randbytes(width * height * 3)
@@ -62,6 +70,38 @@ async def test_upload_supported_images(client, test_app, image_format, content_t
     )
     assert response.status_code == 200
     assert len(list(Path(test_app.state.settings.media_dir).iterdir())) == 1
+
+
+@pytest.mark.parametrize(
+    ("format_name", "content_type", "filename"),
+    [("HEIF", "image/heic", "iphone.heic"), ("HEIF", "image/heif", "iphone.heif")],
+)
+async def test_upload_converts_heic_and_heif_to_displayable_webp(client, test_app, format_name, content_type, filename):
+    response = await client.post(
+        "/api/v1/media",
+        headers=await authorization(client),
+        files={"file": (filename, heif_bytes(format_name), content_type)},
+    )
+
+    assert response.status_code == 200
+    saved_file = Path(test_app.state.settings.media_dir, Path(response.json()["url"]).name)
+    assert saved_file.suffix == ".webp"
+    with Image.open(saved_file) as saved:
+        assert saved.format == "WEBP"
+
+
+async def test_upload_accepts_avif(client, test_app):
+    response = await client.post(
+        "/api/v1/media",
+        headers=await authorization(client),
+        files={"file": ("photo.avif", image_bytes("AVIF"), "image/avif")},
+    )
+
+    assert response.status_code == 200
+    saved_file = Path(test_app.state.settings.media_dir, Path(response.json()["url"]).name)
+    assert saved_file.suffix == ".avif"
+    with Image.open(saved_file) as saved:
+        assert saved.format == "AVIF"
 
 
 async def test_uploads_two_images_sequentially_with_same_token(client, test_app):
@@ -100,6 +140,17 @@ async def test_upload_rejects_invalid_image_and_large_file(client):
         files={"file": ("large.jpg", b"x" * (10 * 1024 * 1024 + 1), "image/jpeg")},
     )
     assert large.status_code == 422
+
+
+async def test_upload_explains_unsupported_format(client):
+    response = await client.post(
+        "/api/v1/media",
+        headers=await authorization(client),
+        files={"file": ("document.pdf", b"not an image", "application/pdf")},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Допустимы JPEG, PNG, WebP, HEIC, HEIF или AVIF"
 
 
 async def test_upload_rejects_truncated_png_with_valid_mime(client, test_app):

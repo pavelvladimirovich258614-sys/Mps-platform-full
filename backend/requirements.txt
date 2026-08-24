@@ -15,5 +15,6 @@ PyJWT
 slowapi
 fakeredis
 pillow
+pillow-heif==1.5.0
 respx
 apscheduler

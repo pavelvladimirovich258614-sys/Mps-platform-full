@@ -1,23 +1,19 @@
 # Session handoff — МПС
 
-## Verified final state — 2026-08-24
+## Verified local state — 2026-08-24
 
-Полный цикл F15–F24 завершён и deployed на `https://mir.pod-solncem.ru`; local `main`, `origin/main` и VPS синхронизированы на `9872364655cb…`.
+F01–F25 are recorded as passing locally. F25 adds phone/modern image formats; production remains at the previously deployed F24 revision until Pavel gives a separate rollout approval.
 
-- F15: редактирование и удаление опубликованных статей — composer prefill, PATCH, confirmation и redirect.
-- F16–F21: загрузка изображений, validation, leading image carousel, удаление кадров, многократная загрузка без потери первого изображения и nginx ingress limit 11 MiB.
-- F22: TipTap toolbar B/I/S (и formatter controls) реактивно пересчитывает active state по `selectionUpdate`/`transaction`.
-- F23: Bold/Italic/Strike имеют `inclusive: false`; форматирование сбрасывается сразу на правой границе mark. Это осознанно отличается от стандартного поведения Word/Google Docs; ввод внутри mark и shortcuts не сломаны.
-- F24: приватные черновики автора — `GET /posts/drafts`, `GET /posts/drafts/{id}`, `posts.updated_at`, draft→published через PATCH с `published_at`; composer сохраняет id первого draft и обновляет тот же Post, а не создаёт дубликат. Черновики видит только их автор.
-- F24 deploy: PostgreSQL backup создан и проверен, Alembic достиг `20260824_0011`, `mps-backend` restarted/healthy, frontend rebuilt с production VITE variables, served F24 bundle и `deploy/smoke.sh` verified. Live own-draft smoke: POST 201, list/detail 200, PATCH publish 200, post подтверждён в public feed, cleanup DELETE 204.
-- `init.sh` использует `python -m pip`; MPS requirements устанавливаются корректно. Остановка на global Hermes/desktop `pip check` остаётся внешней проблемой и не относится к MPS.
+- The reported upload failure was not a PNG/JPEG regression. Current composer chain remains `onChange → apiForm(POST /media) → insertImageAtDocumentStart`; existing PNG baseline passed.
+- The actual cause for iPhone photos was HEIC/HEIF being excluded by both the native file picker `accept` list and the backend MIME allowlist. The UI now accepts JPEG, PNG, WebP, HEIC, HEIF and AVIF.
+- Backend now depends on `pillow-heif==1.5.0`. It registers the HEIF decoder and converts HEIC/HEIF to WebP before storage; AVIF is accepted and preserved as AVIF. An unsupported file receives `422 «Допустимы JPEG, PNG, WebP, HEIC, HEIF или AVIF»`.
+- Fresh verification: F25 RED frontend 1 failed / 18 passed; RED backend after dependency 4 failed / 7 passed. GREEN media 11 passed and RichTextEditor 19 passed. Full backend 70 passed; full frontend 15 files / 85 passed; `npm run build` passed (115 modules, standard chunk-size warning).
+- `./init.sh` installed MPS requirements, then stopped only at the external global Hermes/desktop `pip check`; that environment is not part of MPS and was not modified.
+
+## Production boundary
+
+Do not deploy F25 without Pavel's explicit approval. The rollout changes backend dependency/runtime and frontend picker MIME list, so build both layers and run authenticated HEIC, HEIF and AVIF upload smoke with cleanup. There was no authenticated live browser session in the local F25 verification.
 
 ## Known unresolved boundary
 
 Email remains blocked by the external Unisender/HostKey network path. Do not change email transport, credentials, firewall or VPS networking without Pavel's separate decision.
-
-## Follow-up only when scope is approved
-
-Foreign-draft access returns 404 in F24 automated tests. Live production verification не проводилась: на production был только один editor/admin, поэтому не создавалась вторая тестовая учётная запись. Если появится вторая тестовая editor/admin учётная запись, повторить живой smoke чужого draft → 404; это не блокирует закрытый F24 scope.
-
-Новый продуктовый scope выбирает Павел.

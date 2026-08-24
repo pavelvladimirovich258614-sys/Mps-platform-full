@@ -1,5 +1,16 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 55 F25 local completion — 2026-08-24
+
+- [x] F25 — единственная новая feature сессии; production deploy не выполнялся.
+- [x] Диагностика: PNG/JPEG upload chain присутствует и baseline прошёл; HEIC/HEIF были заблокированы одновременно picker accept и backend MIME allowlist.
+- [x] RED frontend — 1 failed / 18 passed: отсутствовали HEIC/HEIF/AVIF в file picker. RED backend after dependency — 4 failed / 7 passed: HEIC/HEIF/AVIF returned old 422 and message did not explain modern formats.
+- [x] GREEN targeted: backend `test_media.py` — 11 passed; HEIC/HEIF return 200 and saved file opens as WEBP, AVIF returns 200 and remains AVIF; unsupported PDF has Russian 422. Frontend `RichTextEditor.test.tsx` — 19 passed; PNG POST/insertion contract and expanded accept covered.
+- [x] Full frontend: `npm test` — 15 files / 85 passed; `npm run build` — success, 115 modules, only standard Vite chunk-size warning.
+- [x] Full backend: `D:\Python312\python.exe -m pytest tests -q --color=no --basetemp D:\AI\tmp\mps-f25-full-backend` — 70 passed in 21.04s.
+- [x] Final `./init.sh` installed MPS requirements and stopped only on agreed external Hermes/desktop global `pip check`; MPS suites were run separately and green.
+- [x] `pillow-heif==1.5.0` is the only new dependency; no database, sanitizer, carousel or production configuration change. `feature_list.json`, `claude-progress.md` and `session-handoff.md` updated.
+
 ## Session 53 F24 local completion — 2026-08-24
 
 - [x] F24 — единственная новая feature сессии; production deploy не выполнялся.
