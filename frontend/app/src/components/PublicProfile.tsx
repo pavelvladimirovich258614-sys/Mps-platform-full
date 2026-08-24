@@ -17,6 +17,7 @@ type PublicProfileProps = {
   onEditProfile?: () => void;
   onLogout?: () => Promise<void>;
   onNotice?: (message: string) => void;
+  isOnline?: boolean;
 };
 
 const tabs: Array<{ id: Tab; label: string; empty: string }> = [
@@ -35,7 +36,7 @@ function countLabel(count: number, singular: string, few: string, many: string) 
   return `${count} ${many}`;
 }
 
-export function PublicProfile({ profile, posts, likes, loading, likesLoading, viewerId, onOpenPost, onToggleFollow, onEditProfile, onLogout, onNotice }: PublicProfileProps) {
+export function PublicProfile({ profile, posts, likes, loading, likesLoading, viewerId, onOpenPost, onToggleFollow, onEditProfile, onLogout, onNotice, isOnline = false }: PublicProfileProps) {
   const [tab, setTab] = useState<Tab>("posts");
   const [followPending, setFollowPending] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -104,7 +105,7 @@ export function PublicProfile({ profile, posts, likes, loading, likesLoading, vi
             </div>
           </div>
         </div>
-        <span className="public-profile-avatar">{profile.avatar_url && <img src={profile.avatar_url} alt={`Аватар ${profile.name || "пользователя"}`} />}</span>
+        <span className="public-profile-avatar-wrap"><span className="public-profile-avatar">{profile.avatar_url && <img src={profile.avatar_url} alt={`Аватар ${profile.name || "пользователя"}`} />}</span>{isOnline && <i className="online-indicator" aria-label={`${profile.name || "Путешественник"} сейчас на платформе`} />}</span>
       </section>
 
       {profile.countries.length > 0 && (

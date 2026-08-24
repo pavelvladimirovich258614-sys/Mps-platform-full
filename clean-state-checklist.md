@@ -1,5 +1,17 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 64 F34 local completion — 2026-08-25
+
+- [x] F34 — единственная новая feature сессии; scope ограничен presence/avatar frontend flow, его tests и tracker records. Backend/API/database/dependencies/email infrastructure не менялись; production deploy не выполнялся.
+- [x] Diagnosis: backend HTTP middleware updates `last_seen_at`; `/online` returns `{id, name, avatar_url}` for non-anonymous users active within 120 seconds. There is no WebSocket. Layout ignored the returned avatar and positioned its dot after the name; PublicProfile had no indicator. Header already reads avatar from `useAuth` state updated by PATCH `/me`.
+- [x] RED frontend: `npm test -- --run src/components/Layout.test.tsx src/components/PublicProfile.test.tsx src/hooks/useAuth.test.tsx src/hooks/useOnline.test.tsx src/App.routing.test.tsx --reporter=dot` — 4 expected failures / 28 passed: missing real sidebar avatar/anchored dot, public-profile indicator and App presence propagation.
+- [x] GREEN targeted: same files — 5 files / 32 passed. Online avatar uses image or gradient fallback; dot is in avatar wrapper, profile dot appears only if `/online` contains that profile, and hook reloads after auth plus each 30 seconds with cleanup.
+- [x] Backend presence baseline: `D:\Python312\python.exe -m pytest tests/test_presence.py -q --color=no --basetemp D:\AI\tmp\mps-f34-presence` — 2 passed.
+- [x] Full backend unchanged: `D:\Python312\python.exe -m pytest tests -q --color=no --basetemp D:\AI\tmp\mps-f34-full-backend` — 71 passed in 18.75s.
+- [x] Full frontend: `npm test` — 18 files / 106 passed; `npm run build` — success, 115 modules, only standard Vite chunk-size warning.
+- [x] Final `./init.sh` installed MPS requirements and stopped only on agreed external Hermes/desktop global `pip check`; MPS suites were separately green.
+- [x] `feature_list.json`, `claude-progress.md`, `session-handoff.md` and this checklist record F34 as passing with command-backed local evidence. Frontend-only production rollout awaits separate approval.
+
 ## Session 63 F33 production rollout — 2026-08-25
 
 - [x] F33 — единственная новая feature сессии; final product scope ограничен `Feed.tsx`, `ArticleComments.tsx`, их tests и tracker records. `styles.css` намеренно не изменён; backend/API/database/dependencies/email infrastructure не менялись.

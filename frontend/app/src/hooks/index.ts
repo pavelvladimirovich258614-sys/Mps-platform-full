@@ -105,6 +105,14 @@ export const useSubscribe = () => ({ subscribe: (email: string) => apiJson<{ ema
 export const useQA = () => { const resource = useResource(() => api<Question[]>("/qa/my"), []); const create = async (target: Question["target"], body: string) => { const item = await apiJson<Question>("/qa", "POST", { target, body }); resource.setValue((current) => [...(current ?? []), item]); return item; }; return { ...resource, create }; };
 export const useForum = (countryId?: number, topicId?: number) => ({ countries: useResource(() => api<Country[]>("/countries"), []), topics: useResource(() => countryId ? api<Topic[]>(`/countries/${countryId}/topics`) : Promise.resolve([]), [countryId]), messages: useResource(() => topicId ? api<ForumMessage[]>(`/topics/${topicId}/messages`) : Promise.resolve([]), [topicId]), createTopic: (title: string) => apiJson<Topic>(`/countries/${countryId}/topics`, "POST", { title }), createMessage: (body: string) => apiJson<ForumMessage>(`/topics/${topicId}/messages`, "POST", { body }) });
 export const useNotifications = () => { const resource = useResource(() => api<{ items: Notification[] }>("/notifications"), []); const read = async (ids?: number[]) => { await apiJson<{ updated: number }>("/notifications/read", "PATCH", ids ? { ids } : {}); await resource.reload(); }; return { ...resource, items: resource.value?.items ?? [], read }; };
-export const useOnline = () => useResource(() => api<OnlineUser[]>("/online"), []);
+export function useOnline(viewerId?: number) {
+  const resource = useResource(() => api<OnlineUser[]>("/online"), [viewerId]);
+  useEffect(() => {
+    if (!viewerId) return;
+    const interval = window.setInterval(() => { void resource.reload(); }, 30_000);
+    return () => window.clearInterval(interval);
+  }, [viewerId, resource.reload]);
+  return resource;
+}
 export const usePublicSettings = () => useResource(() => api<PublicSettings>("/settings/public"), []);
 export const useComments = (postId: number) => { const resource = useResource(() => api<Comment[]>(`/posts/${postId}/comments`), [postId]); const react = async (commentId: number, emoji: string) => { const result = await apiJson<ReactionResult>(`/comments/${commentId}/react`, "POST", { emoji }); resource.setValue((items) => (items ?? []).map((item) => item.id === commentId ? { ...item, ...result } : item)); }; const create = async (body: string) => { const comment = await apiJson<Comment>(`/posts/${postId}/comments`, "POST", { body }); await resource.reload(); return comment; }; return { ...resource, comments: resource.value ?? [], react, create }; };

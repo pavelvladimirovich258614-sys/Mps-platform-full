@@ -2,7 +2,15 @@
 
 ## Verified state — 2026-08-25
 
-F01–F33 are recorded as passing. F31 backend+frontend is deployed at `9bc70d4`; F33 final frontend-only cover behavior is deployed at `e4c302f`, with rollback `/root/backups/mps-frontend-f33-20260824124812` and successful smoke. F30 is deployed at `11dff37`; F29 at `629f824`; F28 at `df2cb6b`; F27 at `6a02ddd` and live login UI shows only Telegram Login.
+F01–F34 are recorded as passing. F34 is local-only and awaits separate frontend-only deployment approval. F31 backend+frontend is deployed at `9bc70d4`; F33 final frontend-only cover behavior is deployed at `e4c302f`, with rollback `/root/backups/mps-frontend-f33-20260824124812` and successful smoke. F30 is deployed at `11dff37`; F29 at `629f824`; F28 at `df2cb6b`; F27 at `6a02ddd` and live login UI shows only Telegram Login.
+
+## F34 local completion
+
+- Presence contract is unchanged: authenticated HTTP middleware updates `last_seen_at`; `/online` returns only non-anonymous users active in the last 120 seconds and already includes `{id, name, avatar_url}`. There is no WebSocket or backend change.
+- Layout now renders actual `avatar_url` in the «Сейчас на платформе» widget and keeps the prior gradient fallback when absent. The green dot is contained in the avatar wrapper, lower-right, instead of being positioned after the user name. The header already uses `useAuth` state, and PATCH `/me` writes the returned `avatar_url` to that state immediately.
+- App derives PublicProfile `isOnline` from `/online`; `useOnline` reloads as soon as an authenticated viewer exists and polls every 30 seconds with cleanup on unmount/viewer change. The public-profile dot is rendered only when that user is present in the list.
+- Fresh evidence: RED targeted frontend — 4 expected failures / 28 passed. GREEN `Layout`, `PublicProfile`, `useAuth`, `useOnline`, `App.routing` — 5 files / 32 passed. Presence baseline — 2 passed. Full backend unchanged — 71 passed in 18.75s; full frontend — 18 files / 106 passed; build — success, 115 modules. Final `./init.sh` stopped only on known external Hermes/desktop global pip check after MPS requirements installation.
+- No production action has occurred. After explicit frontend-only approval, deploy with rollback copy, run smoke, and let Pavel verify avatar and online indicators in a real Telegram session.
 
 ## F33 production completion
 

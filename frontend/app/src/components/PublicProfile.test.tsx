@@ -28,6 +28,25 @@ const post = {
 };
 
 describe("PublicProfile", () => {
+  it("shows the online indicator only when App marks the profile as currently online", () => {
+    const commonProps = {
+      profile,
+      posts: [],
+      likes: [],
+      loading: false,
+      likesLoading: false,
+      viewerId: null,
+      onOpenPost: vi.fn(),
+      onToggleFollow: vi.fn(),
+    };
+    const view = render(<PublicProfile {...commonProps} isOnline />);
+
+    expect(screen.getByLabelText("Мария сейчас на платформе").parentElement?.classList.contains("public-profile-avatar-wrap")).toBe(true);
+
+    view.rerender(<PublicProfile {...commonProps} isOnline={false} />);
+    expect(screen.queryByLabelText("Мария сейчас на платформе")).toBeNull();
+  });
+
   it("shows public author data and makes only the publications tab functional", () => {
     const onOpenPost = vi.fn();
     render(<PublicProfile profile={profile} posts={[post]} likes={[]} loading={false} likesLoading={false} viewerId={profile.id} onOpenPost={onOpenPost} onToggleFollow={vi.fn()} />);

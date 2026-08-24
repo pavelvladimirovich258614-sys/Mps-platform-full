@@ -105,5 +105,6 @@ describe("useAuth Telegram login", () => {
     expect(new Headers(uploadInit?.headers).has("Content-Type")).toBe(false);
     expect(fetchMock.mock.calls[1][0]).toBe("https://mir.pod-solncem.ru/api/v1/me");
     expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ avatar_url: "/media/avatar.png" });
+    expect(auth.result.current.user?.avatar_url).toBe("/media/avatar.png");
   });
 });

@@ -52,7 +52,7 @@ export function App() {
   const postEditor = usePostEditor();
   const postLike = usePostLike();
   const notifications = useNotifications();
-  const online = useOnline();
+  const online = useOnline(auth.user?.id);
   const publicSettings = usePublicSettings();
   const article = usePost(route.page === "article" ? route.slug : undefined);
   const publicProfile = usePublicProfile(route.page === "profile" ? route.userId : undefined);
@@ -218,6 +218,7 @@ export function App() {
         loading={authorPosts.loading}
         likesLoading={likedPosts.loading}
         viewerId={auth.user?.id ?? null}
+        isOnline={Boolean(online.value?.some((person) => person.id === publicProfile.value?.id))}
         onOpenPost={openArticle}
         onEditProfile={() => setOverlay("profile")}
         onLogout={async () => { await auth.logout(); navigate({ page: "feed" }); }}

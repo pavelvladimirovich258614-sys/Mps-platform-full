@@ -46,7 +46,7 @@ const jsonResponse = (status: number, body: unknown) => new Response(JSON.string
 
 type DetailResult = "ok" | "missing" | "network";
 
-function installApi(detailResult: DetailResult = "ok", currentUser: Record<string, unknown> | null = null, posts: ApiPost[] = [post]) {
+function installApi(detailResult: DetailResult = "ok", currentUser: Record<string, unknown> | null = null, posts: ApiPost[] = [post], online: Array<{ id: number; name: string; avatar_url: string | null }> = []) {
   let likesCount = post.likes_count;
   const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
     const url = new URL(String(input));
@@ -68,7 +68,7 @@ function installApi(detailResult: DetailResult = "ok", currentUser: Record<strin
     if (path === "/api/v1/posts/17/comments") return jsonResponse(200, []);
     if (path === "/api/v1/countries") return jsonResponse(200, [{ id: 1, name: "ОАЭ", topics_count: 0 }]);
     if (path === "/api/v1/countries/1/topics") return jsonResponse(200, []);
-    if (path === "/api/v1/online") return jsonResponse(200, []);
+    if (path === "/api/v1/online") return jsonResponse(200, online);
     if (path === "/api/v1/notifications") return jsonResponse(200, { items: [] });
     if (path === "/api/v1/auth/logout") return new Response(null, { status: 204 });
     if (path === "/api/v1/me" && currentUser) return jsonResponse(200, currentUser);
@@ -121,6 +121,16 @@ describe("App pathname routing", () => {
       "https://mir.pod-solncem.ru/api/v1/users/7/profile",
       expect.any(Object),
     );
+  });
+
+  it("passes the current online list to the public profile indicator", async () => {
+    window.history.replaceState({}, "", "/users/7");
+    installApi("ok", null, [post], [{ id: 7, name: "Мария", avatar_url: "/media/maria.webp" }]);
+
+    render(<App />);
+
+    const indicators = await screen.findAllByLabelText("Мария сейчас на платформе");
+    expect(indicators.some((indicator) => indicator.parentElement?.classList.contains("public-profile-avatar-wrap"))).toBe(true);
   });
 
   it("opens the dedicated Fishki route and renders only fishka cards", async () => {
