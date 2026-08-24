@@ -10,6 +10,8 @@
 - [x] Full backend: `D:\Python312\python.exe -m pytest tests -q --color=no --basetemp D:\AI\tmp\mps-f25-full-backend` — 70 passed in 21.04s.
 - [x] Final `./init.sh` installed MPS requirements and stopped only on agreed external Hermes/desktop global `pip check`; MPS suites were run separately and green.
 - [x] `pillow-heif==1.5.0` is the only new dependency; no database, sanitizer, carousel or production configuration change. `feature_list.json`, `claude-progress.md` and `session-handoff.md` updated.
+- [x] Approved production rollout: backup `/root/backups/mps-f25-20260824T131202Z`; VPS `9872364 → e1a35f3`; pillow-heif installed in `/opt/mps-platform/venv`; backend restarted active; frontend rebuilt with production VITE markers and served asset 200; `deploy/smoke.sh` passed.
+- [x] Live HTTPS media smoke: synthetic HEIC → 200 and valid served WEBP; PNG/JPEG → 200; renamed text → approved Russian 422; exactly three created media files were removed.
 
 ## Session 53 F24 local completion — 2026-08-24
 

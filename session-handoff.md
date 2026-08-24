@@ -2,7 +2,7 @@
 
 ## Verified local state — 2026-08-24
 
-F01–F25 are recorded as passing locally. F25 adds phone/modern image formats; production remains at the previously deployed F24 revision until Pavel gives a separate rollout approval.
+F01–F25 are recorded as passing and F25 is deployed at `e1a35f3`.
 
 - The reported upload failure was not a PNG/JPEG regression. Current composer chain remains `onChange → apiForm(POST /media) → insertImageAtDocumentStart`; existing PNG baseline passed.
 - The actual cause for iPhone photos was HEIC/HEIF being excluded by both the native file picker `accept` list and the backend MIME allowlist. The UI now accepts JPEG, PNG, WebP, HEIC, HEIF and AVIF.
@@ -10,9 +10,9 @@ F01–F25 are recorded as passing locally. F25 adds phone/modern image formats; 
 - Fresh verification: F25 RED frontend 1 failed / 18 passed; RED backend after dependency 4 failed / 7 passed. GREEN media 11 passed and RichTextEditor 19 passed. Full backend 70 passed; full frontend 15 files / 85 passed; `npm run build` passed (115 modules, standard chunk-size warning).
 - `./init.sh` installed MPS requirements, then stopped only at the external global Hermes/desktop `pip check`; that environment is not part of MPS and was not modified.
 
-## Production boundary
+## Production evidence
 
-Do not deploy F25 without Pavel's explicit approval. The rollout changes backend dependency/runtime and frontend picker MIME list, so build both layers and run authenticated HEIC, HEIF and AVIF upload smoke with cleanup. There was no authenticated live browser session in the local F25 verification.
+Rollback backup: `/root/backups/mps-f25-20260824T131202Z` (previous revision and frontend dist). Production venv installed `pillow-heif==1.5.0`; `mps-backend` restarted active; frontend rebuilt with verified VITE markers; served asset returned 200 and `deploy/smoke.sh` passed. Authorized HTTPS smoke: synthetic HEIC returned 200 and was served as valid WebP; PNG/JPEG returned 200; a renamed text file returned the approved Russian 422; exactly three temporary media files were removed. No authenticated browser click was available, so that UI step remains covered by local frontend regression tests.
 
 ## Known unresolved boundary
 
