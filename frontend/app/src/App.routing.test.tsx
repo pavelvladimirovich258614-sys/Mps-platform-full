@@ -69,6 +69,7 @@ function installApi(detailResult: DetailResult = "ok", currentUser: Record<strin
     if (path === "/api/v1/countries/1/topics") return jsonResponse(200, []);
     if (path === "/api/v1/online") return jsonResponse(200, []);
     if (path === "/api/v1/notifications") return jsonResponse(200, { items: [] });
+    if (path === "/api/v1/auth/logout") return new Response(null, { status: 204 });
     if (path === "/api/v1/me" && currentUser) return jsonResponse(200, currentUser);
     if (path === "/api/v1/me" || path === "/api/v1/auth/refresh") {
       return jsonResponse(401, { detail: "Требуется авторизация" });
@@ -160,6 +161,20 @@ describe("App pathname routing", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Редактировать профиль" }));
     expect(await screen.findByRole("dialog", { name: "Мой профиль" })).toBeTruthy();
+  });
+
+  it("logs the profile owner out from the compact menu and returns to the guest feed", async () => {
+    window.history.replaceState({}, "", "/users/7");
+    setAccessToken("owner-access-token");
+    const fetchMock = installApi("ok", { id: 7, email: null, name: "Мария", avatar_url: null, bio: null, role: "reader", is_anonymous: false });
+    render(<App />);
+    expect(await screen.findByRole("button", { name: "Редактировать профиль" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Действия с профилем" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /Выйти/ }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([input, init]) => new URL(String(input)).pathname === "/api/v1/auth/logout" && (init as RequestInit).method === "POST")).toBe(true));
+    await waitFor(() => expect(window.location.pathname).toBe("/"));
+    expect(localStorage.getItem("access_token")).toBeNull();
+    expect(screen.getByRole("button", { name: "Войти" })).toBeTruthy();
   });
 
   it("shows an editor's drafts and opens the selected draft with composer prefill", async () => {

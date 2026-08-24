@@ -15,6 +15,7 @@ type PublicProfileProps = {
   onOpenPost: (post: ApiPost) => void;
   onToggleFollow: () => Promise<void>;
   onEditProfile?: () => void;
+  onLogout?: () => Promise<void>;
   onNotice?: (message: string) => void;
 };
 
@@ -34,7 +35,7 @@ function countLabel(count: number, singular: string, few: string, many: string) 
   return `${count} ${many}`;
 }
 
-export function PublicProfile({ profile, posts, likes, loading, likesLoading, viewerId, onOpenPost, onToggleFollow, onEditProfile, onNotice }: PublicProfileProps) {
+export function PublicProfile({ profile, posts, likes, loading, likesLoading, viewerId, onOpenPost, onToggleFollow, onEditProfile, onLogout, onNotice }: PublicProfileProps) {
   const [tab, setTab] = useState<Tab>("posts");
   const [followPending, setFollowPending] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -75,6 +76,7 @@ export function PublicProfile({ profile, posts, likes, loading, likesLoading, vi
     try { await navigator.share({ title: profile.name || "Профиль путешественника", url: profileUrl }); onNotice?.("Ссылка на профиль отправлена"); }
     catch (cause) { if (!(cause instanceof DOMException && cause.name === "AbortError")) onNotice?.("Не удалось поделиться ссылкой"); }
   };
+  const logout = async () => { setMenuOpen(false); await onLogout?.(); };
 
   return (
     <main className="public-profile-page">
@@ -97,6 +99,7 @@ export function PublicProfile({ profile, posts, likes, loading, likesLoading, vi
               {menuOpen && <div className="public-profile-menu-popover" id="profile-actions-menu" role="menu">
                 <button role="menuitem" onClick={() => void copyLink()}>⌁ <span>Скопировать ссылку</span></button>
                 <button role="menuitem" onClick={() => void shareLink()}>⇧ <span>Поделиться</span></button>
+                {isOwner && onLogout && <button role="menuitem" onClick={() => void logout()}>↪ <span>Выйти</span></button>}
               </div>}
             </div>
           </div>

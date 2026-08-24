@@ -212,6 +212,7 @@ export function App() {
         viewerId={auth.user?.id ?? null}
         onOpenPost={openArticle}
         onEditProfile={() => setOverlay("profile")}
+        onLogout={async () => { await auth.logout(); navigate({ page: "feed" }); }}
         onNotice={setToast}
         onToggleFollow={async () => {
           try {

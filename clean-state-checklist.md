@@ -1,5 +1,17 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 58 F28 local completion — 2026-08-24
+
+- [x] F28 — единственная новая feature сессии; production deploy не выполнялся.
+- [x] Диагностика: «Выйти» был только в `Profile.tsx` modal. Existing owner ••• menu `PublicProfile.tsx` работал и содержал Copy link/Share; выбран как органичное место без нового UI/container.
+- [x] Scope: `PublicProfile.tsx`, `App.tsx` и их frontend tests. Owner получает «Выйти» в •••, menu closes before callback; visitor его не видит. App reuse-ит `auth.logout()` и redirect-ит в guest feed только после successful resolve. Backend/API/database/dependencies/email/production configuration не менялись.
+- [x] RED frontend: `PublicProfile.test.tsx` + `App.routing.test.tsx` — 2 expected failures / 22 passed: owner menu и App scenario не нашли отсутствующий logout item.
+- [x] GREEN targeted: `PublicProfile`, `App.routing`, `useAuth` — 3 files / 27 passed. Covered owner/visitor visibility, menu closing, POST `/auth/logout`, session/token clear and guest redirect.
+- [x] Full frontend: `npm test` — 15 files / 91 passed; `npm run build` — success, 115 modules, only standard Vite chunk-size warning.
+- [x] Full backend (unchanged): `D:\Python312\python.exe -m pytest tests -q --color=no --basetemp D:\AI\tmp\mps-f28-full-backend` — 70 passed in 18.79s.
+- [x] Final `./init.sh` installed MPS requirements and stopped only on agreed external Hermes/desktop global `pip check`; MPS suites were run separately and green.
+- [x] `feature_list.json`, `claude-progress.md` and `session-handoff.md` updated. F28 remains local-only pending separate production approval and a real Telegram owner-session smoke.
+
 ## Session 57 F27 local completion — 2026-08-24
 
 - [x] F27 — единственная новая feature сессии; production deploy не выполнялся.

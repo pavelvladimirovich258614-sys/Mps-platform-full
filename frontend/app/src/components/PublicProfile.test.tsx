@@ -130,6 +130,19 @@ describe("PublicProfile", () => {
     else Reflect.deleteProperty(navigator, "clipboard");
   });
 
+  it("offers logout only to the profile owner and closes the menu before calling it", () => {
+    const onLogout = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = render(<PublicProfile profile={profile} posts={[]} likes={[]} loading={false} likesLoading={false} viewerId={profile.id} onOpenPost={vi.fn()} onToggleFollow={vi.fn()} onLogout={onLogout} />);
+    fireEvent.click(screen.getByRole("button", { name: "Действия с профилем" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /Выйти/ }));
+    expect(onLogout).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("menu")).toBeNull();
+
+    rerender(<PublicProfile profile={profile} posts={[]} likes={[]} loading={false} likesLoading={false} viewerId={9} onOpenPost={vi.fn()} onToggleFollow={vi.fn()} onLogout={onLogout} />);
+    fireEvent.click(screen.getByRole("button", { name: "Действия с профилем" }));
+    expect(screen.queryByRole("menuitem", { name: /Выйти/ })).toBeNull();
+  });
+
   it("loads real liked posts in the likes tab", () => {
     render(
       <PublicProfile

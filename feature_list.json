@@ -522,6 +522,24 @@
       ],
       "evidence": "2026-08-24: RED `npm test -- --run src/components/Profile.test.tsx src/App.routing.test.tsx` — 2 expected failures / 19 passed: both login UI contracts found the visible `input[type=email]`. GREEN targeted `npm test -- --run src/components/Profile.test.tsx src/components/TelegramLogin.test.tsx src/App.routing.test.tsx` — 3 files / 23 passed: no email field, code field, email CTA or email-copy; the official Telegram widget loads and forwards its signed callback payload. Backend baseline `D:\\Python312\\python.exe -m pytest tests/test_auth.py -q --color=no --basetemp D:\\AI\\tmp\\mps-f27-auth-baseline` — 6 passed, including request and verify endpoints. Full frontend `npm test` — 15 files / 89 passed. `npm run build` — success, 115 modules; standard Vite chunk-size warning only; production API/bot markers present and localhost API absent. Full backend `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp D:\\AI\\tmp\\mps-f27-full-backend` — 70 passed in 17.36s. Final `./init.sh` installed MPS requirements and stopped only at unrelated external Hermes/desktop global pip-check conflicts; MPS suites were separately green.",
       "notes": "Temporary frontend-only change: `EMAIL_LOGIN_ENABLED = false` hides the email form and texts while preserving its callbacks, hook methods and backend API. Re-enable the flag only after the external Unisender/HostKey email infrastructure is repaired and delivery has been re-verified. Backend endpoint, transport, credentials, subscription email and production configuration were not changed."
+    },
+    {
+      "id": "F28",
+      "priority": 28,
+      "area": "profile",
+      "title": "Выход из аккаунта на публичной странице собственного профиля",
+      "user_visible_behavior": "Владелец публичного профиля открывает ••• и выходит через существующий logout flow; чужой профиль не показывает этот пункт.",
+      "status": "passing",
+      "verification": [
+        "RED/GREEN: owner sees the logout menu item and visitor does not",
+        "RED/GREEN App integration: POST /auth/logout, session clear and guest-feed redirect",
+        "cd frontend/app && npm test",
+        "cd frontend/app && npm run build",
+        "cd backend && python -m pytest tests -q",
+        "./init.sh outside sandbox; external Hermes pip check is tracked separately"
+      ],
+      "evidence": "2026-08-24: RED `npm test -- --run src/components/PublicProfile.test.tsx src/App.routing.test.tsx` — 2 expected failures / 22 passed: the owner menu had no logout item and the App integration could not locate it. GREEN targeted `npm test -- --run src/components/PublicProfile.test.tsx src/App.routing.test.tsx src/hooks/useAuth.test.tsx` — 3 files / 27 passed: owner-only menu visibility, closing it before callback, POST `/auth/logout`, token/session clearing and guest-feed redirect are covered. Full frontend `npm test` — 15 files / 91 passed. `npm run build` — success, 115 modules; standard Vite chunk-size warning only. Full backend (unchanged) `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp D:\\AI\\tmp\\mps-f28-full-backend` — 70 passed in 18.79s. Final `./init.sh` installed MPS requirements and stopped only at the unrelated external Hermes/desktop global pip-check conflicts; MPS suites were separately green.",
+      "notes": "PublicProfile now exposes optional `onLogout` only in the existing owner ••• menu, closes that menu before invoking the callback, and leaves visitor profiles unchanged. App reuses `auth.logout()` rather than duplicating auth logic, then navigates to the guest feed. No backend, API, database, dependency, email or production configuration changed. Production deploy requires separate approval."
     }
   ]
 }
