@@ -41,12 +41,13 @@ describe("ArticleComments", () => {
     expect(container.querySelector(".article-hero")).toBeNull();
   });
 
-  it("keeps the fallback when an article has no cover", () => {
+  it("renders no hero element when an article has no cover URL", () => {
     const { container } = render(<ArticleComments article={article} commentsModerationEnabled={false} onBack={vi.fn()} onError={vi.fn()} onOpenProfile={vi.fn()} />);
 
-    expect(screen.getByText("Под солнцем")).toBeTruthy();
+    expect(screen.queryByText("Под солнцем")).toBeNull();
     expect(screen.queryByRole("img", { name: "Обложка: Гид по Бали" })).toBeNull();
-    expect(container.querySelector(".article-hero")).toBeTruthy();
+    expect(container.querySelector(".article-hero")).toBeNull();
+    expect(container.querySelector(".article-page")?.children[1]?.classList.contains("post-tag")).toBe(true);
   });
 
   it("shows edit and delete controls only to editor/admin and confirms deletion", () => {

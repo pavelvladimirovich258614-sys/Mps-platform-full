@@ -34,12 +34,13 @@ describe("Feed composer modal", () => {
     expect(container.querySelector(".article-cover")).toBeNull();
   });
 
-  it("keeps the fallback when an article has no cover", () => {
+  it("renders no cover element when an article has no cover URL", () => {
     const { container } = render(<Feed {...editorProps} posts={[post]} onToggleLike={vi.fn()} />);
 
-    expect(screen.getByText("Под солнцем")).toBeTruthy();
+    expect(screen.queryByText("Под солнцем")).toBeNull();
     expect(screen.queryByRole("img", { name: "Обложка: Гид по Бали" })).toBeNull();
-    expect(container.querySelector(".article-cover")).toBeTruthy();
+    expect(container.querySelector(".article-cover")).toBeNull();
+    expect(container.querySelector(".article-card")?.firstElementChild?.classList.contains("post-tag")).toBe(true);
   });
 
   it("renders a like button and its count in a post card", () => {

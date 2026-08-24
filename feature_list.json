@@ -616,6 +616,24 @@
       ],
       "evidence": "2026-08-25 diagnosis: the F31 `cover_url ? img : span` child condition was correct, but Feed and ArticleComments rendered their `.article-cover` / `.article-hero` gradient containers in both branches. The screenshots' image below the title is inline TipTap body content, not proof of an explicit cover. RED `npm test -- --run src/components/Feed.test.tsx src/components/ArticleComments.test.tsx` — 2 expected failures / 10 passed: the cover branches still contained `.article-cover` / `.article-hero`. GREEN same targeted command — 2 files / 12 passed: cover branches contain only real img elements and fallback branches contain only gradient containers. Full frontend `npm test` — 16 files / 102 passed. `npm run build` — success, 115 modules; standard Vite chunk-size warning only. Full backend (unchanged) `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp D:\\AI\\tmp\\mps-f32-full-backend` — 71 passed in 20.50s. Final `./init.sh` installed MPS requirements then stopped only at unrelated external Hermes/desktop global pip-check conflicts; MPS suites were separately green. Production frontend rollout `02823b9`: VPS fast-forwarded, backend stayed active, rollback `/root/backups/mps-frontend-f32-20260824121451`, served bundle `index-BGDRzZT7.js` contained both F32 image branches, and `deploy/smoke.sh` passed.",
       "notes": "Critical F31 production hotfix. With a nonempty trimmed cover_url Feed/ArticleComments now render a standalone object-fit image; the fallback gradient element and text are absent from the DOM. With no usable URL they render only the established `Под солнцем` fallback. Backend, API, database, dependencies and email infrastructure were unchanged. The public feed was empty during post-deploy browser inspection, so an authenticated owner should still create/view one covered article for final visual acceptance."
+    },
+    {
+      "id": "F33",
+      "priority": 33,
+      "area": "posts-cover",
+      "title": "Удаление fallback обложки у статей",
+      "user_visible_behavior": "Явно выбранная cover_url отображается как обложка; статья без cover_url не показывает сверху никакого placeholder или пустого cover-блока.",
+      "status": "in_progress",
+      "verification": [
+        "RED/GREEN Feed and ArticleComments DOM contracts for covered and uncovered articles",
+        "cd frontend/app && npm test",
+        "cd frontend/app && npm run build",
+        "cd backend && python -m pytest tests -q",
+        "./init.sh outside sandbox; внешний Hermes pip check отслеживается отдельно",
+        "frontend-only production rollout with rollback copy, served bundle verification and deploy/smoke.sh"
+      ],
+      "evidence": "",
+      "notes": "Final product decision: articles without cover_url intentionally render no cover, gradient, placeholder text or reserved height. Scope is Feed/ArticleComments rendering, tests and trackers only; styles.css, backend, API, database and dependencies are unchanged."
     }
   ]
 }
