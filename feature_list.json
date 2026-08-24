@@ -604,7 +604,7 @@
       "area": "posts-cover",
       "title": "Hotfix взаимоисключающего рендера обложки",
       "user_visible_behavior": "Статья с непустым cover_url показывает только реальную обложку; статья без cover_url показывает только fallback «Под солнцем», никогда оба элемента.",
-      "status": "in_progress",
+      "status": "passing",
       "verification": [
         "Диагностика Feed/ArticleComments и production screenshot до изменений",
         "RED/GREEN DOM contract: cover branch has no fallback element; fallback branch has no image",
@@ -614,8 +614,8 @@
         "./init.sh outside sandbox; внешний Hermes pip check отслеживается отдельно",
         "production frontend rollout, deploy/smoke.sh and live public cover/fallback verification"
       ],
-      "evidence": "",
-      "notes": "Critical F31 production hotfix. Scope is frontend rendering/tests/styles and tracker records only; backend, API, database, dependencies and email infrastructure are out of scope."
+      "evidence": "2026-08-25 diagnosis: the F31 `cover_url ? img : span` child condition was correct, but Feed and ArticleComments rendered their `.article-cover` / `.article-hero` gradient containers in both branches. The screenshots' image below the title is inline TipTap body content, not proof of an explicit cover. RED `npm test -- --run src/components/Feed.test.tsx src/components/ArticleComments.test.tsx` — 2 expected failures / 10 passed: the cover branches still contained `.article-cover` / `.article-hero`. GREEN same targeted command — 2 files / 12 passed: cover branches contain only real img elements and fallback branches contain only gradient containers. Full frontend `npm test` — 16 files / 102 passed. `npm run build` — success, 115 modules; standard Vite chunk-size warning only. Full backend (unchanged) `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp D:\\AI\\tmp\\mps-f32-full-backend` — 71 passed in 20.50s. Final `./init.sh` installed MPS requirements then stopped only at unrelated external Hermes/desktop global pip-check conflicts; MPS suites were separately green. Production frontend rollout `02823b9`: VPS fast-forwarded, backend stayed active, rollback `/root/backups/mps-frontend-f32-20260824121451`, served bundle `index-BGDRzZT7.js` contained both F32 image branches, and `deploy/smoke.sh` passed.",
+      "notes": "Critical F31 production hotfix. With a nonempty trimmed cover_url Feed/ArticleComments now render a standalone object-fit image; the fallback gradient element and text are absent from the DOM. With no usable URL they render only the established `Под солнцем` fallback. Backend, API, database, dependencies and email infrastructure were unchanged. The public feed was empty during post-deploy browser inspection, so an authenticated owner should still create/view one covered article for final visual acceptance."
     }
   ]
 }

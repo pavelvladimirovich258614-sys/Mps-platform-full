@@ -1,5 +1,17 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 62 F32 production hotfix — 2026-08-25
+
+- [x] F32 — единственная новая feature сессии; scope ограничен Feed, ArticleComments, CSS, frontend tests и tracker records. Backend/API/database/dependencies/email infrastructure не менялись.
+- [x] Diagnosis: F31's cover branch still emitted the gradient `.article-cover` / `.article-hero` container around its img; screenshots also show inline body media separately below the title.
+- [x] RED frontend: `npm test -- --run src/components/Feed.test.tsx src/components/ArticleComments.test.tsx` — 2 expected failures / 10 passed, because cover branch still contained fallback container.
+- [x] GREEN targeted: same command — 2 files / 12 passed. Cover branch has no fallback DOM element; fallback branch has no cover img.
+- [x] Full frontend: `npm test` — 16 files / 102 passed; `npm run build` — success, 115 modules, only standard Vite chunk-size warning.
+- [x] Full backend unchanged: `D:\Python312\python.exe -m pytest tests -q --color=no --basetemp D:\AI\tmp\mps-f32-full-backend` — 71 passed in 20.50s.
+- [x] Final `./init.sh` installed MPS requirements and stopped only on agreed external Hermes/desktop global `pip check`; MPS suites were separately green.
+- [x] Production: `02823b9` pushed/synchronized; VPS fast-forwarded, `mps-backend` remained active, old dist is `/root/backups/mps-frontend-f32-20260824121451`, served `index-BGDRzZT7.js` has both F32 image branches, and `deploy/smoke.sh` passed.
+- [x] Guest browser had no published public articles, so no production test content was created without Telegram authorization. Owner visual acceptance of cover/fallback remains a post-release check, not an unverified completion claim.
+
 ## Session 61 F31 local completion — 2026-08-24
 
 - [x] F31 — единственная новая feature сессии; production deploy не выполнялся.
