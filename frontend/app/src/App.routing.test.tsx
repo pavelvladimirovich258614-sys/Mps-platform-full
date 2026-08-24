@@ -168,6 +168,29 @@ describe("App pathname routing", () => {
     expect(await screen.findByRole("dialog", { name: "Мой профиль" })).toBeTruthy();
   });
 
+  it("shows an editor's drafts and opens the selected draft with composer prefill", async () => {
+    window.history.replaceState({}, "", "/drafts");
+    setAccessToken("editor-access-token");
+    const draft = { ...post, id: 24, title: "Черновик Бали", slug: "bali-draft", body: "Текст черновика", status: "draft", updated_at: "2026-08-24T08:00:00+00:00" };
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>(async (input) => {
+      const path = new URL(String(input)).pathname;
+      if (path === "/api/v1/me") return jsonResponse(200, { id: 5, email: null, name: "Редактор", avatar_url: null, bio: null, role: "editor", is_anonymous: false });
+      if (path === "/api/v1/posts/drafts") return jsonResponse(200, [{ id: draft.id, title: draft.title, updated_at: draft.updated_at }]);
+      if (path === `/api/v1/posts/drafts/${draft.id}`) return jsonResponse(200, draft);
+      if (path === "/api/v1/posts" || path === "/api/v1/online") return jsonResponse(200, []);
+      if (path === "/api/v1/notifications") return jsonResponse(200, { items: [] });
+      if (path === "/api/v1/auth/refresh") return jsonResponse(401, { detail: "Требуется авторизация" });
+      return jsonResponse(200, {});
+    }));
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Черновики" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Черновик Бали/ }));
+    expect(await screen.findByRole("dialog", { name: "Редактирование публикации" })).toBeTruthy();
+    expect((screen.getByLabelText("Заголовок публикации") as HTMLInputElement).value).toBe("Черновик Бали");
+  });
+
   it("shows a dedicated not-found state for a physically missing slug", async () => {
     window.history.replaceState({}, "", "/posts/bali-guide");
     installApi("missing");

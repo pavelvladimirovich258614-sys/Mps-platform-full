@@ -26,6 +26,8 @@ async def unique_slug(session,title):
     while await session.scalar(select(Post.id).where(Post.slug==slug)): slug=f"{base}-{secrets.token_hex(3)}"
     return slug
 def dto(p, author: User): return {"id":p.id,"type":p.type.value,"title":p.title,"slug":p.slug,"body":p.body,"views":p.views,"likes_count":p.likes_count,"shot_at":p.shot_at.isoformat() if p.shot_at else None,"author":{"id":author.id,"name":author.name,"avatar_url":author.avatar_url}}
+def draft_summary_dto(p: Post): return {"id":p.id,"title":p.title,"updated_at":p.updated_at.isoformat()}
+def draft_dto(p: Post, author: User): return {**dto(p, author), "status":p.status.value, "updated_at":p.updated_at.isoformat()}
 
 @router.get("")
 async def list_posts(type:PostType|None=None,country:int|None=None,author_id:int|None=None,page:int=1,session:AsyncSession=Depends(get_db)):
@@ -34,6 +36,16 @@ async def list_posts(type:PostType|None=None,country:int|None=None,author_id:int
     if country:q=q.where(Post.country_id==country)
     if author_id:q=q.where(Post.author_id==author_id)
     rows=(await session.execute(q.offset((max(page,1)-1)*20).limit(20))).all(); return [dto(post, author) for post, author in rows]
+@router.get("/drafts")
+async def list_drafts(session:AsyncSession=Depends(get_db),user:User=Depends(require_role(Role.EDITOR))):
+    drafts = (await session.scalars(select(Post).where(Post.author_id==user.id, Post.status==PostStatus.DRAFT).order_by(Post.updated_at.desc(), Post.id.desc()))).all()
+    return [draft_summary_dto(post) for post in drafts]
+@router.get("/drafts/{post_id}")
+async def get_draft(post_id:int,session:AsyncSession=Depends(get_db),user:User=Depends(require_role(Role.EDITOR))):
+    post = await session.scalar(select(Post).where(Post.id==post_id, Post.author_id==user.id, Post.status==PostStatus.DRAFT))
+    if not post: raise HTTPException(404,"Черновик не найден")
+    author = await session.get(User, post.author_id)
+    return draft_dto(post, author)
 @router.get("/{slug}")
 async def get_post(slug:str,session:AsyncSession=Depends(get_db)):
     row=await session.execute(select(Post, User).join(User, User.id == Post.author_id).where(Post.slug==slug,Post.status==PostStatus.PUBLISHED))
@@ -54,16 +66,19 @@ async def like(post_id:int,session:AsyncSession=Depends(get_db),user:User=Depend
     await session.commit();return {"likes_count":post.likes_count}
 
 @router.patch("/{post_id}")
-async def patch(post_id:int,payload:PostPatch,session:AsyncSession=Depends(get_db),_:User=Depends(require_role(Role.EDITOR))):
+async def patch(post_id:int,payload:PostPatch,session:AsyncSession=Depends(get_db),user:User=Depends(require_role(Role.EDITOR))):
     post=await session.get(Post,post_id)
     if not post: raise HTTPException(404,"Публикация не найдена")
+    if post.status==PostStatus.DRAFT and post.author_id!=user.id: raise HTTPException(404,"Черновик не найден")
     changes = payload.model_dump(exclude_unset=True)
     post_type = changes.get("type", post.type)
     shot_at = changes.get("shot_at", post.shot_at)
     if post_type == PostType.VIDEO_REVIEW and shot_at is None:
         raise HTTPException(422, "Для видеообзора обязательна дата съёмки")
+    was_draft = post.status == PostStatus.DRAFT
     for key,value in changes.items(): setattr(post,key,clean_post_body(value) if key=="body" else value)
-    await session.commit();await session.refresh(post);author=await session.get(User,post.author_id);return dto(post,author)
+    if was_draft and post.status == PostStatus.PUBLISHED: post.published_at = datetime.now(UTC)
+    await session.commit();await session.refresh(post);author=await session.get(User,post.author_id);return draft_dto(post,author)
 @router.delete("/{post_id}",status_code=204)
 async def remove(post_id:int,session:AsyncSession=Depends(get_db),_:User=Depends(require_role(Role.EDITOR))):
     post=await session.get(Post,post_id)

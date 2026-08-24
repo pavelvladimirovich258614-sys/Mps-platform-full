@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("./RichTextEditor", () => ({
@@ -34,5 +34,29 @@ describe("PostComposer", () => {
 
     await Promise.resolve();
     expect(onUpdate).toHaveBeenCalledWith({ title: "Обновлённый гид", type: "article", body: "<p><strong>Готово</strong></p>", status: "published" });
+  });
+
+  it("keeps the id of a newly saved draft so the next save patches that draft", async () => {
+    const onCreate = vi.fn().mockResolvedValue({ id: 24, title: "Черновик", type: "article", body: "<p><strong>Готово</strong></p>", status: "draft" });
+    const onUpdate = vi.fn().mockResolvedValue(undefined);
+    render(<PostComposer onCreate={onCreate} onUpdate={onUpdate} />);
+
+    fireEvent.change(screen.getByLabelText("Заголовок публикации"), { target: { value: "Черновик" } });
+    fireEvent.click(screen.getByRole("button", { name: "Заполнить текст публикации" }));
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить черновик" }));
+    await Promise.resolve();
+
+    fireEvent.change(screen.getByLabelText("Заголовок публикации"), { target: { value: "Обновлённый черновик" } });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить черновик" }));
+    await Promise.resolve();
+
+    expect(onCreate).toHaveBeenCalledTimes(1);
+    expect(onUpdate).toHaveBeenCalledWith({ title: "Обновлённый черновик", type: "article", body: "<p><strong>Готово</strong></p>", status: "draft" });
+
+    const publish = screen.getByRole("button", { name: "Опубликовать" }) as HTMLButtonElement;
+    await waitFor(() => expect(publish.disabled).toBe(false));
+    fireEvent.click(publish);
+    await waitFor(() => expect(onUpdate).toHaveBeenLastCalledWith({ title: "Обновлённый черновик", type: "article", body: "<p><strong>Готово</strong></p>", status: "published" }));
+    expect(onCreate).toHaveBeenCalledTimes(1);
   });
 });

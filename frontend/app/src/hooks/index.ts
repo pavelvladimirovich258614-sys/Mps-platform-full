@@ -8,6 +8,8 @@ export type { Comment } from "../api/comments";
 export type User = { id: number; email: string | null; name: string; avatar_url: string | null; bio: string | null; role: string; is_anonymous: boolean };
 export type ApiPost = { id: number; type: "article" | "fishka" | "tip" | "video_review"; title: string; slug: string; body: string; views: number; likes_count: number; shot_at: string | null; author: { id: number; name: string; avatar_url: string | null } };
 export type PostDraft = { title: string; type: "article"; body: string; status: "draft" | "published" };
+export type DraftSummary = { id: number; title: string; updated_at: string };
+export type DraftPost = ApiPost & { status: "draft"; updated_at: string };
 export type Review = { id: number; author_name: string; rating: number; body: string; photo_url: string | null; status: string };
 export type Question = { id: number; target: "manager" | "lawyer"; body: string; status: string; answer: string | null };
 export type Country = { id: number; name: string; topics_count: number };
@@ -42,6 +44,8 @@ export function useAuth() {
 export const usePosts = () => useResource(() => api<ApiPost[]>("/posts"), []);
 export const usePostCreator = () => ({ create: (post: PostDraft) => apiJson<ApiPost>("/posts", "POST", post) });
 export const usePostEditor = () => ({ update: (postId: number, post: PostDraft) => apiJson<ApiPost>(`/posts/${postId}`, "PATCH", post), remove: (postId: number) => apiJson<void>(`/posts/${postId}`, "DELETE") });
+export const useDrafts = (enabled: boolean) => useResource(() => enabled ? api<DraftSummary[]>("/posts/drafts") : Promise.resolve([]), [enabled]);
+export const getDraft = (postId: number) => api<DraftPost>(`/posts/drafts/${postId}`);
 export const usePostLike = () => ({ toggle: (postId: number) => apiJson<{ likes_count: number }>(`/posts/${postId}/like`, "POST") });
 export const useAuthorPosts = (authorId?: number) => useResource(() => authorId ? api<ApiPost[]>(`/posts?author_id=${authorId}`) : Promise.resolve([]), [authorId]);
 export const useLikedPosts = (userId?: number) => useResource(() => userId ? api<ApiPost[]>(`/users/${userId}/likes`) : Promise.resolve([]), [userId]);

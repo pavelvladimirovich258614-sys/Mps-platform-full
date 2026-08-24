@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import type { ApiPost, PostDraft } from "../hooks";
-import { PostComposer } from "./PostComposer";
+import { PostComposer, type EditablePost } from "./PostComposer";
 import { RichTextContent } from "./RichTextContent";
 
 type FeedProps = {
@@ -9,7 +9,7 @@ type FeedProps = {
   posts: ApiPost[];
   loading: boolean;
   canCreate?: boolean;
-  onCreatePost?: (post: PostDraft) => Promise<void>;
+  onCreatePost?: (post: PostDraft) => Promise<EditablePost | undefined>;
   onToggleLike: (post: ApiPost) => void;
   onOpenArticle: (post: ApiPost) => void;
   onOpenProfile: (userId: number) => void;
@@ -39,7 +39,7 @@ export function Feed({ mode = "feed", posts, loading, canCreate = false, onCreat
   </div></main>;
 }
 
-function ComposerModal({ onClose, onCreate }: { onClose: () => void; onCreate: (post: PostDraft) => Promise<void> }) {
+function ComposerModal({ onClose, onCreate }: { onClose: () => void; onCreate: (post: PostDraft) => Promise<EditablePost | undefined> }) {
   return <div className="modal-backdrop composer-modal-backdrop" role="dialog" aria-modal="true" aria-label="Создание публикации" onMouseDown={onClose}>
     <button type="button" className="composer-backdrop" aria-label="Закрыть создание публикации" />
     <section className="composer-modal" onMouseDown={(event) => event.stopPropagation()}>

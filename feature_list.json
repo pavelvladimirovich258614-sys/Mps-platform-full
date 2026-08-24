@@ -450,6 +450,24 @@
       ],
       "evidence": "2026-08-24: RED `npm test -- --run src/components/RichTextEditor.test.tsx` — 3 expected failures / 15 passed: after toolbar toggle at the right mark boundary, Bold/Italic/Strike serialized the new text inside `<strong>`, `<em>` and `<s>`. GREEN targeted — 18 passed: B/I/S boundary input is ordinary, input inside bold stays bold, F22 toolbar state remains reactive, and Ctrl+B/Ctrl+I remain registered. Full frontend `npm test` — 15 files / 82 passed. `npm run build` — success, 114 modules; standard Vite chunk-size warning only. Full backend `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp .pytest-f23-full` — 65 passed in 15.72s. Final `./init.sh` after the separate `python -m pip` infrastructure fix reached its global Python pre-flight and stopped only on unrelated Hermes/desktop package conflicts (numba/aider/composio and others); no MPS suite failure occurred, and the full MPS suite was run separately. Production is unchanged pending owner approval.",
       "notes": "Product decision: platform deliberately differs from default Word/Google Docs boundary behavior. StarterKit disables only its built-in Bold/Italic/Strike registrations; the existing three TipTap extensions are re-added with `extend({ inclusive: false })`. Toolbar reactivity, toggle commands, keyboard shortcuts and stored HTML remain unchanged. Backend, API, dependencies, database and production are unchanged."
+    },
+    {
+      "id": "F24",
+      "priority": 24,
+      "area": "posts-drafts",
+      "title": "Доступ редактора к собственным черновикам публикаций",
+      "user_visible_behavior": "Редактор или администратор открывает раздел «Черновики», видит только свои сохранённые черновики, открывает любой из них с предзаполненным composer, повторно сохраняет его по тому же Post ID и публикует через PATCH без создания дубликата.",
+      "status": "passing",
+      "verification": [
+        "RED/GREEN backend: изолированный список и чтение только собственных draft, отказ на чужой draft, PATCH draft → published",
+        "RED/GREEN frontend: список черновиков, prefill composer, повторное сохранение через PATCH и публикация без дубликата",
+        "cd frontend/app && npm test",
+        "cd frontend/app && npm run build",
+        "cd backend && python -m pytest tests -q",
+        "./init.sh вне sandbox; внешний Hermes pip check фиксируется отдельно"
+      ],
+      "evidence": "2026-08-24: RED backend `D:\\Python312\\python.exe -m pytest backend/tests/test_posts.py::test_drafts_are_visible_only_to_their_author_and_publish_without_a_duplicate -q --color=no --basetemp .pytest-f24-red-backend` — 1 expected failure: GET /posts/drafts returned 404. GREEN targeted backend — `test_posts.py`: 5 passed. Additional RED verified PATCH draft→published left published_at null; GREEN — 5 passed with published_at set and the post visible in GET /posts. RED frontend `npm test -- --run src/components/PostComposer.test.tsx src/App.routing.test.tsx` — 2 expected failures: no PATCH after first draft and /drafts rendered the feed. GREEN targeted — 2 files / 21 passed. Full frontend `npm test` — 15 files / 84 passed. `npm run build` — success, 115 modules; standard Vite chunk-size warning only. Full backend `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp .pytest-f24-full-backend` — 66 passed in 19.73s. `python -m alembic history --verbose` confirms 20260824_0011 as head. Final `./init.sh` installed MPS requirements and stopped only at the unrelated global Hermes/desktop pip check; MPS suites were separately green.",
+      "notes": "posts.updated_at is added by Alembic 20260824_0011. GET /posts/drafts and GET /posts/drafts/{id} require editor/admin authentication and always filter author_id to the current user; a foreign draft returns 404. Existing published list/detail remain public and F15 keeps editor/admin management of published posts. The frontend /drafts navigation is visible only to editor/admin; a newly created draft keeps its Post ID and subsequent save/publish uses PATCH. Production deploy requires separate approval."
     }
   ]
 }

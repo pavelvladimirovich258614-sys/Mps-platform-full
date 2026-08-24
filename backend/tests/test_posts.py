@@ -2,6 +2,7 @@ import hashlib,hmac,time
 import httpx,pytest
 from sqlalchemy import select
 from app.api.posts import slugify
+from app.models.post import Post
 from app.models.user import Role,User
 
 def tg(user_id=99):
@@ -9,13 +10,41 @@ def tg(user_id=99):
 @pytest.fixture
 async def client(test_app):
  async with httpx.AsyncClient(transport=httpx.ASGITransport(app=test_app),base_url="http://x") as c:yield c
-async def token(client,test_app,editor=False):
- user_id = 100 if editor else 99
+async def token(client,test_app,editor=False,user_id=None):
+ user_id = user_id if user_id is not None else (100 if editor else 99)
  t=(await client.post("/api/v1/auth/telegram",json=tg(user_id))).json()["access_token"]
  if editor:
   async with test_app.state.database.session_factory() as s:
    u=await s.scalar(select(User).where(User.tg_id == user_id));u.role=Role.EDITOR;await s.commit()
  return {"Authorization":f"Bearer {t}"}
+
+async def test_drafts_are_visible_only_to_their_author_and_publish_without_a_duplicate(client,test_app):
+ author = await token(client, test_app, editor=True, user_id=100)
+ other_author = await token(client, test_app, editor=True, user_id=101)
+ own = await client.post("/api/v1/posts", json={"type":"article","title":"Мой черновик","body":"Текст","status":"draft"}, headers=author)
+ foreign = await client.post("/api/v1/posts", json={"type":"article","title":"Чужой черновик","body":"Секрет","status":"draft"}, headers=other_author)
+ assert own.status_code == 201 and foreign.status_code == 201
+
+ listed = await client.get("/api/v1/posts/drafts", headers=author)
+ assert listed.status_code == 200
+ assert [item["id"] for item in listed.json()] == [own.json()["id"]]
+ assert listed.json()[0]["title"] == "Мой черновик"
+ assert listed.json()[0]["updated_at"]
+
+ detail = await client.get(f"/api/v1/posts/drafts/{own.json()['id']}", headers=author)
+ assert detail.status_code == 200
+ assert detail.json()["id"] == own.json()["id"]
+ assert detail.json()["body"] == "Текст"
+ assert detail.json()["status"] == "draft"
+ assert (await client.get(f"/api/v1/posts/drafts/{foreign.json()['id']}", headers=author)).status_code == 404
+
+ published = await client.patch(f"/api/v1/posts/{own.json()['id']}", json={"status":"published"}, headers=author)
+ assert published.status_code == 200
+ assert published.json()["status"] == "published"
+ async with test_app.state.database.session_factory() as s:
+  post = await s.get(Post, own.json()["id"])
+  assert post is not None and post.published_at is not None
+ assert [item["id"] for item in (await client.get("/api/v1/posts")).json()] == [own.json()["id"]]
 async def test_posts_verification(client,test_app):
  payload={"type":"article","title":"Тест статья","body":"<script>x</script>ok","status":"published"}
  reader=await token(client,test_app);assert (await client.post("/api/v1/posts",json=payload,headers=reader)).status_code==403

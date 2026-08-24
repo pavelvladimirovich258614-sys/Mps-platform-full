@@ -2,17 +2,18 @@
 
 ## Verified final state — 2026-08-24
 
-F01–F23 passing локально. Production frontend F22 находится на `1a680db`; F23 ожидает отдельного approval на push/deploy.
+F01–F24 passing локально. F24 не pushed и не deployed; для production требуется approval, потому что есть PostgreSQL-миграция и backend change.
 
-- F23: Bold/Italic/Strike не наследуются при вводе ровно справа от форматированного фрагмента (`inclusive: false`); ввод внутри mark остаётся форматированным. F22 toolbar reactivity и Ctrl+B/Ctrl+I сохранены тестами.
-- F23 RED→GREEN: targeted RichTextEditor — 18 passed; full frontend — 15 files / 82 passed; build — 114 modules success; full backend — 65 passed.
-- `init.sh` исправлен отдельным `e6e9012`: installation использует `python -m pip`. После установки он упирается только в глобальный внешний Hermes/desktop `pip check`; MPS suite отдельно зелёный. Не менять внешние зависимости без отдельного решения.
-- F15 edit/prefill/PATCH/delete, composer/cарусель, likes/comments/profile остаются покрытыми ранее; F23 не меняет backend, API, dependencies, database или stored HTML.
+- F24: только автор draft может получить свой список или содержимое. `GET /posts/drafts` возвращает id/title/updated_at; `GET /posts/drafts/{id}` — полный контент. Другой editor/admin получает 404 для чужого draft. Published F15 visibility/editing rules remain unchanged.
+- `posts.updated_at` is Alembic head `20260824_0011`. PATCH draft→published now assigns `published_at`, so the post enters the public feed and future digest selection.
+- `/drafts` is shown only to editor/admin; it lists title/date, opens the existing F15 composer modal with prefill, keeps the newly created draft ID and PATCHes later Save Draft/Publish actions instead of creating duplicates.
+- F24 RED→GREEN: backend list absent then 5 targeted passed; additional published_at RED then 5 passed; frontend list/PATCH RED then 2 files / 21 targeted passed. Full frontend: 15 files / 84 passed; build: 115 modules success; full backend: 66 passed. Alembic history confirms head.
+- `init.sh` installs MPS requirements then stops only at the unrelated global Hermes/desktop pip check. Do not change external dependencies; full MPS suites are green separately.
 
 ## Known unresolved boundary
 
-Email по-прежнему заблокирован внешней сетью к Unisender/HostKey. Не менять email transport, credentials, firewall или VPS networking без отдельного решения Павла.
+Email remains blocked by the external Unisender/HostKey network path. Do not change email transport, credentials, firewall or VPS networking without Pavel's separate decision.
 
 ## Next step
 
-Дождаться отдельного approval Павла для push и frontend-only deployment F23. После него: authenticated composer smoke для B/I/S на правой границе и внутри mark; backend не перезапускать.
+Await owner approval to push/deploy F24. Deployment must back up PostgreSQL, apply Alembic `20260824_0011`, restart `mps-backend`, rebuild frontend with verified production VITE values, run `deploy/smoke.sh`, then use an authorized temporary editor draft to check own-list/detail, foreign 404, PATCH draft save, publish-to-feed and cleanup.

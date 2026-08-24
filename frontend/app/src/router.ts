@@ -1,6 +1,7 @@
 export type PathRoute =
   | { page: "feed" }
   | { page: "fishki" }
+  | { page: "drafts" }
   | { page: "reviews" }
   | { page: "subscribe" }
   | { page: "about" }
@@ -13,6 +14,7 @@ export type PathRoute =
 const staticRoutes = new Map<string, PathRoute>([
   ["/", { page: "feed" }],
   ["/fishki", { page: "fishki" }],
+  ["/drafts", { page: "drafts" }],
   ["/reviews", { page: "reviews" }],
   ["/subscribe", { page: "subscribe" }],
   ["/about", { page: "about" }],

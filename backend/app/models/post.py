@@ -31,6 +31,7 @@ class Post(Base):
     author_id: Mapped[int]=mapped_column(ForeignKey("users.id"))
     status: Mapped[PostStatus]=mapped_column(SqlEnum(PostStatus, native_enum=False), default=PostStatus.DRAFT)
     published_at: Mapped[datetime|None]=mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     views: Mapped[int]=mapped_column(Integer, default=0)
     likes_count: Mapped[int]=mapped_column(Integer, default=0)
     cta_enabled: Mapped[bool]=mapped_column(Boolean, default=True)

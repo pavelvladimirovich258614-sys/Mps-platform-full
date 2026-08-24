@@ -3,23 +3,25 @@ import { useCallback, useEffect, useState } from "react";
 import { About } from "./components/About";
 import { ArticleComments } from "./components/ArticleComments";
 import { CookieBanner } from "./components/CookieBanner";
+import { Drafts } from "./components/Drafts";
 import { Feed } from "./components/Feed";
 import { Forum } from "./components/Forum";
 import { Layout, type Page } from "./components/Layout";
 import { Legal, type LegalKind } from "./components/Legal";
 import { Notifications } from "./components/Notifications";
 import { Profile } from "./components/Profile";
-import { PostComposer } from "./components/PostComposer";
+import { PostComposer, type EditablePost } from "./components/PostComposer";
 import { PublicProfile } from "./components/PublicProfile";
 import { QA } from "./components/QA";
 import { Reviews } from "./components/Reviews";
 import { Subscribe } from "./components/Subscribe";
-import { type ApiPost, useAuthorPosts, useAuth, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, usePublicProfile, usePublicSettings } from "./hooks";
+import { getDraft, type ApiPost, useAuthorPosts, useAuth, useDrafts, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, usePublicProfile, usePublicSettings } from "./hooks";
 import { pathForRoute, type PathRoute, routeFromPath } from "./router";
 
 function routeForPage(page: Page): PathRoute {
   if (page === "countries") return { page: "countries" };
   if (page === "fishki") return { page: "fishki" };
+  if (page === "drafts") return { page: "drafts" };
   if (page === "reviews" || page === "subscribe" || page === "about" || page === "privacy" || page === "terms") {
     return { page };
   }
@@ -40,10 +42,12 @@ export function App() {
   const [toast, setToast] = useState("");
   const [devRole, setDevRole] = useState<string | null>(null);
   const [likesByPostId, setLikesByPostId] = useState<Record<number, number>>({});
-  const [editingPost, setEditingPost] = useState<ApiPost | null>(null);
+  const [editingPost, setEditingPost] = useState<EditablePost | null>(null);
 
   const auth = useAuth();
+  const canManagePosts = auth.user?.role === "editor" || auth.user?.role === "admin";
   const posts = usePosts();
+  const drafts = useDrafts(route.page === "drafts" && canManagePosts);
   const postCreator = usePostCreator();
   const postEditor = usePostEditor();
   const postLike = usePostLike();
@@ -118,15 +122,32 @@ export function App() {
       showError(cause instanceof Error ? cause.message : "Не удалось изменить лайк");
     }
   };
-  const createPost = async (draft: Parameters<typeof postCreator.create>[0]) => {
-    await postCreator.create(draft);
+  const createPost = async (draft: Parameters<typeof postCreator.create>[0]): Promise<EditablePost | undefined> => {
+    const created = await postCreator.create(draft);
+    if (draft.status === "draft") {
+      await drafts.reload();
+      return { id: created.id, title: created.title, type: "article", body: created.body, status: "draft" };
+    }
     await posts.reload();
   };
-  const updatePost = async (post: ApiPost, draft: Parameters<typeof postEditor.update>[1]) => {
+  const updatePost = async (post: EditablePost, draft: Parameters<typeof postEditor.update>[1]): Promise<EditablePost> => {
     const updated = await postEditor.update(post.id, draft);
-    article.setValue(updated);
-    setEditingPost(null);
-    await posts.reload();
+    const editable = { id: updated.id, title: updated.title, type: "article" as const, body: updated.body, status: draft.status };
+    if (post.status === "published") {
+      article.setValue(updated);
+      setEditingPost(null);
+    }
+    if (draft.status === "published") await posts.reload();
+    await drafts.reload();
+    return editable;
+  };
+  const openDraft = async (postId: number) => {
+    try {
+      const draft = await getDraft(postId);
+      setEditingPost({ id: draft.id, title: draft.title, type: "article", body: draft.body, status: "draft" });
+    } catch (cause) {
+      showError(cause instanceof Error ? cause.message : "Не удалось загрузить черновик");
+    }
   };
   const deletePost = async (post: ApiPost) => {
     try {
@@ -139,7 +160,7 @@ export function App() {
   };
   const page: Page = route.page === "countries" && topicOpen ? "topic" : route.page;
   let content = null;
-  if (page === "feed") content = <Feed posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} canCreate={auth.user?.role === "editor" || auth.user?.role === "admin"} onCreatePost={createPost} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
+  if (page === "feed") content = <Feed posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} canCreate={canManagePosts} onCreatePost={createPost} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
   if (page === "fishki") content = <Feed mode="fishki" posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
   if (page === "countries" || page === "topic") {
     content = (
@@ -156,7 +177,7 @@ export function App() {
     content = <main className="article-page"><div className="comment-skeleton"><i /><i /><i /></div></main>;
   }
   if (page === "article" && article.value) {
-    content = <ArticleComments article={withLikesCount(article.value)} commentsModerationEnabled={publicSettings.value?.comments_moderation_enabled ?? false} onBack={() => navigate({ page: "feed" })} onError={showError} onOpenProfile={(userId) => navigate({ page: "profile", userId })} onToggleLike={toggleLike} canManage={auth.user?.role === "editor" || auth.user?.role === "admin"} onEdit={setEditingPost} onDelete={deletePost} />;
+    content = <ArticleComments article={withLikesCount(article.value)} commentsModerationEnabled={publicSettings.value?.comments_moderation_enabled ?? false} onBack={() => navigate({ page: "feed" })} onError={showError} onOpenProfile={(userId) => navigate({ page: "profile", userId })} onToggleLike={toggleLike} canManage={canManagePosts} onEdit={(post) => setEditingPost({ id: post.id, title: post.title, type: "article", body: post.body, status: "published" })} onDelete={deletePost} />;
   }
   if (page === "article" && article.notFound) {
     content = (
@@ -216,6 +237,8 @@ export function App() {
   if (page === "reviews") content = <Reviews onError={showError} onPrivacy={() => openPage("privacy")} />;
   if (page === "subscribe") content = <Subscribe onError={showError} onPrivacy={() => openPage("privacy")} />;
   if (page === "about") content = <About publicSettings={publicSettings.value} />;
+  if (page === "drafts" && canManagePosts) content = <Drafts drafts={drafts.value ?? []} loading={drafts.loading} onOpen={(draft) => void openDraft(draft.id)} />;
+  if (page === "drafts" && !canManagePosts) content = <main className="feed-page"><div className="feed-wrap"><section className="surface-card"><h1>Раздел недоступен</h1><p>Черновики доступны только редактору.</p></section></div></main>;
   if (page === "privacy" || page === "terms") {
     content = <Legal kind={page as LegalKind} onBack={() => navigate({ page: "feed" })} publicSettings={publicSettings.value} />;
   }
@@ -224,6 +247,7 @@ export function App() {
     <>
       <Layout
         page={page}
+        canManagePosts={canManagePosts}
         theme={theme}
         notificationsOpen={notificationsOpen}
         unreadCount={notifications.items.filter((item) => !item.is_read).length}
@@ -281,7 +305,7 @@ export function App() {
         <div className="modal-backdrop composer-modal-backdrop" role="dialog" aria-modal="true" aria-label="Редактирование публикации" onMouseDown={() => setEditingPost(null)}>
           <section className="composer-modal" onMouseDown={(event) => event.stopPropagation()}>
             <button type="button" className="round-close" aria-label="Закрыть" onClick={() => setEditingPost(null)}>×</button>
-            <PostComposer initialPost={{ id: editingPost.id, title: editingPost.title, type: "article", body: editingPost.body, status: "published" }} onUpdate={(draft) => updatePost(editingPost, draft)} />
+            <PostComposer initialPost={editingPost} onUpdate={(draft) => updatePost(editingPost, draft)} />
           </section>
         </div>
       )}

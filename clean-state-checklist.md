@@ -1,5 +1,16 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 53 F24 local completion — 2026-08-24
+
+- [x] F24 — единственная новая feature сессии; production deploy не выполнялся.
+- [x] RED backend: приватный drafts list отсутствовал (`404`); GREEN `test_posts.py` — 5 passed: только own list/detail, foreign 404, PATCH without duplicate и published feed.
+- [x] Additional RED/GREEN: draft→published сначала оставлял `published_at=null`; после minimal patch `published_at` установлен, targeted backend — 5 passed.
+- [x] RED frontend: `/drafts` fallback в ленту и second save не PATCH-ил draft; GREEN — `PostComposer` + `App.routing`: 2 files / 21 passed.
+- [x] Full frontend: `npm test` — 15 files / 84 passed; `npm run build` — success, 115 modules; только standard Vite chunk-size warning.
+- [x] Full backend: `D:\Python312\python.exe -m pytest tests -q --color=no --basetemp .pytest-f24-full-backend` — 66 passed in 19.73s; Alembic history confirms `20260824_0011` head.
+- [x] Final `./init.sh` установил MPS requirements и остановился только на external global Hermes/desktop `pip check`; project suites проверены отдельно и зелёные.
+- [x] `feature_list.json`, `claude-progress.md` и `session-handoff.md` updated; deploy waits for separate approval.
+
 ## Session 52 F23 local completion — 2026-08-24
 
 - [x] Отдельный инфраструктурный commit `e6e9012`: `init.sh` использует `python -m pip`; MPS код не менялся.
