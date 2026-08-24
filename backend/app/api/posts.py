@@ -25,7 +25,7 @@ async def unique_slug(session,title):
     base=slugify(title); slug=base
     while await session.scalar(select(Post.id).where(Post.slug==slug)): slug=f"{base}-{secrets.token_hex(3)}"
     return slug
-def dto(p, author: User): return {"id":p.id,"type":p.type.value,"title":p.title,"slug":p.slug,"body":p.body,"views":p.views,"likes_count":p.likes_count,"shot_at":p.shot_at.isoformat() if p.shot_at else None,"author":{"id":author.id,"name":author.name,"avatar_url":author.avatar_url}}
+def dto(p, author: User): return {"id":p.id,"type":p.type.value,"title":p.title,"slug":p.slug,"body":p.body,"cover_url":p.cover_url,"views":p.views,"likes_count":p.likes_count,"shot_at":p.shot_at.isoformat() if p.shot_at else None,"author":{"id":author.id,"name":author.name,"avatar_url":author.avatar_url}}
 def draft_summary_dto(p: Post): return {"id":p.id,"title":p.title,"updated_at":p.updated_at.isoformat()}
 def draft_dto(p: Post, author: User): return {**dto(p, author), "status":p.status.value, "updated_at":p.updated_at.isoformat()}
 

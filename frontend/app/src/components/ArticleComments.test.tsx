@@ -33,6 +33,20 @@ describe("ArticleComments", () => {
     expect(screen.getByRole("button", { name: "Нравится: 3" })).toBeTruthy();
   });
 
+  it("renders an explicit cover image instead of the article fallback", () => {
+    render(<ArticleComments article={{ ...article, cover_url: "/media/bali-cover.webp" }} commentsModerationEnabled={false} onBack={vi.fn()} onError={vi.fn()} onOpenProfile={vi.fn()} />);
+
+    expect(screen.getByRole("img", { name: "Обложка: Гид по Бали" }).getAttribute("src")).toBe("/media/bali-cover.webp");
+    expect(screen.queryByText("Под солнцем")).toBeNull();
+  });
+
+  it("keeps the fallback when an article has no cover", () => {
+    render(<ArticleComments article={article} commentsModerationEnabled={false} onBack={vi.fn()} onError={vi.fn()} onOpenProfile={vi.fn()} />);
+
+    expect(screen.getByText("Под солнцем")).toBeTruthy();
+    expect(screen.queryByRole("img", { name: "Обложка: Гид по Бали" })).toBeNull();
+  });
+
   it("shows edit and delete controls only to editor/admin and confirms deletion", () => {
     const onDelete = vi.fn().mockResolvedValue(undefined);
     const { rerender } = render(<ArticleComments article={article} commentsModerationEnabled={false} onBack={vi.fn()} onError={vi.fn()} onOpenProfile={vi.fn()} onToggleLike={vi.fn()} canManage onDelete={onDelete} />);

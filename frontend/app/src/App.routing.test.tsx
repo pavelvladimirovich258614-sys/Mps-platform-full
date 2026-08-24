@@ -11,6 +11,7 @@ const post = {
   title: "Гид по Бали",
   slug: "bali-guide",
   body: "Большой материал о путешествии.",
+  cover_url: "/media/bali-cover.webp",
   views: 12,
   likes_count: 3,
   shot_at: null,
@@ -332,7 +333,7 @@ describe("App pathname routing", () => {
     fireEvent.click(screen.getByRole("button", { name: "Сохранить изменения" }));
     await waitFor(() => expect(fetchMock.mock.calls.some(([input, init]) => new URL(String(input)).pathname === "/api/v1/posts/17" && (init as RequestInit).method === "PATCH")).toBe(true));
     const patchCall = fetchMock.mock.calls.find(([input, init]) => new URL(String(input)).pathname === "/api/v1/posts/17" && (init as RequestInit).method === "PATCH");
-    expect(JSON.parse(String((patchCall?.[1] as RequestInit).body))).toEqual({ title: post.title, type: "article", body: post.body, status: "published" });
+    expect(JSON.parse(String((patchCall?.[1] as RequestInit).body))).toEqual({ title: post.title, type: "article", body: post.body, status: "published", cover_url: post.cover_url });
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Редактирование публикации" })).toBeNull());
 
     fireEvent.click(screen.getByRole("button", { name: "Удалить" }));

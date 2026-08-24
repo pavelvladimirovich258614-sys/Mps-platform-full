@@ -1,5 +1,17 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 61 F31 local completion — 2026-08-24
+
+- [x] F31 — единственная новая feature сессии; production deploy не выполнялся.
+- [x] Scope: existing backend `Post.cover_url` is exposed by posts DTO for list/detail/draft detail, and existing PATCH persists it. No migration, dependency or backend media change.
+- [x] Composer: separate F25-format file picker reuses multipart POST `/media`, previews returned URL and preserves it across create/update/edit/draft prefill. Feed and ArticleComments render only explicit cover_url with object-fit; no URL retains `Под солнцем` fallback and no inline body image is inferred.
+- [x] RED backend: `tests/test_posts.py` — 1 expected failure / 5 passed, because PATCH response omitted cover_url. RED frontend: PostComposer/Feed/ArticleComments — 4 expected failures / 17 passed, because picker/preview/real-image render were absent.
+- [x] GREEN targeted: backend 6 passed; frontend PostComposer, Feed, ArticleComments and App PATCH — 4 files / 41 passed.
+- [x] Full backend: `D:\Python312\python.exe -m pytest tests -q --color=no --basetemp D:\AI\tmp\mps-f31-full-backend` — 71 passed in 33.49s.
+- [x] Full frontend: `npm test` — 16 files / 102 passed; `npm run build` — success, 115 modules, only standard Vite chunk-size warning.
+- [x] Final `./init.sh` installed MPS requirements and stopped only on agreed external Hermes/desktop global `pip check`; MPS suites were separately green.
+- [x] `feature_list.json`, `claude-progress.md` and `session-handoff.md` updated. F31 is local-only pending separate backend+frontend production approval.
+
 ## Session 60 F30 local completion — 2026-08-24
 
 - [x] F30 — единственная новая feature сессии; production deploy не выполнялся.
@@ -10,7 +22,7 @@
 - [x] Full frontend: `npm test` — 16 files / 96 passed; `npm run build` — success, 115 modules, only standard Vite chunk-size warning.
 - [x] Full backend (unchanged): `D:\Python312\python.exe -m pytest tests -q --color=no --basetemp D:\AI\tmp\mps-f30-full-backend` — 70 passed in 17.70s.
 - [x] Final `./init.sh` installed MPS requirements and stopped only on agreed external Hermes/desktop global `pip check`; MPS suites were separately green.
-- [x] `feature_list.json`, `claude-progress.md` and `session-handoff.md` updated. F30 is local-only pending separate production approval; cover behavior remains separate, unimplemented product scope.
+- [x] `feature_list.json`, `claude-progress.md` and `session-handoff.md` updated. F30 was subsequently deployed frontend-only at `11dff37`; rollback `/root/backups/mps-frontend-f30-20260824T152645Z`, smoke and served delete marker passed, backend remained active.
 
 ## Session 59 F29 local completion — 2026-08-24
 

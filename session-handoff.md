@@ -2,7 +2,7 @@
 
 ## Verified local state — 2026-08-24
 
-F01–F30 are recorded as passing. F29 is deployed at `629f824`; F28 is deployed at `df2cb6b`; F27 is deployed at `6a02ddd` and live login UI shows only Telegram Login; F26 is deployed at `2be15d5`. F30 is local-only and awaits separate frontend rollout approval.
+F01–F31 are recorded as passing. F30 is deployed at `11dff37`; F29 is deployed at `629f824`; F28 is deployed at `df2cb6b`; F27 is deployed at `6a02ddd` and live login UI shows only Telegram Login; F26 is deployed at `2be15d5`. F31 is local-only and awaits separate backend+frontend rollout approval.
 
 - The reported upload failure was not a PNG/JPEG regression. Current composer chain remains `onChange → apiForm(POST /media) → insertImageAtDocumentStart`; existing PNG baseline passed.
 - The actual cause for iPhone photos was HEIC/HEIF being excluded by both the native file picker `accept` list and the backend MIME allowlist. The UI now accepts JPEG, PNG, WebP, HEIC, HEIF and AVIF.
@@ -23,7 +23,15 @@ F01–F30 are recorded as passing. F29 is deployed at `629f824`; F28 is deployed
 - Cover diagnosis: `PostCard` in Feed and `ArticleComments` always render the dark-gradient placeholder labelled `Под солнцем`. Inline TipTap images are body content rendered by `RichTextContent`, not cover candidates. Although backend `Post.cover_url` exists, the DTO does not return it and no frontend API type, composer or renderer consumes it. This is a hard-coded fallback/design rather than a failed upload.
 - Completed deletion scope: every draft card now has an independent «Удалить» button, so no button is nested in a button. It opens the F15-style confirmation modal; only confirmation uses the existing `DELETE /posts/{id}`, then removes the card from in-memory draft state without routing to the feed. Backend/API/database/dependencies are unchanged.
 - Fresh evidence: RED `Drafts.test.tsx` + `App.routing.test.tsx` — 4 expected failures / 19 passed. GREEN targeted — 2 files / 23 passed. Full frontend — 16 files / 96 passed; build success (115 modules, standard chunk-size warning). Full backend unchanged — 70 passed in 17.70s. `./init.sh` stopped only on the known external global Hermes/desktop pip check.
-- Local F30 completion commit is created; production is intentionally unchanged. F30 needs separate frontend deployment approval and a live deletion check. No cover behavior was changed: separately approve either automatic first-inline-image cover or a dedicated `cover_url` composer flow.
+- F30 was subsequently deployed frontend-only at `11dff37`; rollback is `/root/backups/mps-frontend-f30-20260824T152645Z`, `deploy/smoke.sh` passed, the served bundle had the delete marker, and backend stayed active. Cover behavior was deliberately left for F31.
+
+## F31 local completion
+
+- Backend: `Post.cover_url` already existed in model and PostWrite/PostPatch. `dto()` now returns it, so it is visible from GET list, published detail and draft detail; the existing generic PATCH persists it. No migration or dependency change.
+- Composer: dedicated `Выбрать обложку` picker uses existing multipart `POST /media` with JPEG/PNG/WebP/HEIC/HEIF/AVIF, previews the returned URL and retains it through draft/article edit prefill and POST/PATCH payloads.
+- Rendering: Feed and ArticleComments render the explicitly selected URL as an object-fit cover image. When it is absent, the existing dark-gradient `Под солнцем` fallback remains unchanged; inline body media is never inferred as a cover.
+- Fresh evidence: RED backend — 1 expected failure / 5 passed; RED frontend — 4 expected failures / 17 passed. GREEN targeted backend — 6 passed; frontend including App PATCH — 4 files / 41 passed. Full backend — 71 passed in 33.49s; full frontend — 16 files / 102 passed; build success (115 modules, standard chunk-size warning). `./init.sh` stopped only on the known external global Hermes/desktop pip check.
+- Local F31 completion commit is created; production is intentionally unchanged. F31 needs separate backend+frontend deployment approval and a live authenticated upload/edit/display check.
 
 ## F28 production evidence
 

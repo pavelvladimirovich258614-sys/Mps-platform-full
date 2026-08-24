@@ -5,9 +5,36 @@ vi.mock("./RichTextEditor", () => ({
   RichTextEditor: ({ onChange }: { onChange: (html: string) => void }) => <button type="button" onClick={() => onChange("<p><strong>Готово</strong></p>")}>Заполнить текст публикации</button>,
 }));
 
+const mocks = vi.hoisted(() => ({ upload: vi.fn() }));
+
+vi.mock("../api/client", () => ({ apiForm: mocks.upload }));
+
 import { PostComposer } from "./PostComposer";
 
 describe("PostComposer", () => {
+  it("uploads a separately selected cover and submits its URL outside the article body", async () => {
+    mocks.upload.mockResolvedValue({ url: "/media/cover.webp" });
+    const onCreate = vi.fn().mockResolvedValue(undefined);
+    render(<PostComposer onCreate={onCreate} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Выбрать обложку" }));
+    fireEvent.change(screen.getByLabelText("Выбрать файл обложки"), { target: { files: [new File(["cover"], "cover.webp", { type: "image/webp" })] } });
+
+    await waitFor(() => expect(mocks.upload).toHaveBeenCalledWith("/media", "POST", expect.any(FormData)));
+    expect(screen.getByRole("img", { name: "Предпросмотр обложки" }).getAttribute("src")).toBe("/media/cover.webp");
+    fireEvent.change(screen.getByLabelText("Заголовок публикации"), { target: { value: "Мой маршрут" } });
+    fireEvent.click(screen.getByRole("button", { name: "Заполнить текст публикации" }));
+    fireEvent.click(screen.getByRole("button", { name: "Опубликовать" }));
+
+    await waitFor(() => expect(onCreate).toHaveBeenCalledWith({ title: "Мой маршрут", type: "article", body: "<p><strong>Готово</strong></p>", status: "published", cover_url: "/media/cover.webp" }));
+  });
+
+  it("prefills the saved cover in edit mode", () => {
+    render(<PostComposer initialPost={{ id: 17, title: "Гид по Бали", type: "article", body: "<p>Большой материал</p>", status: "published", cover_url: "/media/saved-cover.webp" }} onUpdate={vi.fn()} />);
+
+    expect(screen.getByRole("img", { name: "Предпросмотр обложки" }).getAttribute("src")).toBe("/media/saved-cover.webp");
+  });
+
   it("is an editor-only publishing surface that submits TipTap HTML", async () => {
     const onCreate = vi.fn().mockResolvedValue(undefined);
     render(<PostComposer onCreate={onCreate} />);

@@ -126,13 +126,13 @@ export function App() {
     const created = await postCreator.create(draft);
     if (draft.status === "draft") {
       await drafts.reload();
-      return { id: created.id, title: created.title, type: "article", body: created.body, status: "draft" };
+      return { id: created.id, title: created.title, type: "article", body: created.body, status: "draft", cover_url: created.cover_url };
     }
     await posts.reload();
   };
   const updatePost = async (post: EditablePost, draft: Parameters<typeof postEditor.update>[1]): Promise<EditablePost> => {
     const updated = await postEditor.update(post.id, draft);
-    const editable = { id: updated.id, title: updated.title, type: "article" as const, body: updated.body, status: draft.status };
+    const editable = { id: updated.id, title: updated.title, type: "article" as const, body: updated.body, status: draft.status, cover_url: updated.cover_url };
     if (post.status === "published") {
       article.setValue(updated);
       setEditingPost(null);
@@ -144,7 +144,7 @@ export function App() {
   const openDraft = async (postId: number) => {
     try {
       const draft = await getDraft(postId);
-      setEditingPost({ id: draft.id, title: draft.title, type: "article", body: draft.body, status: "draft" });
+      setEditingPost({ id: draft.id, title: draft.title, type: "article", body: draft.body, status: "draft", cover_url: draft.cover_url });
     } catch (cause) {
       showError(cause instanceof Error ? cause.message : "Не удалось загрузить черновик");
     }
@@ -185,7 +185,7 @@ export function App() {
     content = <main className="article-page"><div className="comment-skeleton"><i /><i /><i /></div></main>;
   }
   if (page === "article" && article.value) {
-    content = <ArticleComments article={withLikesCount(article.value)} commentsModerationEnabled={publicSettings.value?.comments_moderation_enabled ?? false} onBack={() => navigate({ page: "feed" })} onError={showError} onOpenProfile={(userId) => navigate({ page: "profile", userId })} onToggleLike={toggleLike} canManage={canManagePosts} onEdit={(post) => setEditingPost({ id: post.id, title: post.title, type: "article", body: post.body, status: "published" })} onDelete={deletePost} />;
+    content = <ArticleComments article={withLikesCount(article.value)} commentsModerationEnabled={publicSettings.value?.comments_moderation_enabled ?? false} onBack={() => navigate({ page: "feed" })} onError={showError} onOpenProfile={(userId) => navigate({ page: "profile", userId })} onToggleLike={toggleLike} canManage={canManagePosts} onEdit={(post) => setEditingPost({ id: post.id, title: post.title, type: "article", body: post.body, status: "published", cover_url: post.cover_url })} onDelete={deletePost} />;
   }
   if (page === "article" && article.notFound) {
     content = (

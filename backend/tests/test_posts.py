@@ -68,6 +68,23 @@ async def test_posts_verification(client,test_app):
  assert (await client.delete(f"/api/v1/posts/{post['id']}",headers=reader)).status_code==403
  assert (await client.delete(f"/api/v1/posts/{post['id']}",headers=editor)).status_code==204
 
+async def test_cover_url_persists_through_patch_and_post_get_endpoints(client, test_app):
+ editor = await token(client, test_app, True)
+ published = await client.post("/api/v1/posts", json={"type":"article", "title":"С обложкой", "body":"Текст", "status":"published"}, headers=editor)
+ assert published.status_code == 201
+
+ cover_url = "/media/cover.webp"
+ patched = await client.patch(f"/api/v1/posts/{published.json()['id']}", json={"cover_url": cover_url}, headers=editor)
+ assert patched.status_code == 200
+ assert patched.json()["cover_url"] == cover_url
+ assert (await client.get("/api/v1/posts")).json()[0]["cover_url"] == cover_url
+ assert (await client.get(f"/api/v1/posts/{published.json()['slug']}")).json()["cover_url"] == cover_url
+
+ draft = await client.post("/api/v1/posts", json={"type":"article", "title":"Черновик с обложкой", "body":"Текст", "status":"draft"}, headers=editor)
+ assert draft.status_code == 201
+ assert (await client.patch(f"/api/v1/posts/{draft.json()['id']}", json={"cover_url": cover_url}, headers=editor)).status_code == 200
+ assert (await client.get(f"/api/v1/posts/drafts/{draft.json()['id']}", headers=editor)).json()["cover_url"] == cover_url
+
 async def test_rich_text_body_uses_the_explicit_allowlist_on_create_and_patch(client, test_app):
  editor = await token(client, test_app, True)
  rich_body = '<h1>Заголовок</h1><p><strong>Жирный</strong><em>Курсив</em><s>Зачёркнутый</s><br></p><ul><li>Пункт</li></ul><ol><li>Первый</li></ol><blockquote>Цитата</blockquote><a href="https://example.com">Ссылка</a><img src="https://cdn.example/image.jpg" alt="Море"><code>Не из редактора</code><iframe src="https://evil.example"></iframe><a href="javascript:alert(1)">XSS</a><p onclick="alert(1)">Без обработчика</p>'

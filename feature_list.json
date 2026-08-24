@@ -577,6 +577,26 @@
       ],
       "evidence": "2026-08-24 diagnosis: Feed PostCard and ArticleComments unconditionally render the dark-gradient `Под солнцем` cover/hero; inline TipTap images in `body` are rendered later by RichTextContent and never selected as cover. Backend Post has `cover_url`, but its DTO, frontend ApiPost, composer and feed/article rendering do not use it. Therefore the block is the hard-coded fallback/design, not a broken inline-image upload. RED `npm test -- --run src/components/Drafts.test.tsx src/App.routing.test.tsx` — 4 expected failures / 19 passed: delete controls and confirmation dialog were absent. GREEN same targeted command — 2 files / 23 passed: no DELETE before confirmation, DELETE after it, and card removal are covered. Full frontend `npm test` — 16 files / 96 passed. `npm run build` — success, 115 modules; standard Vite chunk-size warning only. Full backend (unchanged) `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp D:\\AI\\tmp\\mps-f30-full-backend` — 70 passed in 17.70s. Final `./init.sh` installed MPS requirements then stopped only on unrelated external Hermes/desktop global pip-check conflicts; MPS suites were separately green.",
       "notes": "Draft delete is an editor-list UI over the existing DELETE /posts/{id}: every card now has a separate accessible delete button and F15-style confirmation; successful deletion updates draft state locally with no feed navigation. Backend/API/database/dependencies and production configuration were not changed. Article cover is intentionally not changed in F30: choosing automatic first-inline-image cover versus a separate cover_url composer flow needs product approval. Production deploy requires separate approval."
+    },
+    {
+      "id": "F31",
+      "priority": 31,
+      "area": "posts-cover",
+      "title": "Явный выбор обложки статьи",
+      "user_visible_behavior": "Редактор может загрузить и увидеть preview обложки в composer; выбранная обложка отображается в ленте и статье, а публикации без неё сохраняют текущий fallback.",
+      "status": "passing",
+      "verification": [
+        "Диагностика backend DTO, composer and render paths до плана",
+        "RED/GREEN backend PATCH/GET cover_url",
+        "RED/GREEN composer upload and cover preview",
+        "RED/GREEN feed/article cover render and fallback",
+        "cd frontend/app && npm test",
+        "cd frontend/app && npm run build",
+        "cd backend && python -m pytest tests -q",
+        "./init.sh outside sandbox; внешний Hermes pip check отслеживается отдельно"
+      ],
+      "evidence": "2026-08-24 RED backend `D:\\Python312\\python.exe -m pytest tests/test_posts.py -q --color=no --basetemp D:\\AI\\tmp\\mps-f31-red-backend` — 1 expected failure / 5 passed: PATCH response omitted cover_url despite persisting it. RED frontend `npm test -- --run src/components/PostComposer.test.tsx src/components/Feed.test.tsx src/components/ArticleComments.test.tsx` — 4 expected failures / 17 passed: no cover picker, preview, or image render. GREEN backend targeted — 6 passed; GREEN frontend targeted with App PATCH regression — 4 files / 41 passed. Full backend `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp D:\\AI\\tmp\\mps-f31-full-backend` — 71 passed in 33.49s. Full frontend `npm test` — 16 files / 102 passed. `npm run build` — success, 115 modules; standard Vite chunk-size warning only. Final `./init.sh` installed MPS requirements then stopped only on unrelated external Hermes/desktop global pip-check conflicts; MPS suites were separately green.",
+      "notes": "F31 activates existing Post.cover_url without a migration: DTO now returns it for list/detail/draft detail, and the existing generic PATCH persists it. Composer uploads the selected cover through the existing POST /media using F25 MIME types, previews it, and carries it through create/update/edit/draft prefill. Feed and article render the explicit image with object-fit: cover; without URL, the established `Под солнцем` fallback remains. Automatic extraction from inline body images is out of scope. Production deploy requires separate approval."
     }
   ]
 }
