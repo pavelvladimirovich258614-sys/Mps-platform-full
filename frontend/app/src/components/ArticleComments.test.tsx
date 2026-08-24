@@ -34,17 +34,19 @@ describe("ArticleComments", () => {
   });
 
   it("renders an explicit cover image instead of the article fallback", () => {
-    render(<ArticleComments article={{ ...article, cover_url: "/media/bali-cover.webp" }} commentsModerationEnabled={false} onBack={vi.fn()} onError={vi.fn()} onOpenProfile={vi.fn()} />);
+    const { container } = render(<ArticleComments article={{ ...article, cover_url: "/media/bali-cover.webp" }} commentsModerationEnabled={false} onBack={vi.fn()} onError={vi.fn()} onOpenProfile={vi.fn()} />);
 
     expect(screen.getByRole("img", { name: "Обложка: Гид по Бали" }).getAttribute("src")).toBe("/media/bali-cover.webp");
     expect(screen.queryByText("Под солнцем")).toBeNull();
+    expect(container.querySelector(".article-hero")).toBeNull();
   });
 
   it("keeps the fallback when an article has no cover", () => {
-    render(<ArticleComments article={article} commentsModerationEnabled={false} onBack={vi.fn()} onError={vi.fn()} onOpenProfile={vi.fn()} />);
+    const { container } = render(<ArticleComments article={article} commentsModerationEnabled={false} onBack={vi.fn()} onError={vi.fn()} onOpenProfile={vi.fn()} />);
 
     expect(screen.getByText("Под солнцем")).toBeTruthy();
     expect(screen.queryByRole("img", { name: "Обложка: Гид по Бали" })).toBeNull();
+    expect(container.querySelector(".article-hero")).toBeTruthy();
   });
 
   it("shows edit and delete controls only to editor/admin and confirms deletion", () => {

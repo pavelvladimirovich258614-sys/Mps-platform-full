@@ -27,17 +27,19 @@ const editorProps = {
 
 describe("Feed composer modal", () => {
   it("renders an explicit cover image instead of the article fallback", () => {
-    render(<Feed {...editorProps} posts={[{ ...post, cover_url: "/media/bali-cover.webp" }]} onToggleLike={vi.fn()} />);
+    const { container } = render(<Feed {...editorProps} posts={[{ ...post, cover_url: "/media/bali-cover.webp" }]} onToggleLike={vi.fn()} />);
 
     expect(screen.getByRole("img", { name: "Обложка: Гид по Бали" }).getAttribute("src")).toBe("/media/bali-cover.webp");
     expect(screen.queryByText("Под солнцем")).toBeNull();
+    expect(container.querySelector(".article-cover")).toBeNull();
   });
 
   it("keeps the fallback when an article has no cover", () => {
-    render(<Feed {...editorProps} posts={[post]} onToggleLike={vi.fn()} />);
+    const { container } = render(<Feed {...editorProps} posts={[post]} onToggleLike={vi.fn()} />);
 
     expect(screen.getByText("Под солнцем")).toBeTruthy();
     expect(screen.queryByRole("img", { name: "Обложка: Гид по Бали" })).toBeNull();
+    expect(container.querySelector(".article-cover")).toBeTruthy();
   });
 
   it("renders a like button and its count in a post card", () => {
