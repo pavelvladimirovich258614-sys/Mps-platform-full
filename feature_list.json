@@ -540,6 +540,25 @@
       ],
       "evidence": "2026-08-24: RED `npm test -- --run src/components/PublicProfile.test.tsx src/App.routing.test.tsx` — 2 expected failures / 22 passed: the owner menu had no logout item and the App integration could not locate it. GREEN targeted `npm test -- --run src/components/PublicProfile.test.tsx src/App.routing.test.tsx src/hooks/useAuth.test.tsx` — 3 files / 27 passed: owner-only menu visibility, closing it before callback, POST `/auth/logout`, token/session clearing and guest-feed redirect are covered. Full frontend `npm test` — 15 files / 91 passed. `npm run build` — success, 115 modules; standard Vite chunk-size warning only. Full backend (unchanged) `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp D:\\AI\\tmp\\mps-f28-full-backend` — 70 passed in 18.79s. Final `./init.sh` installed MPS requirements and stopped only at the unrelated external Hermes/desktop global pip-check conflicts; MPS suites were separately green.",
       "notes": "PublicProfile now exposes optional `onLogout` only in the existing owner ••• menu, closes that menu before invoking the callback, and leaves visitor profiles unchanged. App reuses `auth.logout()` rather than duplicating auth logic, then navigates to the guest feed. No backend, API, database, dependency, email or production configuration changed. Production deploy requires separate approval."
+    },
+    {
+      "id": "F29",
+      "priority": 29,
+      "area": "profile",
+      "title": "Диагностика и восстановление загрузки аватара",
+      "user_visible_behavior": "Пользователь выбирает изображение в «Мой профиль», аватар сохраняется и отображается в публичном профиле; неподдерживаемые или ошибочные загрузки дают понятную ошибку.",
+      "status": "passing",
+      "verification": [
+        "Diagnosis of the existing frontend/backend avatar chain",
+        "RED/GREEN Profile: F25 MIME alignment and resetting selected file input",
+        "Existing useAuth regression: multipart POST /media followed by PATCH /me",
+        "cd frontend/app && npm test",
+        "cd frontend/app && npm run build",
+        "cd backend && python -m pytest tests -q",
+        "./init.sh outside sandbox; external Hermes pip check is tracked separately"
+      ],
+      "evidence": "2026-08-24 diagnosis: Profile has a real label-associated hidden file input whose onChange calls auth.uploadAvatar. Existing hook contract proves multipart POST /media followed by PATCH /me {avatar_url}. Backend User.avatar_url exists since migration 20260818_0002; UserUpdate and PATCH /me persist it. Production GET /users/2/profile returned /media/f967a814ad4d4082ad70a662a20a8c58.png (HEAD 200 image/png), therefore Pavel's visible avatar is local media, not Telegram photo_url. RED `npm test -- --run src/components/Profile.test.tsx` — 1 expected failure / 3 passed: avatar input accepted only JPEG/PNG/WebP. GREEN targeted `npm test -- --run src/components/Profile.test.tsx src/hooks/useAuth.test.tsx` — 2 files / 7 passed: F25 MIME set and clearing the input are covered, while the existing multipart POST /media then PATCH /me contract remains green. Full frontend `npm test` — 15 files / 92 passed. `npm run build` — success, 115 modules; standard Vite chunk-size warning only. Full backend (unchanged) `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp D:\\AI\\tmp\\mps-f29-full-backend` — 70 passed in 17.96s. Final `./init.sh` installed MPS requirements and stopped only at unrelated external Hermes/desktop global pip-check conflicts; MPS suites were separately green.",
+      "notes": "Existing avatar upload is not a placeholder: it reuses F25 media and PATCH /me. Profile picker now accepts JPEG, PNG, WebP, HEIC, HEIF and AVIF, and clears its value after reading a file so the same file can be selected again. Backend, API, database, dependencies and production configuration were not changed. Production deploy requires separate approval."
     }
   ]
 }

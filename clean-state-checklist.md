@@ -1,5 +1,18 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 59 F29 local completion — 2026-08-24
+
+- [x] F29 — единственная новая feature сессии; production deploy не выполнялся.
+- [x] Диагностика: `Profile` button is a real file input. Existing contract is multipart `POST /media` then `PATCH /me {avatar_url}`; model, migration `20260818_0002_users`, schema and endpoint already exist. Production `/users/2/profile` avatar is local `/media/*.png` (HEAD 200 image/png), not Telegram `photo_url`.
+- [x] Root cause: profile picker was stale against F25 (only JPEG/PNG/WebP) and retained the selected value, so an identical second choice did not fire browser `change`.
+- [x] Scope: `Profile.tsx` and `Profile.test.tsx` only. Picker now accepts JPEG, PNG, WebP, HEIC, HEIF and AVIF and clears its value after capturing a File. `useAuth.test.tsx` remains the regression proof for POST/PATCH; backend/API/database/dependencies/email/production configuration did not change.
+- [x] RED frontend: `Profile.test.tsx` — 1 expected failure / 3 passed: old accept lacked F25 MIME types.
+- [x] GREEN targeted: `Profile` + `useAuth` — 2 files / 7 passed; covers MIME alignment, reset and existing multipart POST/PATCH chain.
+- [x] Full frontend: `npm test` — 15 files / 92 passed; `npm run build` — success, 115 modules, only standard Vite chunk-size warning.
+- [x] Full backend (unchanged): `D:\Python312\python.exe -m pytest tests -q --color=no --basetemp D:\AI\tmp\mps-f29-full-backend` — 70 passed in 17.96s.
+- [x] Final `./init.sh` installed MPS requirements and stopped only on agreed external Hermes/desktop global `pip check`; MPS suites were run separately and green.
+- [x] `feature_list.json`, `claude-progress.md` and `session-handoff.md` updated. F29 remains local-only pending separate production approval and real Telegram-session validation.
+
 ## Session 58 F28 local completion — 2026-08-24
 
 - [x] F28 — единственная новая feature сессии; production deploy не выполнялся.

@@ -53,17 +53,28 @@ describe("Profile", () => {
     expect(view.getByText("Показывать меня онлайн").parentElement?.querySelector("i")?.className).toBe("");
   });
 
-  it("shows the person name, uploads an avatar and logs out", async () => {
-    const onLogout = vi.fn().mockResolvedValue(undefined);
+  it("uploads an avatar with the same modern format support as media and resets the file input", async () => {
     const onUploadAvatar = vi.fn().mockResolvedValue(undefined);
-    const view = render(<Profile user={{ ...existingUser, role: "admin" }} {...props} onLogout={onLogout} onUploadAvatar={onUploadAvatar} />);
+    const view = render(<Profile user={existingUser} {...props} onUploadAvatar={onUploadAvatar} />);
+    const input = view.getByLabelText("Загрузить аватар") as HTMLInputElement;
+    const setValue = vi.fn();
+    Object.defineProperty(input, "value", { configurable: true, get: () => "C:\\fakepath\\avatar.png", set: setValue });
+
+    expect(input.accept).toBe("image/jpeg,image/png,image/webp,image/heic,image/heif,image/avif");
+    fireEvent.change(input, {
+      target: { files: [new File(["avatar"], "avatar.png", { type: "image/png" })] },
+    });
+
+    await waitFor(() => expect(onUploadAvatar).toHaveBeenCalledWith(expect.any(File)));
+    expect(setValue).toHaveBeenCalledWith("");
+  });
+
+  it("shows the person name and logs out", async () => {
+    const onLogout = vi.fn().mockResolvedValue(undefined);
+    const view = render(<Profile user={{ ...existingUser, role: "admin" }} {...props} onLogout={onLogout} />);
 
     expect(view.getByText("Павел")).toBeTruthy();
     expect(view.getByText("Роль: admin")).toBeTruthy();
-    fireEvent.change(view.getByLabelText("Загрузить аватар"), {
-      target: { files: [new File(["avatar"], "avatar.png", { type: "image/png" })] },
-    });
-    await waitFor(() => expect(onUploadAvatar).toHaveBeenCalled());
     fireEvent.click(view.getByRole("button", { name: "Выйти" }));
     await waitFor(() => expect(onLogout).toHaveBeenCalledTimes(1));
   });

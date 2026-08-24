@@ -2,13 +2,25 @@
 
 ## Verified local state — 2026-08-24
 
-F01–F28 are recorded as passing. F27 is deployed at `6a02ddd` and live login UI shows only Telegram Login; F26 is deployed at `2be15d5`. F28 is local-only and awaits separate frontend rollout approval.
+F01–F29 are recorded as passing. F28 is deployed at `df2cb6b`; F27 is deployed at `6a02ddd` and live login UI shows only Telegram Login; F26 is deployed at `2be15d5`. F29 is local-only and awaits separate frontend rollout approval.
 
 - The reported upload failure was not a PNG/JPEG regression. Current composer chain remains `onChange → apiForm(POST /media) → insertImageAtDocumentStart`; existing PNG baseline passed.
 - The actual cause for iPhone photos was HEIC/HEIF being excluded by both the native file picker `accept` list and the backend MIME allowlist. The UI now accepts JPEG, PNG, WebP, HEIC, HEIF and AVIF.
 - Backend now depends on `pillow-heif==1.5.0`. It registers the HEIF decoder and converts HEIC/HEIF to WebP before storage; AVIF is accepted and preserved as AVIF. An unsupported file receives `422 «Допустимы JPEG, PNG, WebP, HEIC, HEIF или AVIF»`.
 - Fresh verification: F25 RED frontend 1 failed / 18 passed; RED backend after dependency 4 failed / 7 passed. GREEN media 11 passed and RichTextEditor 19 passed. Full backend 70 passed; full frontend 15 files / 85 passed; `npm run build` passed (115 modules, standard chunk-size warning).
 - `./init.sh` installed MPS requirements, then stopped only at the external global Hermes/desktop `pip check`; that environment is not part of MPS and was not modified.
+
+## F29 local completion
+
+- Diagnosis: «Загрузить аватар» is a real hidden file input in `Profile`: `onChange → auth.uploadAvatar → multipart POST /media → PATCH /me {avatar_url}`. User model, `20260818_0002_users` migration, `UserUpdate` and `PATCH /me` all already support the field. Production `/users/2/profile` returned `/media/f967a814ad4d4082ad70a662a20a8c58.png`; its HEAD was 200 image/png, proving the displayed avatar is local media rather than Telegram's external `photo_url`.
+- Root cause: Profile picker accepted only JPEG/PNG/WebP although F25 media accepts HEIC/HEIF/AVIF; its retained input value also suppresses a browser `change` when the user selects the same file again. This is a partially stale UI, not a missing endpoint or placeholder.
+- Fix: picker accepts JPEG, PNG, WebP, HEIC, HEIF and AVIF and clears its value after reading the File. Existing `useAuth` regression continues to cover the exact multipart POST/PATCH chain.
+- Fresh evidence: RED `Profile.test.tsx` — 1 expected failure / 3 passed. GREEN targeted `Profile` + `useAuth` — 2 files / 7 passed. Full frontend — 15 files / 92 passed; build success (115 modules, standard chunk-size warning). Full backend unchanged — 70 passed in 17.96s. `./init.sh` stopped only on the known external global Hermes/desktop pip check.
+- Production is intentionally unchanged. F29 needs separate frontend deployment approval; then verify HEIC/HEIF and same-file repeat behavior in a real Telegram session.
+
+## F28 production evidence
+
+F28 frontend-only rollout fast-forwarded VPS `6a02ddd → df2cb6b`. Recoverable prior dist: `/root/backups/mps-frontend-f28-20260824T142351Z`. Production frontend rebuilt with production API/bot markers, served new asset `index-DIwKqQUz.js`, and `deploy/smoke.sh` passed; `mps-backend` stayed active and was not restarted.
 
 ## F28 local completion
 
