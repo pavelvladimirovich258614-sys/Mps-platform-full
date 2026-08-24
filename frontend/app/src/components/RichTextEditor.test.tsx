@@ -100,6 +100,63 @@ describe("RichTextEditor", () => {
     expect(screen.getByRole("button", { name: "Курсив" }).getAttribute("aria-pressed")).toBe("false");
   });
 
+  it.each([
+    ["Жирный", "Фрагмент", "bold", "strong"],
+    ["Курсив", "Фрагмент", "italic", "em"],
+    ["Зачёркнутый", "Фрагмент", "strike", "s"],
+  ] as const)("does not inherit %s at the right mark boundary after a toolbar toggle", async (label, text, markName, tag) => {
+    const onChange = vi.fn();
+    render(<RichTextEditor value={`<p>${text}</p>`} onChange={onChange} />);
+    const editor = (screen.getByRole("textbox", { name: "Текст публикации" }) as EditorElement).editor;
+    suppressJsdomSelectionScroll(editor);
+    const from = textPosition(editor, text);
+
+    act(() => editor.commands.setTextSelection({ from, to: from + text.length }));
+    fireEvent.click(screen.getByRole("button", { name: label }));
+    act(() => {
+      editor.commands.setTextSelection(from + text.length);
+      editor.commands.insertContent(" хвост");
+    });
+
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    const html = onChange.mock.calls.at(-1)?.[0] as string;
+    expect(html).toContain(`<${tag}>${text}</${tag}> хвост`);
+    expect(editor.isActive(markName)).toBe(false);
+  });
+
+  it("keeps bold when typing inside a bold fragment", async () => {
+    const onChange = vi.fn();
+    render(<RichTextEditor value="<p><strong>Привет</strong></p>" onChange={onChange} />);
+    const editor = (screen.getByRole("textbox", { name: "Текст публикации" }) as EditorElement).editor;
+    suppressJsdomSelectionScroll(editor);
+    const from = textPosition(editor, "Привет");
+
+    act(() => {
+      editor.commands.setTextSelection(from + "Прив".length);
+      editor.commands.insertContent("X");
+    });
+
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    expect(onChange.mock.calls.at(-1)?.[0]).toContain("<strong>ПривXет</strong>");
+    expect(editor.isActive("bold")).toBe(true);
+  });
+
+  it.each([
+    ["b", "Жирный"],
+    ["i", "Курсив"],
+  ] as const)("keeps Ctrl+%s shortcut for %s", async (key, label) => {
+    render(<RichTextEditor value="<p>Горячая клавиша</p>" onChange={vi.fn()} />);
+    const canvas = screen.getByRole("textbox", { name: "Текст публикации" }) as EditorElement;
+    const editor = canvas.editor;
+    suppressJsdomSelectionScroll(editor);
+    const from = textPosition(editor, "Горячая клавиша");
+
+    act(() => editor.commands.setTextSelection(from));
+    fireEvent.keyDown(canvas, { key, ctrlKey: true });
+
+    await waitFor(() => expect(screen.getByRole("button", { name: label }).getAttribute("aria-pressed")).toBe("true"));
+  });
+
   it("updates structural and link toolbar states as the cursor enters and leaves their content", async () => {
     render(<RichTextEditor value={'<h1>Первый</h1><h2>Второй</h2><h3>Третий</h3><ul><li>Маркер</li></ul><ol><li>Номер</li></ol><blockquote>Цитата</blockquote><p><a href="https://example.test">Ссылка</a></p><p>Обычный</p>'} onChange={vi.fn()} />);
     const editor = (screen.getByRole("textbox", { name: "Текст публикации" }) as EditorElement).editor;

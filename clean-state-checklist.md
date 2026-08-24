@@ -1,5 +1,16 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 52 F23 local completion — 2026-08-24
+
+- [x] Отдельный инфраструктурный commit `e6e9012`: `init.sh` использует `python -m pip`; MPS код не менялся.
+- [x] F23 — единственная новая feature сессии; production deploy не выполнялся.
+- [x] RED: `RichTextEditor.test.tsx` — 3 failed / 15 passed; B/I/S на правой mark boundary включали новый текст в existing mark.
+- [x] GREEN targeted: `RichTextEditor.test.tsx` — 18 passed; boundary B/I/S normal, bold внутри фрагмента, F22 toolbar и Ctrl+B/Ctrl+I сохранены.
+- [x] Full frontend: `npm test` — 15 files / 82 passed; `npm run build` — success, 114 modules; только standard Vite chunk-size warning.
+- [x] Full backend: `D:\Python312\python.exe -m pytest tests -q --color=no --basetemp .pytest-f23-full` — 65 passed in 15.72s; backend не менялся.
+- [x] Final `./init.sh` устанавливает MPS requirements и останавливается только на внешнем global Hermes/desktop `pip check`; project suite проверен отдельно и зелёный.
+- [x] `feature_list.json`, `claude-progress.md` и `session-handoff.md` обновлены; backend/API/dependencies/database/production не менялись.
+
 ## Session 51 F22 local completion — 2026-08-24
 
 - [x] F22 — единственная новая feature сессии; production deployment не выполнялся и ожидает отдельного approval.

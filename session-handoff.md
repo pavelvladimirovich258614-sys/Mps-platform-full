@@ -2,12 +2,12 @@
 
 ## Verified final state — 2026-08-24
 
-F01–F22 passing локально; production остаётся на `ada1f52` без F22 до отдельного approval.
+F01–F23 passing локально. Production frontend F22 находится на `1a680db`; F23 ожидает отдельного approval на push/deploy.
 
-- Composer toolbar теперь реактивно обновляет B/I/S, H1–H3, списки, цитату и link по TipTap `selectionUpdate`/`transaction`. Bold/italic после перехода в обычный текст не наследуются новым вводом; toggle-команды и stored HTML не менялись.
-- F15 edit UX проверен регрессией: editor/admin получает prefill, PATCH, delete confirmation и redirect; `PostComposer`, `ArticleComments` и `App.routing` зелёные.
-- Composer/cарусель production-state прежний и подтверждён: media JPEG/PNG/WebP, 11m nginx ingress / 10 MiB backend limit, leading-карусель, edit/delete статей, likes/comments/profile.
-- F22 RED→GREEN; full frontend 15 files / 76 passed, build success (114 modules), backend 65 passed. `./init.sh` с корректным Hermes venv останавливается только на внешнем pip check missing charset-normalizer.
+- F23: Bold/Italic/Strike не наследуются при вводе ровно справа от форматированного фрагмента (`inclusive: false`); ввод внутри mark остаётся форматированным. F22 toolbar reactivity и Ctrl+B/Ctrl+I сохранены тестами.
+- F23 RED→GREEN: targeted RichTextEditor — 18 passed; full frontend — 15 files / 82 passed; build — 114 modules success; full backend — 65 passed.
+- `init.sh` исправлен отдельным `e6e9012`: installation использует `python -m pip`. После установки он упирается только в глобальный внешний Hermes/desktop `pip check`; MPS suite отдельно зелёный. Не менять внешние зависимости без отдельного решения.
+- F15 edit/prefill/PATCH/delete, composer/cарусель, likes/comments/profile остаются покрытыми ранее; F23 не меняет backend, API, dependencies, database или stored HTML.
 
 ## Known unresolved boundary
 
@@ -15,4 +15,4 @@ Email по-прежнему заблокирован внешней сетью �
 
 ## Next step
 
-Дождаться отдельного approval Павла для frontend-only deployment F22 и authenticated composer smoke. Следующий product scope отдельно выбирает Павел.
+Дождаться отдельного approval Павла для push и frontend-only deployment F23. После него: authenticated composer smoke для B/I/S на правой границе и внутри mark; backend не перезапускать.

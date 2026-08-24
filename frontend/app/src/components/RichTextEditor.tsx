@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import Bold from "@tiptap/extension-bold";
+import Italic from "@tiptap/extension-italic";
+import Strike from "@tiptap/extension-strike";
 import Link from "@tiptap/extension-link";
 import type { Editor } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
@@ -76,7 +79,15 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
   const [uploadError, setUploadError] = useState("");
   const [uploading, setUploading] = useState(false);
   const editor = useEditor({
-    extensions: [StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false }), Link.configure({ openOnClick: false, autolink: false }), EditorImageNode.configure({ allowBase64: false }), ImageCarouselNode],
+    extensions: [
+      StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false, bold: false, italic: false, strike: false }),
+      Bold.extend({ inclusive: false }),
+      Italic.extend({ inclusive: false }),
+      Strike.extend({ inclusive: false }),
+      Link.configure({ openOnClick: false, autolink: false }),
+      EditorImageNode.configure({ allowBase64: false }),
+      ImageCarouselNode,
+    ],
     content: value,
     editorProps: { attributes: { class: "rich-editor-canvas", role: "textbox", "aria-label": "Текст публикации" } },
     onUpdate: ({ editor: currentEditor }) => onChange(currentEditor.getHTML()),

@@ -432,6 +432,24 @@
       ],
       "evidence": "2026-08-24: RED `npm test -- --run src/components/RichTextEditor.test.tsx` — 3 failed / 9 passed: B and I remained aria-pressed=false after applying their mark and H1 remained active after cursor moved into an ordinary paragraph. GREEN targeted — 12 passed: bold/italic selections become active, typing after moving into ordinary text creates no inherited mark, and H1-H3, bullet/ordered list, quote and link update active state only at their real cursor position. Related F15 regression `RichTextEditor`, `PostComposer`, `ArticleComments`, `App.routing` — 4 files / 36 passed, including editor prefill, PATCH, delete confirmation and redirect. Full frontend `npm test` — 15 files / 76 passed. `npm run build` — success, 114 modules; standard chunk-size warning only. Full backend `python -m pytest tests -q --color=no --basetemp .pytest-f22-full` via the established Hermes venv — 65 passed in 17.56s. Final `./init.sh` via that venv installed MPS requirements and stopped only at the known external Hermes pip check: missing charset-normalizer for pdfminer-six/reportlab/requests; no MPS test failure occurred.",
       "notes": "Fixed only toolbar reactivity: explicit editor selectionUpdate/transaction subscriptions recompute active state for marks, headings, lists, quote and link. Existing toggle commands and stored HTML remain unchanged. The transaction-ownership test mock now exposes stable on/off methods matching the editor lifecycle. Backend, API, dependencies, database and production deployment are unchanged; production awaits owner approval."
+    },
+    {
+      "id": "F23",
+      "priority": 23,
+      "area": "rich-text",
+      "title": "Сброс B/I/S на правой границе форматированного текста",
+      "user_visible_behavior": "После жирного, курсивного или зачёркнутого фрагмента следующий ввод на его правой границе начинается обычным текстом; ввод внутри фрагмента сохраняет форматирование.",
+      "status": "passing",
+      "verification": [
+        "RED/GREEN: B/I/S не наследуются новым вводом на правой границе mark без перемещения курсора",
+        "Регрессии: ввод внутри bold сохраняет mark; toolbar F22 и Ctrl+B/Ctrl+I продолжают работать",
+        "cd frontend/app && npm test",
+        "cd frontend/app && npm run build",
+        "cd backend && python -m pytest tests -q",
+        "./init.sh вне sandbox; внешний Hermes pip check фиксируется отдельно"
+      ],
+      "evidence": "2026-08-24: RED `npm test -- --run src/components/RichTextEditor.test.tsx` — 3 expected failures / 15 passed: after toolbar toggle at the right mark boundary, Bold/Italic/Strike serialized the new text inside `<strong>`, `<em>` and `<s>`. GREEN targeted — 18 passed: B/I/S boundary input is ordinary, input inside bold stays bold, F22 toolbar state remains reactive, and Ctrl+B/Ctrl+I remain registered. Full frontend `npm test` — 15 files / 82 passed. `npm run build` — success, 114 modules; standard Vite chunk-size warning only. Full backend `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp .pytest-f23-full` — 65 passed in 15.72s. Final `./init.sh` after the separate `python -m pip` infrastructure fix reached its global Python pre-flight and stopped only on unrelated Hermes/desktop package conflicts (numba/aider/composio and others); no MPS suite failure occurred, and the full MPS suite was run separately. Production is unchanged pending owner approval.",
+      "notes": "Product decision: platform deliberately differs from default Word/Google Docs boundary behavior. StarterKit disables only its built-in Bold/Italic/Strike registrations; the existing three TipTap extensions are re-added with `extend({ inclusive: false })`. Toolbar reactivity, toggle commands, keyboard shortcuts and stored HTML remain unchanged. Backend, API, dependencies, database and production are unchanged."
     }
   ]
 }
