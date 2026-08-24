@@ -1,5 +1,16 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 65 final F15–F34 handoff — 2026-08-25
+
+- [x] Scope is tracker-only: only `claude-progress.md`, `session-handoff.md` and this checklist changed; no application, dependency, configuration, service or production-content mutation occurred.
+- [x] F29 completed production avatar-picker alignment: F25 MIME formats and same-file input reset.
+- [x] F30 completed production draft-card delete with existing confirmation/DELETE contract, without opening composer.
+- [x] F31 completed explicit `cover_url` through DTO, composer and renderer; F32 made old gradient and real cover mutually exclusive; F33 removed the fallback by final product decision, so no-cover posts render no upper block.
+- [x] F34 completed and deployed: real sidebar avatars plus anchored green online dots; public-profile dot is driven by `/online`; authenticated refresh plus 30-second polling has cleanup. The backend presence contract remains 120-second `last_seen_at`, no WebSocket.
+- [x] F34 rollout evidence: `3451397` pushed; VPS fast-forwarded `e7e97b7 → 3451397`; rollback `/root/backups/mps-frontend-f34-20260824T172052Z`; remote build passed, served `index-C-CVCK1W.js` returned 200, `deploy/smoke.sh` returned `[OK]`, backend stayed active without restart. Guest browser DOM verified sidebar avatar+dot; public-profile live check was not completed because the only online user expired from the 120-second window and no Telegram session was available.
+- [x] Known external blocker is unchanged: Unisender/HostKey delivery network failure. F27 keeps Telegram as the sole visible login path through `EMAIL_LOGIN_ENABLED=false`; backend email endpoints remain intact.
+- [x] Next feature F35 is intentionally unstarted: personal-cabinet tabs still contain placeholders and subscribers-list «Подписаться» is not implemented.
+
 ## Session 64 F34 local completion — 2026-08-25
 
 - [x] F34 — единственная новая feature сессии; scope ограничен presence/avatar frontend flow, его tests и tracker records. Backend/API/database/dependencies/email infrastructure не менялись; production deploy не выполнялся.

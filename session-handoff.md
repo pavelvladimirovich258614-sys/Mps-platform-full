@@ -1,99 +1,30 @@
 # Session handoff — МПС
 
-## Verified state — 2026-08-25
+## Final verified state — 2026-08-25
 
-F01–F34 are recorded as passing. F34 is local-only and awaits separate frontend-only deployment approval. F31 backend+frontend is deployed at `9bc70d4`; F33 final frontend-only cover behavior is deployed at `e4c302f`, with rollback `/root/backups/mps-frontend-f33-20260824124812` and successful smoke. F30 is deployed at `11dff37`; F29 at `629f824`; F28 at `df2cb6b`; F27 at `6a02ddd` and live login UI shows only Telegram Login.
+F15–F34 are complete and deployed. Current local `main`, `origin/main` and the VPS checkout are synchronized during this checkpoint. The active production frontend includes F34 at `3451397`; its rollback copy is `/root/backups/mps-frontend-f34-20260824T172052Z`. `mps-backend` remained active throughout the frontend-only F34 rollout, and `deploy/smoke.sh` passed.
 
-## F34 local completion
+## Completed delivery cycle
 
-- Presence contract is unchanged: authenticated HTTP middleware updates `last_seen_at`; `/online` returns only non-anonymous users active in the last 120 seconds and already includes `{id, name, avatar_url}`. There is no WebSocket or backend change.
-- Layout now renders actual `avatar_url` in the «Сейчас на платформе» widget and keeps the prior gradient fallback when absent. The green dot is contained in the avatar wrapper, lower-right, instead of being positioned after the user name. The header already uses `useAuth` state, and PATCH `/me` writes the returned `avatar_url` to that state immediately.
-- App derives PublicProfile `isOnline` from `/online`; `useOnline` reloads as soon as an authenticated viewer exists and polls every 30 seconds with cleanup on unmount/viewer change. The public-profile dot is rendered only when that user is present in the list.
-- Fresh evidence: RED targeted frontend — 4 expected failures / 28 passed. GREEN `Layout`, `PublicProfile`, `useAuth`, `useOnline`, `App.routing` — 5 files / 32 passed. Presence baseline — 2 passed. Full backend unchanged — 71 passed in 18.75s; full frontend — 18 files / 106 passed; build — success, 115 modules. Final `./init.sh` stopped only on known external Hermes/desktop global pip check after MPS requirements installation.
-- No production action has occurred. After explicit frontend-only approval, deploy with rollback copy, run smoke, and let Pavel verify avatar and online indicators in a real Telegram session.
+- F15–F24: article edit/delete, TipTap media/carousels and formatting boundaries, plus private drafts with safe PATCH/publish flows.
+- F25: JPEG/PNG/WebP plus HEIC/HEIF conversion to WebP and direct AVIF support; unsupported media receives a Russian 422 explanation.
+- F26–F28: composer closes only after successful POST/PATCH, drafts remain editable through the list, and own public profile has owner-only logout through •••.
+- F29: avatar picker now accepts the F25 image set and clears its input after capture, so repeated selection of the same file works.
+- F30: each draft card has a confirmation-gated delete control that removes the draft without opening composer.
+- F31: composer provides explicit cover selection and preview; `Post.cover_url` is returned by list/detail/draft DTOs and has priority over inline body media.
+- F32: cover image and former gradient fallback were made mutually exclusive.
+- F33: final product decision removed the fallback altogether. A missing/blank cover_url renders no upper cover element, no «Под солнцем» text and no reserved cover height.
+- F34: sidebar presence renders real avatar_url or the existing gradient fallback; green online dots are anchored lower-right on sidebar/public-profile avatars. `/online` retains the 120-second `last_seen_at` rule without WebSocket, refreshes after auth and polls every 30 seconds with timer cleanup.
 
-## F33 production completion
+## Production evidence
 
-- Final product contract: explicit nonempty `cover_url` renders the existing standalone object-fit image; absent/blank `cover_url` renders no cover element, no gradient, no `Под солнцем` text and no reserved height. Inline TipTap media remain body content.
-- Fix: `Feed.tsx` and `ArticleComments.tsx` replaced the F32 image/fallback ternaries with `{coverUrl && <img ... />}`. No fallback else-branch remains. `styles.css` was intentionally untouched; backend/API/database/dependencies are unchanged.
-- Fresh evidence: RED Feed/ArticleComments — 2 expected failures / 10 passed because both no-cover paths still contained `<span>Под солнцем</span>`. GREEN targeted — 2 files / 12 passed. Full frontend — 16 files / 102 passed; build — 115 modules. Full backend unchanged — 71 passed in 19.84s. Final `./init.sh` stopped only on the known external Hermes/desktop global pip check after MPS requirements installation.
-- Production: VPS fast-forwarded to `e4c302f`; backend stayed active and was not restarted. Recoverable old dist is `/root/backups/mps-frontend-f33-20260824124812`; served bundle is `index-CXtH547q.js`; production markers and both explicit-cover image branches were present, fallback className literals absent, and `deploy/smoke.sh` passed.
-- Live no-cover DOM: existing production article showed `fallback=false`, `coverImage=false` and no exact placeholder text in both feed and detail. The immediate next content element was `post-tag`, proving there is no retained cover-height gap.
+- F34 rollout: VPS fast-forwarded `e7e97b7 → 3451397`; remote frontend build passed, served `index-C-CVCK1W.js` returned HTTP 200 and carries the F34 markers; `deploy/smoke.sh` returned `[OK]`; backend stayed `active` and was not restarted.
+- Guest browser DOM confirmed a real sidebar avatar and its green dot. A Telegram-authenticated browser session was unavailable. The only public online user expired from the 120-second window before the public-profile dot could be rechecked live; the source and regression contracts remain green.
 
-## F32 production completion
+## Known boundary
 
-- Diagnosis: F31's child condition chose `<img>` or `<span>`, but the outer `.article-cover` / `.article-hero` gradient container was unconditional. Therefore a cover DOM still contained the fallback element. The provided screenshots' lower image is inline TipTap body media; it is not a second cover and does not imply a populated `cover_url`.
-- Fix: with a nonempty trimmed `cover_url`, Feed and ArticleComments render only a standalone `article-cover-image` / `article-hero-image`. With no usable URL, they render only the former `Под солнцем` gradient container. The branches are mutually exclusive in the DOM.
-- Fresh evidence: RED Feed/ArticleComments — 2 expected failures / 10 passed; GREEN targeted — 2 files / 12 passed. Full frontend — 16 files / 102 passed; build — 115 modules. Full backend unchanged — 71 passed in 20.50s. Final `./init.sh` stopped only on known external Hermes/desktop global pip check after MPS requirements installation.
-- Production: VPS fast-forwarded `9bc70d4 → 02823b9`; backend stayed active without restart. Frontend rebuilt with production API/bot markers; served `index-BGDRzZT7.js` contains both F32 image classes and no legacy child-image rule; `deploy/smoke.sh` passed. Public feed was empty during the guest browser check, and no test data was created without Telegram authentication.
-- Superseded by F33: the F32 no-cover fallback branch was deliberately removed by the final product decision. Only explicit covers remain.
+Email delivery is still blocked by external Unisender/HostKey networking. F27 intentionally hides email login and leaves Telegram Login as the only visible guest path. The email implementation and API endpoints remain intact; restore the UI by setting `EMAIL_LOGIN_ENABLED` after the delivery infrastructure has been repaired and verified. Do not change email transport, credentials, firewall or VPS network configuration without a separate decision.
 
-- The reported upload failure was not a PNG/JPEG regression. Current composer chain remains `onChange → apiForm(POST /media) → insertImageAtDocumentStart`; existing PNG baseline passed.
-- The actual cause for iPhone photos was HEIC/HEIF being excluded by both the native file picker `accept` list and the backend MIME allowlist. The UI now accepts JPEG, PNG, WebP, HEIC, HEIF and AVIF.
-- Backend now depends on `pillow-heif==1.5.0`. It registers the HEIF decoder and converts HEIC/HEIF to WebP before storage; AVIF is accepted and preserved as AVIF. An unsupported file receives `422 «Допустимы JPEG, PNG, WebP, HEIC, HEIF или AVIF»`.
-- Fresh verification: F25 RED frontend 1 failed / 18 passed; RED backend after dependency 4 failed / 7 passed. GREEN media 11 passed and RichTextEditor 19 passed. Full backend 70 passed; full frontend 15 files / 85 passed; `npm run build` passed (115 modules, standard chunk-size warning).
-- `./init.sh` installed MPS requirements, then stopped only at the external global Hermes/desktop `pip check`; that environment is not part of MPS and was not modified.
+## Next unstarted feature — F35
 
-## F29 local completion
-
-- Diagnosis: «Загрузить аватар» is a real hidden file input in `Profile`: `onChange → auth.uploadAvatar → multipart POST /media → PATCH /me {avatar_url}`. User model, `20260818_0002_users` migration, `UserUpdate` and `PATCH /me` all already support the field. Production `/users/2/profile` returned `/media/f967a814ad4d4082ad70a662a20a8c58.png`; its HEAD was 200 image/png, proving the displayed avatar is local media rather than Telegram's external `photo_url`.
-- Root cause: Profile picker accepted only JPEG/PNG/WebP although F25 media accepts HEIC/HEIF/AVIF; its retained input value also suppresses a browser `change` when the user selects the same file again. This is a partially stale UI, not a missing endpoint or placeholder.
-- Fix: picker accepts JPEG, PNG, WebP, HEIC, HEIF and AVIF and clears its value after reading the File. Existing `useAuth` regression continues to cover the exact multipart POST/PATCH chain.
-- Fresh evidence: RED `Profile.test.tsx` — 1 expected failure / 3 passed. GREEN targeted `Profile` + `useAuth` — 2 files / 7 passed. Full frontend — 15 files / 92 passed; build success (115 modules, standard chunk-size warning). Full backend unchanged — 70 passed in 17.96s. `./init.sh` stopped only on the known external global Hermes/desktop pip check.
-- F29 frontend was subsequently deployed at `629f824`; its live smoke passed. Continue to verify HEIC/HEIF and same-file repeat behavior in a real Telegram session when available.
-
-## F30 local completion
-
-- Cover diagnosis: `PostCard` in Feed and `ArticleComments` always render the dark-gradient placeholder labelled `Под солнцем`. Inline TipTap images are body content rendered by `RichTextContent`, not cover candidates. Although backend `Post.cover_url` exists, the DTO does not return it and no frontend API type, composer or renderer consumes it. This is a hard-coded fallback/design rather than a failed upload.
-- Completed deletion scope: every draft card now has an independent «Удалить» button, so no button is nested in a button. It opens the F15-style confirmation modal; only confirmation uses the existing `DELETE /posts/{id}`, then removes the card from in-memory draft state without routing to the feed. Backend/API/database/dependencies are unchanged.
-- Fresh evidence: RED `Drafts.test.tsx` + `App.routing.test.tsx` — 4 expected failures / 19 passed. GREEN targeted — 2 files / 23 passed. Full frontend — 16 files / 96 passed; build success (115 modules, standard chunk-size warning). Full backend unchanged — 70 passed in 17.70s. `./init.sh` stopped only on the known external global Hermes/desktop pip check.
-- F30 was subsequently deployed frontend-only at `11dff37`; rollback is `/root/backups/mps-frontend-f30-20260824T152645Z`, `deploy/smoke.sh` passed, the served bundle had the delete marker, and backend stayed active. Cover behavior was deliberately left for F31.
-
-## F31 local completion
-
-- Backend: `Post.cover_url` already existed in model and PostWrite/PostPatch. `dto()` now returns it, so it is visible from GET list, published detail and draft detail; the existing generic PATCH persists it. No migration or dependency change.
-- Composer: dedicated `Выбрать обложку` picker uses existing multipart `POST /media` with JPEG/PNG/WebP/HEIC/HEIF/AVIF, previews the returned URL and retains it through draft/article edit prefill and POST/PATCH payloads.
-- Rendering: Feed and ArticleComments render the explicitly selected URL as an object-fit cover image. When it is absent, the existing dark-gradient `Под солнцем` fallback remains unchanged; inline body media is never inferred as a cover.
-- Fresh evidence: RED backend — 1 expected failure / 5 passed; RED frontend — 4 expected failures / 17 passed. GREEN targeted backend — 6 passed; frontend including App PATCH — 4 files / 41 passed. Full backend — 71 passed in 33.49s; full frontend — 16 files / 102 passed; build success (115 modules, standard chunk-size warning). `./init.sh` stopped only on the known external global Hermes/desktop pip check.
-- F31 was subsequently deployed at `9bc70d4`: backend was restarted after Alembic in service environment, readiness passed, frontend bundle was rebuilt, and `deploy/smoke.sh` passed. F32 then tightened its DOM rendering contract.
-
-## F28 production evidence
-
-F28 frontend-only rollout fast-forwarded VPS `6a02ddd → df2cb6b`. Recoverable prior dist: `/root/backups/mps-frontend-f28-20260824T142351Z`. Production frontend rebuilt with production API/bot markers, served new asset `index-DIwKqQUz.js`, and `deploy/smoke.sh` passed; `mps-backend` stayed active and was not restarted.
-
-## F28 local completion
-
-- Diagnosis: `Profile.tsx` modal was the sole physical UI location for «Выйти». `PublicProfile.tsx` already had a functioning ••• actions menu with Copy link/Share, so the owner-only logout item belongs there; no separate menu or layout was needed.
-- Fix: `PublicProfile` accepts optional `onLogout`, closes its menu before invoking it, and renders «Выйти» only for the profile owner. `App` supplies the existing `auth.logout()` flow and routes to guest feed only after it resolves. Visitor profiles remain unchanged.
-- Fresh evidence: RED `PublicProfile.test.tsx` + `App.routing.test.tsx` — 2 expected failures / 22 passed. GREEN targeted `PublicProfile`, `App.routing`, `useAuth` — 27 passed. Full frontend — 15 files / 91 passed; build success (115 modules, standard chunk-size warning). Full backend unchanged — 70 passed in 18.79s. `./init.sh` stopped only on the known external global Hermes/desktop pip check.
-- Production is intentionally unchanged. F28 needs separate frontend deployment approval; then verify the owner logout path in a real Telegram session.
-
-## F26 local completion
-
-- Root cause: Feed's composer modal had an `onClose`, but `ComposerModal` passed only `onCreate` to PostComposer; PostComposer had no callback to close after successful POST/PATCH. Thus draft save and publish both left the modal open.
-- Fix: PostComposer invokes optional `onClose` only after successful awaited POST/PATCH, catches server errors into the existing notice, and never closes on error. Feed forwards the callback to reset `composerOpen`; App clears `editingPost` for article/draft edit mode.
-- Fresh evidence: RED `PostComposer.test.tsx` — 3 expected failures / 4 passed; GREEN targeted `PostComposer`, `Feed`, `App.routing` — 28 passed. Full frontend — 15 files / 89 passed; build success (production API/bot markers present, localhost API absent). Full backend — 70 passed in 20.79s. `./init.sh` stopped only on the known external global Hermes/desktop pip check.
-- The reported draft-list click issue was not reproduced in code or tests: `Drafts` click → GET `/posts/drafts/{id}` → `setEditingPost` → prefilled edit modal is covered. Do not change that flow. Repeat the authenticated live browser check only after an approved F26 deployment.
-
-## F26 production evidence
-
-F26 frontend-only rollout fast-forwarded VPS `e1a35f3 → 2be15d5`. Rollback copy: `/root/backups/mps-frontend-f26-20260824T133425Z`. Production frontend rebuilt with verified VITE markers, served asset returned 200, and `deploy/smoke.sh` passed; `mps-backend` remained active and was not restarted. An isolated browser session was guest-only, so authenticated modal-close and draft-click checks remain unverified in live browser.
-
-## F27 production evidence
-
-F27 frontend-only rollout was pushed as `6a02ddd`, rebuilt and deployed after approval. `deploy/smoke.sh` passed; live login page showed Telegram Login only, with no email field. Backend was not restarted.
-
-## F27 local completion
-
-- Root cause: production email delivery remains externally blocked by the Unisender/HostKey network path, while the UI still presented a working-looking code form.
-- Fix: `Profile.tsx` has a documented `EMAIL_LOGIN_ENABLED = false`. It hides email input, code input, CTA and email-copy; Telegram Login remains the sole visible guest authentication path. The email callbacks, `useAuth` methods and backend endpoints are intentionally retained.
-- Fresh evidence: RED `Profile` + `App.routing` — 2 expected failures / 19 passed; GREEN targeted `Profile`, `TelegramLogin`, `App.routing` — 23 passed. `test_auth.py` — 6 passed, proving email request/verify remain available. Full frontend — 15 files / 89 passed; build success (production API/bot markers present, localhost API absent). Full backend — 70 passed in 17.36s. `./init.sh` stopped only on the known external Hermes/desktop pip check.
-- Pavel should still confirm Telegram login in a real account; Codex has no test Telegram account. Re-enable email only by changing the flag after repair and real delivery verification.
-
-## Production evidence (F25)
-
-Rollback backup: `/root/backups/mps-f25-20260824T131202Z` (previous revision and frontend dist). Production venv installed `pillow-heif==1.5.0`; `mps-backend` restarted active; frontend rebuilt with verified VITE markers; served asset returned 200 and `deploy/smoke.sh` passed. Authorized HTTPS smoke: synthetic HEIC returned 200 and was served as valid WebP; PNG/JPEG returned 200; a renamed text file returned the approved Russian 422; exactly three temporary media files were removed. No authenticated browser click was available, so that UI step remains covered by local frontend regression tests.
-
-## Known unresolved boundary
-
-Email remains blocked by the external Unisender/HostKey network path. Do not change email transport, credentials, firewall or VPS networking without Pavel's separate decision.
+The personal-cabinet tabs «Активность», «Публикации», «Ответы», «Лайки» and «Подписки» still render placeholders rather than real data. The «Подписаться» action in the subscribers list is also unfinished. Treat both as one next major feature F35; it has not been started.
