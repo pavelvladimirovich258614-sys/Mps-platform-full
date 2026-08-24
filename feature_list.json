@@ -623,7 +623,7 @@
       "area": "posts-cover",
       "title": "Удаление fallback обложки у статей",
       "user_visible_behavior": "Явно выбранная cover_url отображается как обложка; статья без cover_url не показывает сверху никакого placeholder или пустого cover-блока.",
-      "status": "in_progress",
+      "status": "passing",
       "verification": [
         "RED/GREEN Feed and ArticleComments DOM contracts for covered and uncovered articles",
         "cd frontend/app && npm test",
@@ -632,8 +632,8 @@
         "./init.sh outside sandbox; внешний Hermes pip check отслеживается отдельно",
         "frontend-only production rollout with rollback copy, served bundle verification and deploy/smoke.sh"
       ],
-      "evidence": "",
-      "notes": "Final product decision: articles without cover_url intentionally render no cover, gradient, placeholder text or reserved height. Scope is Feed/ArticleComments rendering, tests and trackers only; styles.css, backend, API, database and dependencies are unchanged."
+      "evidence": "2026-08-25 RED `npm test -- --run src/components/Feed.test.tsx src/components/ArticleComments.test.tsx --reporter=verbose` — 2 expected failures / 10 passed, exit 1: both no-cover branches still rendered `<span>Под солнцем</span>`. GREEN same targeted command — 2 files / 12 passed, exit 0: explicit cover image regression preserved; no-cover feed/detail contain no image cover, fallback class or placeholder text and the next content element is immediate. Full frontend `npm test` — 16 files / 102 passed. Full backend unchanged `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp D:\\AI\\tmp\\mps-f33-full-backend` — 71 passed in 19.84s. `npm run build` — success, 115 modules; standard chunk-size warning only. Final `./init.sh` installed MPS requirements then stopped only at unrelated external Hermes/desktop global pip-check conflicts; MPS suites were separately green. Production frontend rollout `e4c302f`: rollback `/root/backups/mps-frontend-f33-20260824124812`, served bundle `index-CXtH547q.js`, production markers present, exact fallback className strings absent, backend remained active, and `deploy/smoke.sh` passed. Live guest DOM on existing no-cover article: feed/detail fallback=false, coverImage=false, exact placeholder=false, next content class=post-tag.",
+      "notes": "Final product decision implemented: articles without cover_url intentionally render no cover, gradient, placeholder text or reserved height. Explicit cover_url keeps the F32 standalone object-fit image branch. styles.css was intentionally untouched; its now-unused fallback classes can remain harmlessly. Backend, API, database, dependencies and email infrastructure are unchanged."
     }
   ]
 }

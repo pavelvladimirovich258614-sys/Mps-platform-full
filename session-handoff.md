@@ -2,7 +2,15 @@
 
 ## Verified state — 2026-08-25
 
-F01–F32 are recorded as passing. F31 backend+frontend is deployed at `9bc70d4`; F32 critical frontend hotfix is deployed at `02823b9`, with rollback `/root/backups/mps-frontend-f32-20260824121451` and successful smoke. F30 is deployed at `11dff37`; F29 at `629f824`; F28 at `df2cb6b`; F27 at `6a02ddd` and live login UI shows only Telegram Login.
+F01–F33 are recorded as passing. F31 backend+frontend is deployed at `9bc70d4`; F33 final frontend-only cover behavior is deployed at `e4c302f`, with rollback `/root/backups/mps-frontend-f33-20260824124812` and successful smoke. F30 is deployed at `11dff37`; F29 at `629f824`; F28 at `df2cb6b`; F27 at `6a02ddd` and live login UI shows only Telegram Login.
+
+## F33 production completion
+
+- Final product contract: explicit nonempty `cover_url` renders the existing standalone object-fit image; absent/blank `cover_url` renders no cover element, no gradient, no `Под солнцем` text and no reserved height. Inline TipTap media remain body content.
+- Fix: `Feed.tsx` and `ArticleComments.tsx` replaced the F32 image/fallback ternaries with `{coverUrl && <img ... />}`. No fallback else-branch remains. `styles.css` was intentionally untouched; backend/API/database/dependencies are unchanged.
+- Fresh evidence: RED Feed/ArticleComments — 2 expected failures / 10 passed because both no-cover paths still contained `<span>Под солнцем</span>`. GREEN targeted — 2 files / 12 passed. Full frontend — 16 files / 102 passed; build — 115 modules. Full backend unchanged — 71 passed in 19.84s. Final `./init.sh` stopped only on the known external Hermes/desktop global pip check after MPS requirements installation.
+- Production: VPS fast-forwarded to `e4c302f`; backend stayed active and was not restarted. Recoverable old dist is `/root/backups/mps-frontend-f33-20260824124812`; served bundle is `index-CXtH547q.js`; production markers and both explicit-cover image branches were present, fallback className literals absent, and `deploy/smoke.sh` passed.
+- Live no-cover DOM: existing production article showed `fallback=false`, `coverImage=false` and no exact placeholder text in both feed and detail. The immediate next content element was `post-tag`, proving there is no retained cover-height gap.
 
 ## F32 production completion
 
@@ -10,7 +18,7 @@ F01–F32 are recorded as passing. F31 backend+frontend is deployed at `9bc70d4`
 - Fix: with a nonempty trimmed `cover_url`, Feed and ArticleComments render only a standalone `article-cover-image` / `article-hero-image`. With no usable URL, they render only the former `Под солнцем` gradient container. The branches are mutually exclusive in the DOM.
 - Fresh evidence: RED Feed/ArticleComments — 2 expected failures / 10 passed; GREEN targeted — 2 files / 12 passed. Full frontend — 16 files / 102 passed; build — 115 modules. Full backend unchanged — 71 passed in 20.50s. Final `./init.sh` stopped only on known external Hermes/desktop global pip check after MPS requirements installation.
 - Production: VPS fast-forwarded `9bc70d4 → 02823b9`; backend stayed active without restart. Frontend rebuilt with production API/bot markers; served `index-BGDRzZT7.js` contains both F32 image classes and no legacy child-image rule; `deploy/smoke.sh` passed. Public feed was empty during the guest browser check, and no test data was created without Telegram authentication.
-- Next action: Pavel should perform one authenticated visual acceptance: covered article shows only its picture at the top in feed/detail, and uncovered article shows only `Под солнцем`.
+- Superseded by F33: the F32 no-cover fallback branch was deliberately removed by the final product decision. Only explicit covers remain.
 
 - The reported upload failure was not a PNG/JPEG regression. Current composer chain remains `onChange → apiForm(POST /media) → insertImageAtDocumentStart`; existing PNG baseline passed.
 - The actual cause for iPhone photos was HEIC/HEIF being excluded by both the native file picker `accept` list and the backend MIME allowlist. The UI now accepts JPEG, PNG, WebP, HEIC, HEIF and AVIF.

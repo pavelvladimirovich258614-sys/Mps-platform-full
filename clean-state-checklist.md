@@ -1,5 +1,17 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 63 F33 production rollout — 2026-08-25
+
+- [x] F33 — единственная новая feature сессии; final product scope ограничен `Feed.tsx`, `ArticleComments.tsx`, их tests и tracker records. `styles.css` намеренно не изменён; backend/API/database/dependencies/email infrastructure не менялись.
+- [x] RED frontend: `npm test -- --run src/components/Feed.test.tsx src/components/ArticleComments.test.tsx --reporter=verbose` — 2 expected failures / 10 passed, поскольку обе no-cover ветки всё ещё содержали `<span>Под солнцем</span>`.
+- [x] GREEN targeted: тот же command — 2 files / 12 passed. Explicit cover image regression сохранён; no-cover DOM не имеет img, fallback class, placeholder text или зарезервированной высоты.
+- [x] Full frontend: `npm test` — 16 files / 102 passed; `npm run build` — success, 115 modules, only standard Vite chunk-size warning.
+- [x] Full backend unchanged: `D:\Python312\python.exe -m pytest tests -q --color=no --basetemp D:\AI\tmp\mps-f33-full-backend` — 71 passed in 19.84s.
+- [x] Final `./init.sh` installed MPS requirements and stopped only on agreed external Hermes/desktop global `pip check`; MPS suites were separately green.
+- [x] Production frontend-only rollout: `e4c302f` pushed and deployed; recoverable old dist `/root/backups/mps-frontend-f33-20260824124812`; served `index-CXtH547q.js`; production markers present, fallback className literals absent, `deploy/smoke.sh` passed. `mps-backend` remained active and was not restarted.
+- [x] Live guest DOM on an existing no-cover article: feed/detail `fallback=false`, `coverImage=false`, exact `Под солнцем` absent, and immediate next content class `post-tag`; no production content was created or deleted.
+- [x] `feature_list.json`, `claude-progress.md`, `session-handoff.md` and this checklist record F33 as passing with command-backed and live production evidence.
+
 ## Session 62 F32 production hotfix — 2026-08-25
 
 - [x] F32 — единственная новая feature сессии; scope ограничен Feed, ArticleComments, CSS, frontend tests и tracker records. Backend/API/database/dependencies/email infrastructure не менялись.
