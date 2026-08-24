@@ -486,6 +486,24 @@
       ],
       "evidence": "2026-08-24: pre-code inspection proved the reported iPhone path was blocked by both `accept=image/jpeg,image/png,image/webp` and backend MIME allowlist, while F24 had no diff in RichTextEditor/media. RED frontend `npm test -- --run src/components/RichTextEditor.test.tsx` — 1 expected failure / 18 passed: input accept omitted HEIC/HEIF/AVIF. RED backend initially stopped at missing `pillow_heif`; after adding the required wheel, backend RED — 4 expected failures / 7 passed: HEIC, HEIF and AVIF each returned 422, and the old unsupported-format message omitted the new supported formats. GREEN targeted: `test_media.py` — 11 passed; `RichTextEditor.test.tsx` — 19 passed. Full backend `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp D:\\AI\\tmp\\mps-f25-full-backend` — 70 passed in 21.04s. Full frontend `npm test` — 15 files / 85 passed. `npm run build` — success, 115 modules; standard Vite chunk-size warning only. Final `./init.sh` installed MPS requirements and stopped only on unrelated global Hermes/desktop pip-check conflicts; project suites were run separately and green.",
       "notes": "This is a format-extension, not a PNG/JPEG regression: the existing upload chain remained present and its baseline tests passed. `pillow-heif==1.5.0` registers HEIF decoding; HEIC and HEIF are normalized to WebP so browsers can render iPhone photos. AVIF is accepted and saved as AVIF because current Pillow and modern browsers support it. No database, sanitizer or carousel semantics changed. Approved production rollout 2026-08-24: VPS fast-forwarded `9872364` to `e1a35f3`, installed pillow-heif in `/opt/mps-platform/venv`, restarted healthy backend, rebuilt frontend, and passed smoke plus live media checks."
+    },
+    {
+      "id": "F26",
+      "priority": 26,
+      "area": "posts-drafts",
+      "title": "Поведение composer после сохранения черновика",
+      "user_visible_behavior": "После успешного сохранения черновика или публикации composer закрывается; клик по своему черновику открывает его с предзаполненными данными для редактирования.",
+      "status": "passing",
+      "verification": [
+        "Диагностика: source path и UI regression для save/close, draft click, GET detail и composer prefill",
+        "RED/GREEN: save draft и publish закрывают соответствующий composer modal; draft click sends GET detail and opens prefilled edit modal",
+        "cd frontend/app && npm test",
+        "cd frontend/app && npm run build",
+        "cd backend && python -m pytest tests -q",
+        "./init.sh вне sandbox; внешний Hermes pip check фиксируется отдельно"
+      ],
+      "evidence": "2026-08-24: RED `npm test -- --run src/components/PostComposer.test.tsx` — 3 expected failures / 4 passed: successful draft save, publish and PATCH did not invoke the absent onClose callback; the server-error scenario also exposed the pre-existing unhandled rejected promise. GREEN targeted `npm test -- --run src/components/PostComposer.test.tsx src/components/Feed.test.tsx src/App.routing.test.tsx` — 3 files / 28 passed: successful POST draft/publish and PATCH draft/article invoke onClose, while rejected server request leaves the composer rendered with its error. Full frontend `npm test` — 15 files / 89 passed. `npm run build` — success, 115 modules; standard Vite chunk-size warning only; production API/bot markers present and localhost API absent. Full backend `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp D:\\AI\\tmp\\mps-f26-full-backend` — 70 passed in 20.79s. Final `./init.sh` installed MPS requirements and stopped only at unrelated external Hermes/desktop global pip-check conflicts; MPS suites were separately green.",
+      "notes": "Fixed only the confirmed close path: PostComposer calls optional onClose only after its awaited POST/PATCH has resolved; its error catch preserves the open modal and error notice. Feed forwards onClose to reset composerOpen; App forwards it for edit mode to clear editingPost, so draft/article PATCH closes too. Point 2 (draft-list click) was not reproduced in source or tests: Drafts onClick → GET /posts/drafts/{id} → setEditingPost → prefilled edit modal remains covered; it needs a repeat live authenticated browser check after the separately approved F26 deploy. No backend, API, database, dependency or production change."
     }
   ]
 }

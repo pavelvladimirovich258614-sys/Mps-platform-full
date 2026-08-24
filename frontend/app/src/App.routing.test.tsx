@@ -172,11 +172,12 @@ describe("App pathname routing", () => {
     window.history.replaceState({}, "", "/drafts");
     setAccessToken("editor-access-token");
     const draft = { ...post, id: 24, title: "Черновик Бали", slug: "bali-draft", body: "Текст черновика", status: "draft", updated_at: "2026-08-24T08:00:00+00:00" };
-    vi.stubGlobal("fetch", vi.fn<typeof fetch>(async (input) => {
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>(async (input, init) => {
       const path = new URL(String(input)).pathname;
       if (path === "/api/v1/me") return jsonResponse(200, { id: 5, email: null, name: "Редактор", avatar_url: null, bio: null, role: "editor", is_anonymous: false });
       if (path === "/api/v1/posts/drafts") return jsonResponse(200, [{ id: draft.id, title: draft.title, updated_at: draft.updated_at }]);
       if (path === `/api/v1/posts/drafts/${draft.id}`) return jsonResponse(200, draft);
+      if (path === `/api/v1/posts/${draft.id}` && init?.method === "PATCH") return jsonResponse(200, { ...draft, ...JSON.parse(String(init.body)) });
       if (path === "/api/v1/posts" || path === "/api/v1/online") return jsonResponse(200, []);
       if (path === "/api/v1/notifications") return jsonResponse(200, { items: [] });
       if (path === "/api/v1/auth/refresh") return jsonResponse(401, { detail: "Требуется авторизация" });
@@ -189,6 +190,8 @@ describe("App pathname routing", () => {
     fireEvent.click(screen.getByRole("button", { name: /Черновик Бали/ }));
     expect(await screen.findByRole("dialog", { name: "Редактирование публикации" })).toBeTruthy();
     expect((screen.getByLabelText("Заголовок публикации") as HTMLInputElement).value).toBe("Черновик Бали");
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить черновик" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Редактирование публикации" })).toBeNull());
   });
 
   it("shows a dedicated not-found state for a physically missing slug", async () => {
@@ -294,6 +297,7 @@ describe("App pathname routing", () => {
     await waitFor(() => expect(fetchMock.mock.calls.some(([input, init]) => new URL(String(input)).pathname === "/api/v1/posts/17" && (init as RequestInit).method === "PATCH")).toBe(true));
     const patchCall = fetchMock.mock.calls.find(([input, init]) => new URL(String(input)).pathname === "/api/v1/posts/17" && (init as RequestInit).method === "PATCH");
     expect(JSON.parse(String((patchCall?.[1] as RequestInit).body))).toEqual({ title: post.title, type: "article", body: post.body, status: "published" });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Редактирование публикации" })).toBeNull());
 
     fireEvent.click(screen.getByRole("button", { name: "Удалить" }));
     expect(fetchMock.mock.calls.some(([input, init]) => new URL(String(input)).pathname === "/api/v1/posts/17" && (init as RequestInit).method === "DELETE")).toBe(false);

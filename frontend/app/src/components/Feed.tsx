@@ -44,7 +44,7 @@ function ComposerModal({ onClose, onCreate }: { onClose: () => void; onCreate: (
     <button type="button" className="composer-backdrop" aria-label="Закрыть создание публикации" />
     <section className="composer-modal" onMouseDown={(event) => event.stopPropagation()}>
       <button type="button" className="round-close" aria-label="Закрыть" onClick={onClose}>×</button>
-      <PostComposer onCreate={onCreate} />
+      <PostComposer onCreate={onCreate} onClose={onClose} />
     </section>
   </div>;
 }

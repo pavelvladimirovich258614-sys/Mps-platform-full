@@ -1,5 +1,16 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 56 F26 local completion — 2026-08-24
+
+- [x] F26 — единственная новая feature сессии; production deploy не выполнялся.
+- [x] Диагностика: Feed ComposerModal имел onClose, но передавал в PostComposer только onCreate; поэтому ни successful draft save, ни publish не могли закрыть creation modal. App edit modal также не получал close callback.
+- [x] Point 2 не воспроизведён: Drafts button onClick → GET `/posts/drafts/{id}` → `setEditingPost` → initialPost подтверждены source и `App.routing` тестом; CSS pointer-events blocker не найден. Нужна повторная authenticated live browser проверка после deploy, рабочий flow не менялся.
+- [x] RED frontend: `PostComposer.test.tsx` — 3 expected failures / 4 passed; onClose отсутствовал после successful draft POST, published POST и PATCH, а rejected request был unhandled. GREEN targeted: `PostComposer`, `Feed`, `App.routing` — 3 files / 28 passed; error оставляет composer открытым.
+- [x] Full frontend: `npm test` — 15 files / 89 passed; `npm run build` — success, 115 modules, only standard Vite chunk-size warning. Built bundle confirms production API/bot markers and no localhost API.
+- [x] Full backend (unchanged): `D:\Python312\python.exe -m pytest tests -q --color=no --basetemp D:\AI\tmp\mps-f26-full-backend` — 70 passed in 20.79s.
+- [x] Final `./init.sh` installed MPS requirements and stopped only on agreed external Hermes/desktop global `pip check`; MPS suites were run separately and green.
+- [x] Scope only PostComposer close callback and its Feed/App propagation plus regression tests. No backend, API, database, dependency, email or production configuration changed. `feature_list.json`, `claude-progress.md` and `session-handoff.md` updated.
+
 ## Session 55 F25 local completion — 2026-08-24
 
 - [x] F25 — единственная новая feature сессии; production deploy не выполнялся.

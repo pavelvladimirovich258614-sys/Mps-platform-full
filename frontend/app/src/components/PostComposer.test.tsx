@@ -59,4 +59,45 @@ describe("PostComposer", () => {
     await waitFor(() => expect(onUpdate).toHaveBeenLastCalledWith({ title: "Обновлённый черновик", type: "article", body: "<p><strong>Готово</strong></p>", status: "published" }));
     expect(onCreate).toHaveBeenCalledTimes(1);
   });
+
+  it.each(["Сохранить черновик", "Опубликовать"])("closes only after a successful %s create request", async (action) => {
+    const onCreate = vi.fn().mockResolvedValue(action === "Сохранить черновик" ? { id: 24, title: "Черновик", type: "article", body: "<p><strong>Готово</strong></p>", status: "draft" } : undefined);
+    const onClose = vi.fn();
+    render(<PostComposer onCreate={onCreate} onClose={onClose} />);
+
+    fireEvent.change(screen.getByLabelText("Заголовок публикации"), { target: { value: "Материал" } });
+    fireEvent.click(screen.getByRole("button", { name: "Заполнить текст публикации" }));
+    fireEvent.click(screen.getByRole("button", { name: action }));
+
+    await waitFor(() => expect(onCreate).toHaveBeenCalled());
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the composer open when its save request fails", async () => {
+    const onCreate = vi.fn().mockRejectedValue(new Error("Сервер недоступен"));
+    const onClose = vi.fn();
+    render(<PostComposer onCreate={onCreate} onClose={onClose} />);
+
+    fireEvent.change(screen.getByLabelText("Заголовок публикации"), { target: { value: "Материал" } });
+    fireEvent.click(screen.getByRole("button", { name: "Заполнить текст публикации" }));
+    fireEvent.click(screen.getByRole("button", { name: "Опубликовать" }));
+
+    await waitFor(() => expect(onCreate).toHaveBeenCalled());
+    await Promise.resolve();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: "Создать публикацию" })).toBeTruthy();
+    expect(screen.getByText("Сервер недоступен")).toBeTruthy();
+  });
+
+  it("closes after a successful PATCH of an existing draft or article", async () => {
+    const onUpdate = vi.fn().mockResolvedValue({ id: 17, title: "Черновик", type: "article", body: "<p><strong>Готово</strong></p>", status: "draft" });
+    const onClose = vi.fn();
+    render(<PostComposer initialPost={{ id: 17, title: "Черновик", type: "article", body: "<p>Текст</p>", status: "draft" }} onUpdate={onUpdate} onClose={onClose} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Заполнить текст публикации" }));
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить черновик" }));
+
+    await waitFor(() => expect(onUpdate).toHaveBeenCalled());
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });

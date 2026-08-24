@@ -4,9 +4,9 @@ import { RichTextEditor } from "./RichTextEditor";
 
 export type PostDraft = { title: string; type: "article"; body: string; status: "draft" | "published" };
 export type EditablePost = PostDraft & { id: number };
-type PostComposerProps = { onCreate?: (post: PostDraft) => Promise<EditablePost | undefined>; initialPost?: EditablePost; onUpdate?: (post: PostDraft) => Promise<EditablePost | undefined> };
+type PostComposerProps = { onCreate?: (post: PostDraft) => Promise<EditablePost | undefined>; initialPost?: EditablePost; onUpdate?: (post: PostDraft) => Promise<EditablePost | undefined>; onClose?: () => void };
 
-export function PostComposer({ onCreate, initialPost, onUpdate }: PostComposerProps) {
+export function PostComposer({ onCreate, initialPost, onUpdate, onClose }: PostComposerProps) {
   const [currentPost, setCurrentPost] = useState(initialPost);
   const editing = Boolean(currentPost);
   const [title, setTitle] = useState(initialPost?.title ?? "");
@@ -42,6 +42,9 @@ export function PostComposer({ onCreate, initialPost, onUpdate }: PostComposerPr
           setNotice("Публикация опубликована");
         }
       }
+      onClose?.();
+    } catch (cause) {
+      setNotice(cause instanceof Error ? cause.message : "Не удалось сохранить публикацию");
     } finally {
       setSaving(false);
     }

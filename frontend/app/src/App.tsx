@@ -305,7 +305,7 @@ export function App() {
         <div className="modal-backdrop composer-modal-backdrop" role="dialog" aria-modal="true" aria-label="Редактирование публикации" onMouseDown={() => setEditingPost(null)}>
           <section className="composer-modal" onMouseDown={(event) => event.stopPropagation()}>
             <button type="button" className="round-close" aria-label="Закрыть" onClick={() => setEditingPost(null)}>×</button>
-            <PostComposer initialPost={editingPost} onUpdate={(draft) => updatePost(editingPost, draft)} />
+            <PostComposer initialPost={editingPost} onUpdate={(draft) => updatePost(editingPost, draft)} onClose={() => setEditingPost(null)} />
           </section>
         </div>
       )}
