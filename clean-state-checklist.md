@@ -1,5 +1,17 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 60 F30 local completion — 2026-08-24
+
+- [x] F30 — единственная новая feature сессии; production deploy не выполнялся.
+- [x] Cover diagnosis before implementation: `Feed` PostCard and `ArticleComments` unconditionally render dark-gradient `Под солнцем`; TipTap inline images are body-only `RichTextContent`. Backend `Post.cover_url` exists but is absent from DTO/frontend/composer/rendering. This is a hard-coded fallback/design, not a media-upload regression.
+- [x] Scope: `Drafts.tsx`, `App.tsx`, frontend tests and CSS only. Each draft card has independent open/delete buttons (no nested button); F15-style confirmation guards the existing DELETE, and success removes only that card from local drafts without navigation. No backend/API/database/dependency/email/production configuration change.
+- [x] RED frontend: `Drafts.test.tsx` + `App.routing.test.tsx` — 4 expected failures / 19 passed: absent delete control/confirmation paths.
+- [x] GREEN targeted: same command — 2 files / 23 passed; covers visible control, no DELETE before confirmation, DELETE after confirmation and card disappearing.
+- [x] Full frontend: `npm test` — 16 files / 96 passed; `npm run build` — success, 115 modules, only standard Vite chunk-size warning.
+- [x] Full backend (unchanged): `D:\Python312\python.exe -m pytest tests -q --color=no --basetemp D:\AI\tmp\mps-f30-full-backend` — 70 passed in 17.70s.
+- [x] Final `./init.sh` installed MPS requirements and stopped only on agreed external Hermes/desktop global `pip check`; MPS suites were separately green.
+- [x] `feature_list.json`, `claude-progress.md` and `session-handoff.md` updated. F30 is local-only pending separate production approval; cover behavior remains separate, unimplemented product scope.
+
 ## Session 59 F29 local completion — 2026-08-24
 
 - [x] F29 — единственная новая feature сессии; production deploy не выполнялся.

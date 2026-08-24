@@ -196,11 +196,38 @@ describe("App pathname routing", () => {
     render(<App />);
 
     expect(await screen.findByRole("heading", { level: 1, name: "Черновики" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /Черновик Бали/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Черновик Бали/ }));
     expect(await screen.findByRole("dialog", { name: "Редактирование публикации" })).toBeTruthy();
     expect((screen.getByLabelText("Заголовок публикации") as HTMLInputElement).value).toBe("Черновик Бали");
     fireEvent.click(screen.getByRole("button", { name: "Сохранить черновик" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Редактирование публикации" })).toBeNull());
+  });
+
+  it("deletes a draft after confirmation and removes its card from the list", async () => {
+    window.history.replaceState({}, "", "/drafts");
+    setAccessToken("editor-access-token");
+    const draft = { ...post, id: 24, title: "Черновик Бали", slug: "bali-draft", body: "Текст черновика", status: "draft", updated_at: "2026-08-24T08:00:00+00:00" };
+    let visibleDrafts = [{ id: draft.id, title: draft.title, updated_at: draft.updated_at }];
+    const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
+      const path = new URL(String(input)).pathname;
+      if (path === "/api/v1/me") return jsonResponse(200, { id: 5, email: null, name: "Редактор", avatar_url: null, bio: null, role: "editor", is_anonymous: false });
+      if (path === "/api/v1/posts/drafts") return jsonResponse(200, visibleDrafts);
+      if (path === `/api/v1/posts/${draft.id}` && init?.method === "DELETE") { visibleDrafts = []; return new Response(null, { status: 204 }); }
+      if (path === "/api/v1/posts" || path === "/api/v1/online") return jsonResponse(200, []);
+      if (path === "/api/v1/notifications") return jsonResponse(200, { items: [] });
+      if (path === "/api/v1/auth/refresh") return jsonResponse(401, { detail: "Требуется авторизация" });
+      return jsonResponse(200, {});
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<App />);
+
+    expect(await screen.findByText(draft.title)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: `Удалить черновик: ${draft.title}` }));
+    expect(fetchMock.mock.calls.some(([input, init]) => new URL(String(input)).pathname === `/api/v1/posts/${draft.id}` && (init as RequestInit).method === "DELETE")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Подтвердить удаление" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([input, init]) => new URL(String(input)).pathname === `/api/v1/posts/${draft.id}` && (init as RequestInit).method === "DELETE")).toBe(true));
+    await waitFor(() => expect(screen.queryByText(draft.title)).toBeNull());
   });
 
   it("shows a dedicated not-found state for a physically missing slug", async () => {

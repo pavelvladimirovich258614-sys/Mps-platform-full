@@ -559,6 +559,24 @@
       ],
       "evidence": "2026-08-24 diagnosis: Profile has a real label-associated hidden file input whose onChange calls auth.uploadAvatar. Existing hook contract proves multipart POST /media followed by PATCH /me {avatar_url}. Backend User.avatar_url exists since migration 20260818_0002; UserUpdate and PATCH /me persist it. Production GET /users/2/profile returned /media/f967a814ad4d4082ad70a662a20a8c58.png (HEAD 200 image/png), therefore Pavel's visible avatar is local media, not Telegram photo_url. RED `npm test -- --run src/components/Profile.test.tsx` — 1 expected failure / 3 passed: avatar input accepted only JPEG/PNG/WebP. GREEN targeted `npm test -- --run src/components/Profile.test.tsx src/hooks/useAuth.test.tsx` — 2 files / 7 passed: F25 MIME set and clearing the input are covered, while the existing multipart POST /media then PATCH /me contract remains green. Full frontend `npm test` — 15 files / 92 passed. `npm run build` — success, 115 modules; standard Vite chunk-size warning only. Full backend (unchanged) `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp D:\\AI\\tmp\\mps-f29-full-backend` — 70 passed in 17.96s. Final `./init.sh` installed MPS requirements and stopped only at unrelated external Hermes/desktop global pip-check conflicts; MPS suites were separately green.",
       "notes": "Existing avatar upload is not a placeholder: it reuses F25 media and PATCH /me. Profile picker now accepts JPEG, PNG, WebP, HEIC, HEIF and AVIF, and clears its value after reading a file so the same file can be selected again. Backend, API, database, dependencies and production configuration were not changed. Production deploy requires separate approval."
+    },
+    {
+      "id": "F30",
+      "priority": 30,
+      "area": "posts-drafts",
+      "title": "Удаление черновиков из списка и диагностика обложки статьи",
+      "user_visible_behavior": "Редактор может удалить черновик прямо из списка после подтверждения; поведение обложки опубликованной статьи документировано и меняется только после отдельного продуктового решения.",
+      "status": "passing",
+      "verification": [
+        "Диагностика cover/fallback до изменений",
+        "RED/GREEN controls удаления черновика и confirmation modal",
+        "cd frontend/app && npm test",
+        "cd frontend/app && npm run build",
+        "cd backend && python -m pytest tests -q",
+        "./init.sh outside sandbox; внешний Hermes pip check отслеживается отдельно"
+      ],
+      "evidence": "2026-08-24 diagnosis: Feed PostCard and ArticleComments unconditionally render the dark-gradient `Под солнцем` cover/hero; inline TipTap images in `body` are rendered later by RichTextContent and never selected as cover. Backend Post has `cover_url`, but its DTO, frontend ApiPost, composer and feed/article rendering do not use it. Therefore the block is the hard-coded fallback/design, not a broken inline-image upload. RED `npm test -- --run src/components/Drafts.test.tsx src/App.routing.test.tsx` — 4 expected failures / 19 passed: delete controls and confirmation dialog were absent. GREEN same targeted command — 2 files / 23 passed: no DELETE before confirmation, DELETE after it, and card removal are covered. Full frontend `npm test` — 16 files / 96 passed. `npm run build` — success, 115 modules; standard Vite chunk-size warning only. Full backend (unchanged) `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp D:\\AI\\tmp\\mps-f30-full-backend` — 70 passed in 17.70s. Final `./init.sh` installed MPS requirements then stopped only on unrelated external Hermes/desktop global pip-check conflicts; MPS suites were separately green.",
+      "notes": "Draft delete is an editor-list UI over the existing DELETE /posts/{id}: every card now has a separate accessible delete button and F15-style confirmation; successful deletion updates draft state locally with no feed navigation. Backend/API/database/dependencies and production configuration were not changed. Article cover is intentionally not changed in F30: choosing automatic first-inline-image cover versus a separate cover_url composer flow needs product approval. Production deploy requires separate approval."
     }
   ]
 }

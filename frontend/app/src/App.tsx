@@ -158,6 +158,14 @@ export function App() {
       showError(cause instanceof Error ? cause.message : "Не удалось удалить публикацию");
     }
   };
+  const deleteDraft = async (draft: { id: number }) => {
+    try {
+      await postEditor.remove(draft.id);
+      drafts.setValue((current) => (current ?? []).filter((item) => item.id !== draft.id));
+    } catch (cause) {
+      showError(cause instanceof Error ? cause.message : "Не удалось удалить черновик");
+    }
+  };
   const page: Page = route.page === "countries" && topicOpen ? "topic" : route.page;
   let content = null;
   if (page === "feed") content = <Feed posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} canCreate={canManagePosts} onCreatePost={createPost} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
@@ -238,7 +246,7 @@ export function App() {
   if (page === "reviews") content = <Reviews onError={showError} onPrivacy={() => openPage("privacy")} />;
   if (page === "subscribe") content = <Subscribe onError={showError} onPrivacy={() => openPage("privacy")} />;
   if (page === "about") content = <About publicSettings={publicSettings.value} />;
-  if (page === "drafts" && canManagePosts) content = <Drafts drafts={drafts.value ?? []} loading={drafts.loading} onOpen={(draft) => void openDraft(draft.id)} />;
+  if (page === "drafts" && canManagePosts) content = <Drafts drafts={drafts.value ?? []} loading={drafts.loading} onOpen={(draft) => void openDraft(draft.id)} onDelete={deleteDraft} />;
   if (page === "drafts" && !canManagePosts) content = <main className="feed-page"><div className="feed-wrap"><section className="surface-card"><h1>Раздел недоступен</h1><p>Черновики доступны только редактору.</p></section></div></main>;
   if (page === "privacy" || page === "terms") {
     content = <Legal kind={page as LegalKind} onBack={() => navigate({ page: "feed" })} publicSettings={publicSettings.value} />;

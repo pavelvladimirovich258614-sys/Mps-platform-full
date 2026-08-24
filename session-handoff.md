@@ -2,7 +2,7 @@
 
 ## Verified local state — 2026-08-24
 
-F01–F29 are recorded as passing. F28 is deployed at `df2cb6b`; F27 is deployed at `6a02ddd` and live login UI shows only Telegram Login; F26 is deployed at `2be15d5`. F29 is local-only and awaits separate frontend rollout approval.
+F01–F30 are recorded as passing. F29 is deployed at `629f824`; F28 is deployed at `df2cb6b`; F27 is deployed at `6a02ddd` and live login UI shows only Telegram Login; F26 is deployed at `2be15d5`. F30 is local-only and awaits separate frontend rollout approval.
 
 - The reported upload failure was not a PNG/JPEG regression. Current composer chain remains `onChange → apiForm(POST /media) → insertImageAtDocumentStart`; existing PNG baseline passed.
 - The actual cause for iPhone photos was HEIC/HEIF being excluded by both the native file picker `accept` list and the backend MIME allowlist. The UI now accepts JPEG, PNG, WebP, HEIC, HEIF and AVIF.
@@ -16,7 +16,14 @@ F01–F29 are recorded as passing. F28 is deployed at `df2cb6b`; F27 is deployed
 - Root cause: Profile picker accepted only JPEG/PNG/WebP although F25 media accepts HEIC/HEIF/AVIF; its retained input value also suppresses a browser `change` when the user selects the same file again. This is a partially stale UI, not a missing endpoint or placeholder.
 - Fix: picker accepts JPEG, PNG, WebP, HEIC, HEIF and AVIF and clears its value after reading the File. Existing `useAuth` regression continues to cover the exact multipart POST/PATCH chain.
 - Fresh evidence: RED `Profile.test.tsx` — 1 expected failure / 3 passed. GREEN targeted `Profile` + `useAuth` — 2 files / 7 passed. Full frontend — 15 files / 92 passed; build success (115 modules, standard chunk-size warning). Full backend unchanged — 70 passed in 17.96s. `./init.sh` stopped only on the known external global Hermes/desktop pip check.
-- Production is intentionally unchanged. F29 needs separate frontend deployment approval; then verify HEIC/HEIF and same-file repeat behavior in a real Telegram session.
+- F29 frontend was subsequently deployed at `629f824`; its live smoke passed. Continue to verify HEIC/HEIF and same-file repeat behavior in a real Telegram session when available.
+
+## F30 local completion
+
+- Cover diagnosis: `PostCard` in Feed and `ArticleComments` always render the dark-gradient placeholder labelled `Под солнцем`. Inline TipTap images are body content rendered by `RichTextContent`, not cover candidates. Although backend `Post.cover_url` exists, the DTO does not return it and no frontend API type, composer or renderer consumes it. This is a hard-coded fallback/design rather than a failed upload.
+- Completed deletion scope: every draft card now has an independent «Удалить» button, so no button is nested in a button. It opens the F15-style confirmation modal; only confirmation uses the existing `DELETE /posts/{id}`, then removes the card from in-memory draft state without routing to the feed. Backend/API/database/dependencies are unchanged.
+- Fresh evidence: RED `Drafts.test.tsx` + `App.routing.test.tsx` — 4 expected failures / 19 passed. GREEN targeted — 2 files / 23 passed. Full frontend — 16 files / 96 passed; build success (115 modules, standard chunk-size warning). Full backend unchanged — 70 passed in 17.70s. `./init.sh` stopped only on the known external global Hermes/desktop pip check.
+- Local F30 completion commit is created; production is intentionally unchanged. F30 needs separate frontend deployment approval and a live deletion check. No cover behavior was changed: separately approve either automatic first-inline-image cover or a dedicated `cover_url` composer flow.
 
 ## F28 production evidence
 
