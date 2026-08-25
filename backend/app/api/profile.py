@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps import get_current_user, get_db, get_optional_current_user
 from app.models.comment import Comment
+from app.models.activity import ActivityEventType
 from app.models.notification import Notification
 from app.api.posts import dto as post_dto
 from app.models.post import Country, Post, PostStatus, post_likes
@@ -13,6 +14,7 @@ from app.models.review import ModerationStatus
 from app.models.user import User, UserFollow
 from app.schemas.admin import NotificationsReadUpdate
 from app.schemas.user import PublicProfileResponse, UserResponse, UserUpdate
+from app.services.activity import record_activity, remove_activity
 
 router = APIRouter(tags=["profile"])
 
@@ -227,6 +229,12 @@ async def follow_user(
     if exists is not None:
         raise HTTPException(409, "Вы уже подписаны на этого пользователя")
     session.add(UserFollow(follower_id=user.id, following_id=user_id))
+    record_activity(
+        session,
+        user_id=user.id,
+        event_type=ActivityEventType.USER_FOLLOWED,
+        reference_id=user_id,
+    )
     await session.commit()
     return {"followers_count": await followers_count(session, user_id), "is_following": True}
 
@@ -243,6 +251,12 @@ async def unfollow_user(
             UserFollow.follower_id == user.id,
             UserFollow.following_id == user_id,
         )
+    )
+    await remove_activity(
+        session,
+        user_id=user.id,
+        event_type=ActivityEventType.USER_FOLLOWED,
+        reference_id=user_id,
     )
     await session.commit()
     return {"followers_count": await followers_count(session, user_id), "is_following": False}

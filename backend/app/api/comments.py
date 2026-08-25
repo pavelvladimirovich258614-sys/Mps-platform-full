@@ -5,12 +5,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps import get_current_user, get_db, get_optional_current_user, require_role
 from app.models.comment import Comment, comment_reactions
+from app.models.activity import ActivityEventType
 from app.models.notification import Notification
 from app.models.post import Post
 from app.models.review import ModerationStatus
 from app.models.setting import Setting
 from app.models.user import Role, User
 from app.schemas.moderation import CommentCreate, ModerateRequest, ModerationAction, ReactionCreate
+from app.services.activity import record_activity
 
 router = APIRouter(tags=["comments"])
 REACTION_EMOJI = ("👍", "❤️", "🔥", "😂")
@@ -94,6 +96,13 @@ async def create_comment(
     status = ModerationStatus.PENDING if await comments_moderation_enabled(session) else ModerationStatus.APPROVED
     comment = Comment(post_id=post_id, user_id=user.id, parent_id=payload.parent_id, body=nh3.clean(payload.body), status=status)
     session.add(comment)
+    await session.flush()
+    record_activity(
+        session,
+        user_id=user.id,
+        event_type=ActivityEventType.COMMENT_CREATED,
+        reference_id=comment.id,
+    )
     await session.commit()
     await session.refresh(comment)
     return await comment_dto(session, comment, user.id)

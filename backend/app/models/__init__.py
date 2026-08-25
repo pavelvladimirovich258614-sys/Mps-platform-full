@@ -9,9 +9,11 @@ from app.models.question import Question, QuestionStatus, QuestionTarget
 from app.models.subscription import Subscription
 from app.models.forum import ForumMessage, ForumTopic
 from app.models.setting import Setting
+from app.models.activity import ActivityEventType, ActivityLog
 
 __all__ = [
     "Role", "User", "Country", "Post", "PostStatus", "PostType", "post_likes",
     "Comment", "comment_reactions", "ModerationStatus", "Notification", "Review",
     "ReviewSource", "ReviewToken",
+    "ActivityEventType", "ActivityLog",
 ]

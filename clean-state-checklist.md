@@ -8,12 +8,21 @@
 
 ## Session 68 F35 Session 3 local completion — 2026-08-25
 
+## Session 69 F35 Session 4a local completion — 2026-08-25
+
+- [x] F35 remains the single `in_progress` feature. Session 4a scope is backend Activity infrastructure only: migration/backfill and atomic write hooks; no Activity read endpoint, frontend UI, privacy exposure, email or unrelated changes.
+- [x] Exact event contract: `post_published`, `comment_created`, `post_liked`, `user_followed`; draft saves create no event. Unlike/unfollow remove the corresponding reversible current-state event.
+- [x] RED `test_activity_log.py` — expected missing `app.models.activity` collection error. GREEN — 4 passed: direct/draft publication, comment, like/unlike and follow/unfollow.
+- [x] Full backend — 77 passed in 21.70s. Alembic head — `20260825_0012`. `git diff --check` passed before checkpoint staging.
+- [x] Final `./init.sh` outside sandbox stopped only at the agreed external Hermes/desktop global `pip check` before MPS tests; no attempt was made to modify that environment.
+- [x] Production deployment is not performed for Session 4a and remains separately approved; frontend is intentionally untouched.
+
 - [x] F35 remains the single `in_progress` feature. Session 3 scope was public Likes UX only: optional real cover, liked date and same-tab cache refresh; no card toggle, privacy change, BroadcastChannel, Activity or email work.
 - [x] RED backend — expected missing `liked_at`, 1 failure / 9 passed. GREEN `test_public_profile.py` — 10 passed, including a UTC `liked_at` from `post_likes.created_at`.
 - [x] RED frontend — 2 expected failures / 29 passed: Likes card lacked cover/date and toggle did not refresh shared likes state. GREEN targeted PublicProfile + routing — 31 passed.
 - [x] Full backend — 73 passed in 22.95s. Full frontend — 18 files / 110 passed. `npm run build` — success, 115 modules; only standard chunk-size warning.
 - [x] Final `./init.sh` outside sandbox stopped only at the agreed external Hermes/desktop global `pip check` before MPS tests; no attempt was made to modify that environment.
-- [x] Production deploy was not performed for Session 3 and remains separately approved; no migration or dependency change is required.
+- [x] Approved Session 3 rollout completed: `c12e102` is on VPS; backend readiness was green on attempt 2, remote build published `index-DL7pFkN2.js`, public Likes returned 200 and `deploy/smoke.sh` passed. No migration or dependency change was required.
 
 - [x] F35 remains the single `in_progress` feature. Session 2 scope was own comments in «Ответы» only; Likes, Activity and email delivery were not changed.
 - [x] RED backend — expected missing-route 404, 1 failure / 9 passed. GREEN `D:\Python312\python.exe -m pytest tests/test_public_profile.py -q --color=no --basetemp .pytest-f35-s2-green-backend` — 10 passed. Owner sees all own statuses; guest/viewer only approved; DTO carries comment and post context.

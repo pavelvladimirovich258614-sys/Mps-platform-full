@@ -6,8 +6,10 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.deps import get_current_user, get_db, require_role
 from app.models.post import Post, PostStatus, PostType, post_likes
+from app.models.activity import ActivityEventType
 from app.models.user import Role, User
 from app.schemas.post import PostPatch, PostWrite
+from app.services.activity import record_activity, remove_activity
 
 router=APIRouter(prefix="/posts",tags=["posts"])
 POST_BODY_TAGS = {"p", "br", "strong", "em", "s", "h1", "h2", "h3", "ul", "ol", "li", "blockquote", "a", "img", "figure"}
@@ -56,13 +58,22 @@ async def get_post(slug:str,session:AsyncSession=Depends(get_db)):
 async def create(payload:PostWrite,session:AsyncSession=Depends(get_db),user:User=Depends(require_role(Role.EDITOR))):
     values = payload.model_dump()
     values["body"] = clean_post_body(payload.body)
-    post=Post(**values,slug=await unique_slug(session,payload.title),author_id=user.id,published_at=datetime.now(UTC) if payload.status==PostStatus.PUBLISHED else None);session.add(post);await session.commit();await session.refresh(post);return dto(post,user)
+    post=Post(**values,slug=await unique_slug(session,payload.title),author_id=user.id,published_at=datetime.now(UTC) if payload.status==PostStatus.PUBLISHED else None)
+    session.add(post)
+    await session.flush()
+    if post.status == PostStatus.PUBLISHED:
+        record_activity(session, user_id=post.author_id, event_type=ActivityEventType.POST_PUBLISHED, reference_id=post.id)
+    await session.commit();await session.refresh(post);return dto(post,user)
 @router.post("/{post_id}/like")
 async def like(post_id:int,session:AsyncSession=Depends(get_db),user:User=Depends(get_current_user)):
     exists=await session.scalar(select(post_likes.c.post_id).where(post_likes.c.post_id==post_id,post_likes.c.user_id==user.id)); post=await session.get(Post,post_id)
     if not post: raise HTTPException(404,"Публикация не найдена")
-    if exists: await session.execute(delete(post_likes).where(post_likes.c.post_id==post_id,post_likes.c.user_id==user.id));post.likes_count-=1
-    else: await session.execute(post_likes.insert().values(post_id=post_id,user_id=user.id));post.likes_count+=1
+    if exists:
+        await session.execute(delete(post_likes).where(post_likes.c.post_id==post_id,post_likes.c.user_id==user.id));post.likes_count-=1
+        await remove_activity(session, user_id=user.id, event_type=ActivityEventType.POST_LIKED, reference_id=post_id)
+    else:
+        await session.execute(post_likes.insert().values(post_id=post_id,user_id=user.id));post.likes_count+=1
+        record_activity(session, user_id=user.id, event_type=ActivityEventType.POST_LIKED, reference_id=post_id)
     await session.commit();return {"likes_count":post.likes_count}
 
 @router.patch("/{post_id}")
@@ -77,7 +88,9 @@ async def patch(post_id:int,payload:PostPatch,session:AsyncSession=Depends(get_d
         raise HTTPException(422, "Для видеообзора обязательна дата съёмки")
     was_draft = post.status == PostStatus.DRAFT
     for key,value in changes.items(): setattr(post,key,clean_post_body(value) if key=="body" else value)
-    if was_draft and post.status == PostStatus.PUBLISHED: post.published_at = datetime.now(UTC)
+    if was_draft and post.status == PostStatus.PUBLISHED:
+        post.published_at = datetime.now(UTC)
+        record_activity(session, user_id=post.author_id, event_type=ActivityEventType.POST_PUBLISHED, reference_id=post.id)
     await session.commit();await session.refresh(post);author=await session.get(User,post.author_id);return draft_dto(post,author)
 @router.delete("/{post_id}",status_code=204)
 async def remove(post_id:int,session:AsyncSession=Depends(get_db),_:User=Depends(require_role(Role.EDITOR))):
