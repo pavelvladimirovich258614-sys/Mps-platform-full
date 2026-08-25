@@ -10,9 +10,9 @@
 - [x] New API scope is read-only lists: public `id/name/avatar_url/is_following`, filtering anonymous/banned users and ordering by follow creation time. Existing follow POST/DELETE is reused; no migration or dependency change.
 - [x] Full backend: 72 passed in 22.10s. Full frontend: 18 files / 107 passed. `npm run build`: success, 115 modules; only the standard chunk-size warning.
 - [x] Final `./init.sh` outside sandbox stopped only on the agreed external Hermes/desktop global `pip check` before MPS tests; no attempt was made to modify that environment.
-- [x] Production deploy was not performed and remains separately approved. Next F35 sub-session is own-comments «Ответы» with exact empty state «Пока нет ответов. Ваши ответы появятся здесь.»
+- [x] Approved rollout: `fe00787` was pushed and VPS fast-forwarded from `04ae21d`; Alembic compatibility check passed, `mps-backend` restarted and reached readiness on attempt 2. Frontend rollback is `/root/backups/mps-frontend-f35-20260825T002954Z`; remote build, served F35 bundle markers and `deploy/smoke.sh` passed. Public profile plus followers/following API each returned 200. No authenticated Telegram browser session was available for a live follow-click. Next F35 sub-session is own-comments «Ответы» with exact empty state «Пока нет ответов. Ваши ответы появятся здесь.»
 
-- [x] Scope is tracker-only: only `claude-progress.md`, `session-handoff.md` and this checklist changed; no application, dependency, configuration, service or production-content mutation occurred.
+- [x] Closeout scope is tracker-only: only `feature_list.json`, `claude-progress.md`, `session-handoff.md` and this checklist changed locally; the separately approved production rollout changed backend/frontend build artifacts and restarted only `mps-backend`.
 - [x] F29 completed production avatar-picker alignment: F25 MIME formats and same-file input reset.
 - [x] F30 completed production draft-card delete with existing confirmation/DELETE contract, without opening composer.
 - [x] F31 completed explicit `cover_url` through DTO, composer and renderer; F32 made old gradient and real cover mutually exclusive; F33 removed the fallback by final product decision, so no-cover posts render no upper block.

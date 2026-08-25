@@ -2,14 +2,14 @@
 
 ## Current verified state — 2026-08-25
 
-F01–F34 remain passing and deployed. F35 remains `in_progress`; Session 1 is complete locally and is not deployed. The active production frontend remains F34 revision `3451397`; do not treat the local F35 changes as live.
+F01–F34 remain passing and deployed. F35 remains `in_progress`; Session 1 is deployed at revision `fe00787`. The previous frontend dist is recoverable at `/root/backups/mps-frontend-f35-20260825T002954Z`.
 
 ## F35 Session 1 — subscriptions and publications baseline
 
 - Existing `GET /posts?author_id={id}` and the Publications tab are regression-covered; their behavior was not changed.
 - `GET /users/{id}/followers` and `GET /users/{id}/following` now return public users only, ordered by `UserFollow.created_at desc`, with `id`, `name`, `avatar_url` and viewer-relative `is_following`.
 - PublicProfile now has «Подписчики» / «Подписки» sub-tabs, cards with avatar and name, and immediate «Подписаться» / «Подписан» state through the existing follow toggle API.
-- There is no migration, dependency change or production deployment.
+- There is no migration or dependency change. Approved backend+frontend production rollout completed: Alembic check passed, backend readiness succeeded on attempt 2, served bundle contains F35 markers and `deploy/smoke.sh` passed.
 
 ## Verification evidence
 
@@ -24,4 +24,4 @@ Implement the agreed «Ответы» semantic: the user's own comments. Empty s
 
 ## Known boundary
 
-Email delivery remains blocked by the external Unisender/HostKey network path. Keep `EMAIL_LOGIN_ENABLED=false`; do not change email transport, credentials, firewall or VPS networking. Production deployment of F35 Session 1 requires separate Pavel approval.
+Email delivery remains blocked by the external Unisender/HostKey network path. Keep `EMAIL_LOGIN_ENABLED=false`; do not change email transport, credentials, firewall or VPS networking.
