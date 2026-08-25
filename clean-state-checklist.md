@@ -2,6 +2,15 @@
 
 ## Session 65 final F15–F34 handoff — 2026-08-25
 
+## Session 70 F35 Session 4b local completion — 2026-08-25
+
+- [x] F35 is locally `passing`: Session 4b is limited to the Activity read API/UI over the already deployed Session 4a activity_log infrastructure. Email, schema, activity-write hooks and unrelated product behavior were not changed.
+- [x] RED backend `D:\Python312\python.exe -m pytest tests/test_activity_feed.py -q --color=no --basetemp .pytest-f35-s4b-red-backend` — 2 expected missing-route 404 failures. GREEN same target — 2 passed: four event contexts, newest-first order, opaque keyset page boundary, no duplicates, and owner-only pending/rejected comment visibility.
+- [x] RED frontend `npm test -- --run src/components/PublicProfile.test.tsx src/App.routing.test.tsx --reporter=dot` — expected Activity placeholder failure. GREEN targeted command — 33 passed, including four event texts, exact empty state and cursor-driven «Показать ещё» request.
+- [x] Full backend — 79 passed in 23.39s. Full frontend — 18 files / 112 passed. `npm run build` — success, 115 modules; only the standard Vite chunk-size warning. `git diff --check` is clean before checkpoint staging.
+- [x] Final `./init.sh` outside sandbox stopped only at agreed external Hermes/desktop global `pip check` before MPS tests; no attempt was made to change that environment.
+- [x] Production deployment is intentionally not performed for Session 4b and remains separately approved. Session 4a is already production-deployed at `2e58222` with backup, migration/backfill, readiness, smoke and direct SQL evidence.
+
 ## Session 66 F35 Session 1 local completion — 2026-08-25
 
 ## Session 67 F35 Session 2 local completion — 2026-08-25
@@ -10,12 +19,12 @@
 
 ## Session 69 F35 Session 4a local completion — 2026-08-25
 
-- [x] F35 remains the single `in_progress` feature. Session 4a scope is backend Activity infrastructure only: migration/backfill and atomic write hooks; no Activity read endpoint, frontend UI, privacy exposure, email or unrelated changes.
+- [x] F35 was the single `in_progress` feature during Session 4a. Its scope was backend Activity infrastructure only: migration/backfill and atomic write hooks; no Activity read endpoint, frontend UI, privacy exposure, email or unrelated changes.
 - [x] Exact event contract: `post_published`, `comment_created`, `post_liked`, `user_followed`; draft saves create no event. Unlike/unfollow remove the corresponding reversible current-state event.
 - [x] RED `test_activity_log.py` — expected missing `app.models.activity` collection error. GREEN — 4 passed: direct/draft publication, comment, like/unlike and follow/unfollow.
 - [x] Full backend — 77 passed in 21.70s. Alembic head — `20260825_0012`. `git diff --check` passed before checkpoint staging.
 - [x] Final `./init.sh` outside sandbox stopped only at the agreed external Hermes/desktop global `pip check` before MPS tests; no attempt was made to modify that environment.
-- [x] Production deployment is not performed for Session 4a and remains separately approved; frontend is intentionally untouched.
+- [x] Frontend was intentionally untouched in Session 4a. Its later approved production deployment completed with a fresh backup, migration/backfill, backend readiness, smoke and direct SQL evidence.
 
 - [x] F35 remains the single `in_progress` feature. Session 3 scope was public Likes UX only: optional real cover, liked date and same-tab cache refresh; no card toggle, privacy change, BroadcastChannel, Activity or email work.
 - [x] RED backend — expected missing `liked_at`, 1 failure / 9 passed. GREEN `test_public_profile.py` — 10 passed, including a UTC `liked_at` from `post_likes.created_at`.

@@ -265,6 +265,55 @@ describe("PublicProfile", () => {
     expect(screen.queryByRole("img", { name: "Обложка: Гид по Бали" })).toBeNull();
   });
 
+  it("renders the activity timeline, empty state and load-more action", () => {
+    const onLoadMoreActivity = vi.fn();
+    const { rerender } = render(
+      <PublicProfile
+        profile={profile}
+        posts={[]}
+        likes={[]}
+        activity={[
+          { id: 1, event_type: "post_published", created_at: "2026-08-11T09:30:00Z", post: { id: 17, title: "Гид по Бали", slug: "bali-guide" } },
+          { id: 2, event_type: "comment_created", created_at: "2026-08-10T09:30:00Z", comment: { id: 31, body: "Совет по маршруту", status: "approved", post: { title: "Гид по Португалии", slug: "portugal-guide" } } },
+          { id: 3, event_type: "post_liked", created_at: "2026-08-09T09:30:00Z", post: { id: 18, title: "Отели Бали", slug: "bali-hotels" } },
+          { id: 4, event_type: "user_followed", created_at: "2026-08-08T09:30:00Z", user: { id: 9, name: "Анна", avatar_url: null } },
+        ]}
+        activityLoading={false}
+        activityHasMore
+        onLoadMoreActivity={onLoadMoreActivity}
+        loading={false}
+        likesLoading={false}
+        viewerId={profile.id}
+        onOpenPost={vi.fn()}
+        onToggleFollow={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: "Активность" }));
+    expect(screen.getByText("Опубликовал статью «Гид по Бали»")).toBeTruthy();
+    expect(screen.getByText("Ответил на «Гид по Португалии»: Совет по маршруту")).toBeTruthy();
+    expect(screen.getByText("Лайкнул «Отели Бали»")).toBeTruthy();
+    expect(screen.getByText("Подписался на Анна")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Показать ещё" }));
+    expect(onLoadMoreActivity).toHaveBeenCalledOnce();
+
+    rerender(
+      <PublicProfile
+        profile={profile}
+        posts={[]}
+        likes={[]}
+        activity={[]}
+        activityLoading={false}
+        loading={false}
+        likesLoading={false}
+        viewerId={profile.id}
+        onOpenPost={vi.fn()}
+        onToggleFollow={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Пока нет активности. Здесь появятся ваши публикации, ответы, лайки и подписки.")).toBeTruthy();
+  });
+
   it("shows follower and following lists and toggles a listed person's follow state", async () => {
     const onToggleListFollow = vi.fn().mockResolvedValue(true);
     render(

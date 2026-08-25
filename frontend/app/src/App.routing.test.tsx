@@ -46,7 +46,7 @@ const jsonResponse = (status: number, body: unknown) => new Response(JSON.string
 
 type DetailResult = "ok" | "missing" | "network";
 
-function installApi(detailResult: DetailResult = "ok", currentUser: Record<string, unknown> | null = null, posts: ApiPost[] = [post], online: Array<{ id: number; name: string; avatar_url: string | null }> = [], profileComments: unknown[] = [], profileLikes: ApiPost[] = []) {
+function installApi(detailResult: DetailResult = "ok", currentUser: Record<string, unknown> | null = null, posts: ApiPost[] = [post], online: Array<{ id: number; name: string; avatar_url: string | null }> = [], profileComments: unknown[] = [], profileLikes: ApiPost[] = [], profileActivity: { items: unknown[]; next_cursor: string | null } = { items: [], next_cursor: null }, nextProfileActivity: { items: unknown[]; next_cursor: string | null } = { items: [], next_cursor: null }) {
   let likesCount = post.likes_count;
   let currentProfileLikes = profileLikes;
   const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
@@ -54,6 +54,7 @@ function installApi(detailResult: DetailResult = "ok", currentUser: Record<strin
     const path = url.pathname;
     if (path === "/api/v1/users/7/profile") return jsonResponse(200, publicProfile);
     if (path === "/api/v1/users/7/likes") return jsonResponse(200, currentProfileLikes);
+    if (path === "/api/v1/users/7/activity") return jsonResponse(200, url.searchParams.has("cursor") ? nextProfileActivity : profileActivity);
     if (path === "/api/v1/users/7/comments") return jsonResponse(200, profileComments);
     if (path === "/api/v1/users/7/followers" || path === "/api/v1/users/7/following") return jsonResponse(200, []);
     if (path === "/api/v1/posts/bali-guide") {
@@ -149,6 +150,28 @@ describe("App pathname routing", () => {
       "https://mir.pod-solncem.ru/api/v1/users/7/comments",
       expect.any(Object),
     );
+  });
+
+  it("loads and paginates Activity through the profile activity endpoint", async () => {
+    window.history.replaceState({}, "", "/users/7");
+    const fetchMock = installApi("ok", null, [post], [], [], [], {
+      items: [{ id: 1, event_type: "post_published", created_at: "2026-08-11T09:30:00Z", post: { id: 17, title: "Гид по Бали", slug: "bali-guide" } }],
+      next_cursor: "next-page",
+    }, {
+      items: [{ id: 2, event_type: "user_followed", created_at: "2026-08-10T09:30:00Z", user: { id: 9, name: "Анна", avatar_url: null } }],
+      next_cursor: null,
+    });
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Активность" }));
+    expect(await screen.findByText("Опубликовал статью «Гид по Бали»")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Показать ещё" }));
+    expect(await screen.findByText("Подписался на Анна")).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([input]) => {
+      const url = new URL(String(input));
+      return url.pathname === "/api/v1/users/7/activity" && url.searchParams.get("cursor") === "next-page";
+    })).toBe(true);
   });
 
   it("refreshes the current user's shared liked-posts state after a like toggle", async () => {

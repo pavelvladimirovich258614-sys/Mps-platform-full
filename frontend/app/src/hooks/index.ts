@@ -20,6 +20,15 @@ export type OnlineUser = { id: number; name: string; avatar_url: string | null }
 export type PublicProfile = { id: number; name: string; avatar_url: string | null; bio: string | null; posts_count: number; followers_count: number; following_count: number; is_following: boolean; countries: Array<{ id: number; name: string; flag_emoji: string }> };
 export type PublicProfileFollow = { id: number; name: string; avatar_url: string | null; is_following: boolean };
 export type PublicProfileComment = { id: number; body: string; created_at: string; status: "pending" | "approved" | "rejected"; post: { slug: string; title: string } };
+export type PublicProfileActivity = {
+  id: number;
+  event_type: "post_published" | "comment_created" | "post_liked" | "user_followed";
+  created_at: string;
+  post?: { id: number; title: string; slug: string };
+  comment?: { id: number; body: string; status: "pending" | "approved" | "rejected"; post: { title: string; slug: string } };
+  user?: { id: number; name: string; avatar_url: string | null };
+};
+export type PublicProfileActivityPage = { items: PublicProfileActivity[]; next_cursor: string | null };
 export type PublicSettings = { legal_name: string | null; legal_inn: string | null; legal_ogrn: string | null; contact_email: string | null; contact_phone: string | null; contact_address: string | null; comments_moderation_enabled: boolean };
 export type TelegramLoginPayload = { id: number; first_name: string; last_name?: string; username?: string; photo_url?: string; auth_date: number; hash: string };
 
@@ -55,6 +64,51 @@ export const useLikedPosts = (userId?: number) => useResource(() => userId ? get
 export const useProfileFollowers = (userId?: number) => useResource(() => userId ? api<PublicProfileFollow[]>(`/users/${userId}/followers`) : Promise.resolve([]), [userId]);
 export const useProfileFollowing = (userId?: number) => useResource(() => userId ? api<PublicProfileFollow[]>(`/users/${userId}/following`) : Promise.resolve([]), [userId]);
 export const useProfileComments = (userId?: number) => useResource(() => userId ? api<PublicProfileComment[]>(`/users/${userId}/comments`) : Promise.resolve([]), [userId]);
+export function useProfileActivity(userId?: number) {
+  const [items, setItems] = useState<PublicProfileActivity[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loading, setLoading] = useState(Boolean(userId));
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    if (!userId) {
+      setItems([]); setNextCursor(null); setLoading(false); setError("");
+      return;
+    }
+    setLoading(true); setError("");
+    try {
+      const page = await api<PublicProfileActivityPage>(`/users/${userId}/activity`);
+      setItems(page.items); setNextCursor(page.next_cursor);
+    } catch (cause) {
+      setItems([]); setNextCursor(null);
+      setError(cause instanceof Error ? cause.message : "Не удалось загрузить активность");
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const loadMore = useCallback(async () => {
+    if (!userId || !nextCursor || loadingMore) return;
+    setLoadingMore(true); setError("");
+    try {
+      const page = await api<PublicProfileActivityPage>(`/users/${userId}/activity?cursor=${encodeURIComponent(nextCursor)}`);
+      setItems((current) => {
+        const knownIds = new Set(current.map((item) => item.id));
+        return [...current, ...page.items.filter((item) => !knownIds.has(item.id))];
+      });
+      setNextCursor(page.next_cursor);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Не удалось загрузить активность");
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, nextCursor, userId]);
+
+  return { items, loading, loadingMore, error, hasMore: Boolean(nextCursor), loadMore, reload: load };
+}
 export const useUserFollow = () => ({
   toggle: async (userId: number, isFollowing: boolean) => {
     const result = await apiJson<{ is_following: boolean }>(`/users/${userId}/follow`, isFollowing ? "DELETE" : "POST");

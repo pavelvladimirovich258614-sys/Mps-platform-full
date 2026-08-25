@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { ApiPost, PublicProfile as PublicProfileData, PublicProfileComment, PublicProfileFollow, User } from "../hooks";
+import type { ApiPost, PublicProfile as PublicProfileData, PublicProfileActivity, PublicProfileComment, PublicProfileFollow, User } from "../hooks";
 import { RichTextContent } from "./RichTextContent";
 
 type Tab = "activity" | "posts" | "answers" | "likes" | "subscriptions";
@@ -9,16 +9,21 @@ type PublicProfileProps = {
   profile: PublicProfileData;
   posts: ApiPost[];
   likes: ApiPost[];
+  activity?: PublicProfileActivity[];
   comments?: PublicProfileComment[];
   followers?: PublicProfileFollow[];
   following?: PublicProfileFollow[];
   loading: boolean;
   likesLoading: boolean;
+  activityLoading?: boolean;
+  activityLoadingMore?: boolean;
+  activityHasMore?: boolean;
   commentsLoading?: boolean;
   followListsLoading?: boolean;
   viewerId: number | null;
   currentUser?: Pick<User, "id" | "role"> | null;
   onOpenPost: (post: ApiPost) => void;
+  onLoadMoreActivity?: () => Promise<void> | void;
   onToggleFollow: () => Promise<void>;
   onToggleListFollow?: (userId: number, isFollowing: boolean) => Promise<boolean>;
   onEditProfile?: () => void;
@@ -28,7 +33,7 @@ type PublicProfileProps = {
 };
 
 const tabs: Array<{ id: Tab; label: string; empty: string }> = [
-  { id: "activity", label: "Активность", empty: "Скоро здесь появится активность пользователя." },
+  { id: "activity", label: "Активность", empty: "Пока нет активности. Здесь появятся ваши публикации, ответы, лайки и подписки." },
   { id: "posts", label: "Публикации", empty: "" },
   { id: "answers", label: "Ответы", empty: "Пока нет ответов. Ваши ответы появятся здесь." },
   { id: "likes", label: "Лайки", empty: "Скоро здесь появятся понравившиеся публикации." },
@@ -57,7 +62,23 @@ function formatLikedDate(value: string) {
   return new Intl.DateTimeFormat("ru-RU", { timeZone: "UTC" }).format(new Date(value));
 }
 
-export function PublicProfile({ profile, posts, likes, comments = [], followers = [], following = [], loading, likesLoading, commentsLoading = false, followListsLoading = false, viewerId, currentUser = null, onOpenPost, onToggleFollow, onToggleListFollow, onEditProfile, onLogout, onNotice, isOnline = false }: PublicProfileProps) {
+function activityText(item: PublicProfileActivity) {
+  switch (item.event_type) {
+    case "post_published": return `Опубликовал статью «${item.post?.title ?? "публикацию"}»`;
+    case "comment_created": return `Ответил на «${item.comment?.post.title ?? "публикацию"}»: ${item.comment?.body ?? ""}`;
+    case "post_liked": return `Лайкнул «${item.post?.title ?? "публикацию"}»`;
+    case "user_followed": return `Подписался на ${item.user?.name ?? "пользователя"}`;
+  }
+}
+
+const activityIcon: Record<PublicProfileActivity["event_type"], string> = {
+  post_published: "✎",
+  comment_created: "↳",
+  post_liked: "♥",
+  user_followed: "+",
+};
+
+export function PublicProfile({ profile, posts, likes, activity = [], comments = [], followers = [], following = [], loading, likesLoading, commentsLoading = false, activityLoading = false, activityLoadingMore = false, activityHasMore = false, followListsLoading = false, viewerId, currentUser = null, onOpenPost, onLoadMoreActivity, onToggleFollow, onToggleListFollow, onEditProfile, onLogout, onNotice, isOnline = false }: PublicProfileProps) {
   const [tab, setTab] = useState<Tab>("posts");
   const [followListTab, setFollowListTab] = useState<"followers" | "following">("followers");
   const [followPending, setFollowPending] = useState(false);
@@ -68,6 +89,7 @@ export function PublicProfile({ profile, posts, likes, comments = [], followers 
   const current = tabs.find((item) => item.id === tab) ?? tabs[1];
   const isOwner = viewerId === profile.id;
   const showingPosts = tab === "posts";
+  const showingActivity = tab === "activity";
   const showingLikes = tab === "likes";
   const showingAnswers = tab === "answers";
   const showingSubscriptions = tab === "subscriptions";
@@ -170,7 +192,22 @@ export function PublicProfile({ profile, posts, likes, comments = [], followers 
         ))}
       </div>
 
-      {(showingPosts || showingLikes) ? (
+      {showingActivity ? (
+        <section className="public-profile-activity" role="tabpanel" aria-label="Активность пользователя">
+          {activityLoading && <div className="comment-skeleton"><i /><i /><i /></div>}
+          {!activityLoading && activity.map((item) => (
+            <article key={item.id} className="public-profile-activity-item">
+              <span className="public-profile-activity-icon" aria-hidden="true">{activityIcon[item.event_type]}</span>
+              <div>
+                <p>{activityText(item)}</p>
+                <time dateTime={item.created_at}>{formatReplyDate(item.created_at)}</time>
+              </div>
+            </article>
+          ))}
+          {!activityLoading && !activity.length && <p className="empty-comments">Пока нет активности. Здесь появятся ваши публикации, ответы, лайки и подписки.</p>}
+          {!activityLoading && activityHasMore && <button className="public-profile-activity-more" onClick={() => void onLoadMoreActivity?.()} disabled={activityLoadingMore}>{activityLoadingMore ? "Загружаем…" : "Показать ещё"}</button>}
+        </section>
+      ) : (showingPosts || showingLikes) ? (
         <section className="public-profile-posts" aria-label={showingLikes ? "Понравившиеся публикации" : "Публикации пользователя"}>
           {postsLoading && <div className="comment-skeleton"><i /><i /><i /></div>}
           {!postsLoading && visiblePosts.map((post) => (

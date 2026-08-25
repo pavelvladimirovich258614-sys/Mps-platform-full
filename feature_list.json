@@ -660,7 +660,7 @@
       "area": "profile",
       "title": "Личный кабинет: реальные вкладки профиля и подписки",
       "user_visible_behavior": "Публичный профиль показывает реальные данные во вкладках «Публикации», «Ответы», «Лайки» и «Подписки», а также согласованную ленту «Активность»; посетитель видит корректное состояние подписки и может подписаться или отписаться.",
-      "status": "in_progress",
+      "status": "passing",
       "verification": [
         "Диагностика существующих API и продуктовых решений до плана",
         "RED/GREEN контракты для каждого согласованного блока F35",
@@ -669,8 +669,8 @@
         "cd backend && python -m pytest tests -q",
         "./init.sh outside sandbox; внешний Hermes pip check отслеживается отдельно"
       ],
-      "evidence": "Sessions 1–3 are deployed: subscriptions `fe00787`, replies `72ce494`, Likes UX `c12e102` (backend restart/readiness, production frontend build and deploy/smoke.sh all passed). 2026-08-25 Session 4a: RED `test_activity_log.py` failed at collection with expected missing `app.models.activity`; GREEN — 4 passed. Full backend — 77 passed in 21.70s; Alembic head — `20260825_0012`; final `./init.sh` stopped only at the unrelated external Hermes/desktop global pip check before MPS tests.",
-      "notes": "F35 остаётся in_progress. Session 4a is locally complete and awaits separate deployment approval: migration `20260825_0012` adds normalized activity_log plus set-based historical backfill for published posts, comments, current likes and current follows. Events are post_published, comment_created, post_liked and user_followed. Creation and inverse-action removal are atomic with the source actions; no activity read endpoint or frontend UI exists yet. Session 4b will add the public Activity feed and its visibility contract."
+      "evidence": "Sessions 1–3 are deployed: subscriptions `fe00787`, replies `72ce494`, Likes UX `c12e102` (backend restart/readiness, production frontend build and deploy/smoke.sh all passed). Session 4a deployed at `2e58222`: backup before migration, PostgreSQL `20260825_0012` upgrade/backfill, backend readiness and smoke passed; production activity_log count was 4 with verified sample rows. 2026-08-25 Session 4b: backend RED `tests/test_activity_feed.py` — 2 expected 404 failures; GREEN — 2 passed. Frontend RED — Activity placeholder failure; GREEN targeted PublicProfile + routing — 33 passed. Full backend — 79 passed in 23.39s; full frontend — 18 files / 112 passed; `npm run build` succeeded (115 modules, standard chunk-size warning only). Final `./init.sh` stopped only at the unrelated external Hermes/desktop global pip check before MPS tests.",
+      "notes": "F35 is locally passing: all five profile tabs now use real data. Session 4b adds GET /users/{id}/activity with opaque (created_at,id) keyset cursor, chunked batch context resolution and owner/public visibility filtering; the frontend has a paginated Activity timeline and exact empty state. Activity events are post_published, comment_created, post_liked and user_followed. Session 4b production deployment remains separately approved and has not been performed."
     }
   ]
 }

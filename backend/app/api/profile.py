@@ -1,12 +1,14 @@
+import base64
+import json
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps import get_current_user, get_db, get_optional_current_user
 from app.models.comment import Comment
-from app.models.activity import ActivityEventType
+from app.models.activity import ActivityEventType, ActivityLog
 from app.models.notification import Notification
 from app.api.posts import dto as post_dto
 from app.models.post import Country, Post, PostStatus, post_likes
@@ -17,6 +19,7 @@ from app.schemas.user import PublicProfileResponse, UserResponse, UserUpdate
 from app.services.activity import record_activity, remove_activity
 
 router = APIRouter(tags=["profile"])
+ACTIVITY_RAW_CHUNK_SIZE = 100
 
 
 async def get_public_profile_user(session: AsyncSession, user_id: int) -> User:
@@ -191,6 +194,158 @@ async def public_profile_comments(
         }
         for comment, post in rows
     ]
+
+
+def activity_timestamp(value: datetime) -> str:
+    return (value if value.tzinfo is not None else value.replace(tzinfo=UTC)).isoformat()
+
+
+def encode_activity_cursor(created_at: str, activity_id: int) -> str:
+    payload = json.dumps({"created_at": created_at, "id": activity_id}, separators=(",", ":"))
+    return base64.urlsafe_b64encode(payload.encode()).decode().rstrip("=")
+
+
+def decode_activity_cursor(cursor: str) -> tuple[datetime, int]:
+    try:
+        padding = "=" * (-len(cursor) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(cursor + padding))
+        created_at = datetime.fromisoformat(payload["created_at"])
+        activity_id = int(payload["id"])
+        if created_at.tzinfo is None or activity_id < 1:
+            raise ValueError
+        return created_at, activity_id
+    except (KeyError, TypeError, ValueError, UnicodeDecodeError):
+        raise HTTPException(422, "Некорректный курсор активности")
+
+
+async def resolve_activity_items(
+    session: AsyncSession,
+    activities: list[ActivityLog],
+    *,
+    owner_id: int,
+    viewer_is_owner: bool,
+) -> list[dict]:
+    post_ids = {activity.reference_id for activity in activities if activity.event_type in {ActivityEventType.POST_PUBLISHED, ActivityEventType.POST_LIKED}}
+    comment_ids = {activity.reference_id for activity in activities if activity.event_type == ActivityEventType.COMMENT_CREATED}
+    followed_user_ids = {activity.reference_id for activity in activities if activity.event_type == ActivityEventType.USER_FOLLOWED}
+
+    posts_by_id: dict[int, Post] = {}
+    if post_ids:
+        posts_by_id = {
+            post.id: post
+            for post in (await session.scalars(
+                select(Post).where(Post.id.in_(post_ids), Post.status == PostStatus.PUBLISHED)
+            )).all()
+        }
+
+    comments_by_id: dict[int, tuple[Comment, Post]] = {}
+    if comment_ids:
+        conditions = [
+            Comment.id.in_(comment_ids),
+            Comment.user_id == owner_id,
+            Post.status == PostStatus.PUBLISHED,
+        ]
+        if not viewer_is_owner:
+            conditions.append(Comment.status == ModerationStatus.APPROVED)
+        comments_by_id = {
+            comment.id: (comment, post)
+            for comment, post in (await session.execute(
+                select(Comment, Post).join(Post, Post.id == Comment.post_id).where(*conditions)
+            )).all()
+        }
+
+    followed_users_by_id: dict[int, User] = {}
+    if followed_user_ids:
+        followed_users_by_id = {
+            user.id: user
+            for user in (await session.scalars(
+                select(User).where(
+                    User.id.in_(followed_user_ids),
+                    User.is_anonymous.is_(False),
+                    User.is_banned.is_(False),
+                )
+            )).all()
+        }
+
+    items: list[dict] = []
+    for activity in activities:
+        item = {
+            "id": activity.id,
+            "event_type": activity.event_type.value,
+            "created_at": activity_timestamp(activity.created_at),
+        }
+        if activity.event_type in {ActivityEventType.POST_PUBLISHED, ActivityEventType.POST_LIKED}:
+            post = posts_by_id.get(activity.reference_id)
+            if post is None or (activity.event_type == ActivityEventType.POST_PUBLISHED and post.author_id != owner_id):
+                continue
+            item["post"] = {"id": post.id, "title": post.title, "slug": post.slug}
+        elif activity.event_type == ActivityEventType.COMMENT_CREATED:
+            row = comments_by_id.get(activity.reference_id)
+            if row is None:
+                continue
+            comment, post = row
+            item["comment"] = {
+                "id": comment.id,
+                "body": comment.body,
+                "status": comment.status.value,
+                "post": {"title": post.title, "slug": post.slug},
+            }
+        else:
+            followed_user = followed_users_by_id.get(activity.reference_id)
+            if followed_user is None:
+                continue
+            item["user"] = {
+                "id": followed_user.id,
+                "name": followed_user.name,
+                "avatar_url": followed_user.avatar_url,
+            }
+        items.append(item)
+    return items
+
+
+@router.get("/users/{user_id}/activity")
+async def public_profile_activity(
+    user_id: int,
+    limit: int = Query(default=20, ge=1, le=50),
+    cursor: str | None = None,
+    session: AsyncSession = Depends(get_db),
+    viewer: User | None = Depends(get_optional_current_user),
+) -> dict:
+    await get_public_profile_user(session, user_id)
+    raw_cursor = decode_activity_cursor(cursor) if cursor else None
+    visible_items: list[dict] = []
+    raw_exhausted = False
+
+    while len(visible_items) <= limit and not raw_exhausted:
+        conditions = [ActivityLog.user_id == user_id]
+        if raw_cursor is not None:
+            created_at, activity_id = raw_cursor
+            conditions.append(or_(
+                ActivityLog.created_at < created_at,
+                and_(ActivityLog.created_at == created_at, ActivityLog.id < activity_id),
+            ))
+        activities = list((await session.scalars(
+            select(ActivityLog)
+            .where(*conditions)
+            .order_by(ActivityLog.created_at.desc(), ActivityLog.id.desc())
+            .limit(ACTIVITY_RAW_CHUNK_SIZE)
+        )).all())
+        if not activities:
+            break
+        visible_items.extend(await resolve_activity_items(
+            session,
+            activities,
+            owner_id=user_id,
+            viewer_is_owner=viewer is not None and viewer.id == user_id,
+        ))
+        raw_exhausted = len(activities) < ACTIVITY_RAW_CHUNK_SIZE
+        raw_cursor = (activities[-1].created_at, activities[-1].id)
+
+    page = visible_items[:limit]
+    return {
+        "items": page,
+        "next_cursor": encode_activity_cursor(page[-1]["created_at"], page[-1]["id"]) if len(visible_items) > limit else None,
+    }
 
 
 @router.get("/users/{user_id}/followers")

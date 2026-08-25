@@ -15,7 +15,7 @@ import { PublicProfile } from "./components/PublicProfile";
 import { QA } from "./components/QA";
 import { Reviews } from "./components/Reviews";
 import { Subscribe } from "./components/Subscribe";
-import { getDraft, getLikedPosts, type ApiPost, useAuthorPosts, useAuth, useDrafts, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, useProfileComments, useProfileFollowers, useProfileFollowing, usePublicProfile, usePublicSettings, useUserFollow } from "./hooks";
+import { getDraft, getLikedPosts, type ApiPost, useAuthorPosts, useAuth, useDrafts, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, useProfileActivity, useProfileComments, useProfileFollowers, useProfileFollowing, usePublicProfile, usePublicSettings, useUserFollow } from "./hooks";
 import { pathForRoute, type PathRoute, routeFromPath } from "./router";
 
 function routeForPage(page: Page): PathRoute {
@@ -59,6 +59,7 @@ export function App() {
   const publicProfile = usePublicProfile(route.page === "profile" ? route.userId : undefined);
   const authorPosts = useAuthorPosts(route.page === "profile" ? route.userId : undefined);
   const likedPosts = useLikedPosts(route.page === "profile" ? route.userId : undefined);
+  const profileActivity = useProfileActivity(route.page === "profile" ? route.userId : undefined);
   const profileComments = useProfileComments(route.page === "profile" ? route.userId : undefined);
   const profileFollowers = useProfileFollowers(route.page === "profile" ? route.userId : undefined);
   const profileFollowing = useProfileFollowing(route.page === "profile" ? route.userId : undefined);
@@ -228,17 +229,22 @@ export function App() {
         profile={publicProfile.value}
         posts={authorPosts.value ?? []}
         likes={likedPostsByUserId[publicProfile.value.id] ?? likedPosts.value ?? []}
+        activity={profileActivity.items}
         comments={profileComments.value ?? []}
         followers={profileFollowers.value ?? []}
         following={profileFollowing.value ?? []}
         loading={authorPosts.loading}
         likesLoading={likedPosts.loading}
+        activityLoading={profileActivity.loading}
+        activityLoadingMore={profileActivity.loadingMore}
+        activityHasMore={profileActivity.hasMore}
         commentsLoading={profileComments.loading}
         followListsLoading={profileFollowers.loading || profileFollowing.loading}
         viewerId={auth.user?.id ?? null}
         currentUser={auth.user}
         isOnline={Boolean(online.value?.some((person) => person.id === publicProfile.value?.id))}
         onOpenPost={openArticle}
+        onLoadMoreActivity={profileActivity.loadMore}
         onEditProfile={() => setOverlay("profile")}
         onLogout={async () => { await auth.logout(); navigate({ page: "feed" }); }}
         onNotice={setToast}
