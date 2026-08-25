@@ -46,13 +46,14 @@ const jsonResponse = (status: number, body: unknown) => new Response(JSON.string
 
 type DetailResult = "ok" | "missing" | "network";
 
-function installApi(detailResult: DetailResult = "ok", currentUser: Record<string, unknown> | null = null, posts: ApiPost[] = [post], online: Array<{ id: number; name: string; avatar_url: string | null }> = []) {
+function installApi(detailResult: DetailResult = "ok", currentUser: Record<string, unknown> | null = null, posts: ApiPost[] = [post], online: Array<{ id: number; name: string; avatar_url: string | null }> = [], profileComments: unknown[] = []) {
   let likesCount = post.likes_count;
   const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
     const url = new URL(String(input));
     const path = url.pathname;
     if (path === "/api/v1/users/7/profile") return jsonResponse(200, publicProfile);
     if (path === "/api/v1/users/7/likes") return jsonResponse(200, []);
+    if (path === "/api/v1/users/7/comments") return jsonResponse(200, profileComments);
     if (path === "/api/v1/users/7/followers" || path === "/api/v1/users/7/following") return jsonResponse(200, []);
     if (path === "/api/v1/posts/bali-guide") {
       if (detailResult === "missing") return jsonResponse(404, { detail: "Публикация не найдена" });
@@ -126,6 +127,26 @@ describe("App pathname routing", () => {
       const url = new URL(String(input));
       return url.pathname === "/api/v1/posts" && url.searchParams.get("author_id") === "7";
     })).toBe(true);
+  });
+
+  it("loads replies for a public profile from the profile comments endpoint", async () => {
+    window.history.replaceState({}, "", "/users/7");
+    const fetchMock = installApi("ok", null, [post], [], [{
+      id: 31,
+      body: "Совет по маршруту",
+      created_at: "2026-08-11T09:30:00Z",
+      status: "approved",
+      post: { slug: "portugal-guide", title: "Гид по Португалии" },
+    }]);
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Ответы" }));
+    expect(await screen.findByText("Совет по маршруту")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://mir.pod-solncem.ru/api/v1/users/7/comments",
+      expect.any(Object),
+    );
   });
 
   it("passes the current online list to the public profile indicator", async () => {

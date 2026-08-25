@@ -4,6 +4,15 @@
 
 ## Session 66 F35 Session 1 local completion — 2026-08-25
 
+## Session 67 F35 Session 2 local completion — 2026-08-25
+
+- [x] F35 remains the single `in_progress` feature. Session 2 scope was own comments in «Ответы» only; Likes, Activity and email delivery were not changed.
+- [x] RED backend — expected missing-route 404, 1 failure / 9 passed. GREEN `D:\Python312\python.exe -m pytest tests/test_public_profile.py -q --color=no --basetemp .pytest-f35-s2-green-backend` — 10 passed. Owner sees all own statuses; guest/viewer only approved; DTO carries comment and post context.
+- [x] RED frontend — 3 expected failures / 27 passed: stale empty text, no reply list and no profile comments load. GREEN targeted PublicProfile + routing — 30 passed, including admin-own-only status badges and article context/date.
+- [x] Full backend — 73 passed in 20.15s. Full frontend — 18 files / 109 passed. `npm run build` — success, 115 modules; only standard chunk-size warning.
+- [x] Final `./init.sh` outside sandbox stopped only at the agreed external Hermes/desktop global `pip check` before MPS tests; no attempt was made to modify that environment.
+- [x] No production deployment was performed for Session 2. It awaits separate approval; no migration or dependency change is required.
+
 - [x] F35 remains the single `in_progress` feature; F34 remains `passing`. Session 1 scope was the Publications regression baseline and Subscriptions lists only.
 - [x] RED backend: new followers/following contract failed with missing-route 404 — 1 expected failure / 8 passed. GREEN `D:\Python312\python.exe -m pytest tests/test_public_profile.py -q --color=no --basetemp .pytest-f35-green-backend` — 9 passed.
 - [x] RED frontend: PublicProfile subscriptions tab remained the placeholder — 1 expected failure / 6 passed. GREEN `npm test -- --run src/components/PublicProfile.test.tsx src/App.routing.test.tsx --reporter=dot` — 28 passed.

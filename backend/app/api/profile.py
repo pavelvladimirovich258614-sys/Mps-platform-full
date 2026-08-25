@@ -5,9 +5,11 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps import get_current_user, get_db, get_optional_current_user
+from app.models.comment import Comment
 from app.models.notification import Notification
 from app.api.posts import dto as post_dto
 from app.models.post import Country, Post, PostStatus, post_likes
+from app.models.review import ModerationStatus
 from app.models.user import User, UserFollow
 from app.schemas.admin import NotificationsReadUpdate
 from app.schemas.user import PublicProfileResponse, UserResponse, UserUpdate
@@ -156,6 +158,34 @@ async def public_profile_likes(user_id: int, session: AsyncSession = Depends(get
         .order_by(post_likes.c.created_at.desc(), Post.id.desc())
     )).all()
     return [post_dto(post, author) for post, author in posts]
+
+
+@router.get("/users/{user_id}/comments")
+async def public_profile_comments(
+    user_id: int,
+    session: AsyncSession = Depends(get_db),
+    viewer: User | None = Depends(get_optional_current_user),
+) -> list[dict]:
+    user = await get_public_profile_user(session, user_id)
+    conditions = [Comment.user_id == user.id]
+    if viewer is None or viewer.id != user.id:
+        conditions.append(Comment.status == ModerationStatus.APPROVED)
+    rows = (await session.execute(
+        select(Comment, Post)
+        .join(Post, Post.id == Comment.post_id)
+        .where(*conditions)
+        .order_by(Comment.created_at.desc(), Comment.id.desc())
+    )).all()
+    return [
+        {
+            "id": comment.id,
+            "body": comment.body,
+            "created_at": comment.created_at,
+            "status": comment.status.value,
+            "post": {"slug": post.slug, "title": post.title},
+        }
+        for comment, post in rows
+    ]
 
 
 @router.get("/users/{user_id}/followers")

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { ApiPost, PublicProfile as PublicProfileData, PublicProfileFollow } from "../hooks";
+import type { ApiPost, PublicProfile as PublicProfileData, PublicProfileComment, PublicProfileFollow, User } from "../hooks";
 import { RichTextContent } from "./RichTextContent";
 
 type Tab = "activity" | "posts" | "answers" | "likes" | "subscriptions";
@@ -9,12 +9,15 @@ type PublicProfileProps = {
   profile: PublicProfileData;
   posts: ApiPost[];
   likes: ApiPost[];
+  comments?: PublicProfileComment[];
   followers?: PublicProfileFollow[];
   following?: PublicProfileFollow[];
   loading: boolean;
   likesLoading: boolean;
+  commentsLoading?: boolean;
   followListsLoading?: boolean;
   viewerId: number | null;
+  currentUser?: Pick<User, "id" | "role"> | null;
   onOpenPost: (post: ApiPost) => void;
   onToggleFollow: () => Promise<void>;
   onToggleListFollow?: (userId: number, isFollowing: boolean) => Promise<boolean>;
@@ -27,7 +30,7 @@ type PublicProfileProps = {
 const tabs: Array<{ id: Tab; label: string; empty: string }> = [
   { id: "activity", label: "Активность", empty: "Скоро здесь появится активность пользователя." },
   { id: "posts", label: "Публикации", empty: "" },
-  { id: "answers", label: "Ответы", empty: "Скоро здесь появятся ответы пользователя." },
+  { id: "answers", label: "Ответы", empty: "Пока нет ответов. Ваши ответы появятся здесь." },
   { id: "likes", label: "Лайки", empty: "Скоро здесь появятся понравившиеся публикации." },
   { id: "subscriptions", label: "Подписки", empty: "Скоро здесь появятся подписки пользователя." },
 ];
@@ -40,7 +43,17 @@ function countLabel(count: number, singular: string, few: string, many: string) 
   return `${count} ${many}`;
 }
 
-export function PublicProfile({ profile, posts, likes, followers = [], following = [], loading, likesLoading, followListsLoading = false, viewerId, onOpenPost, onToggleFollow, onToggleListFollow, onEditProfile, onLogout, onNotice, isOnline = false }: PublicProfileProps) {
+const replyStatusLabel: Record<PublicProfileComment["status"], string> = {
+  approved: "Одобрен",
+  pending: "На проверке",
+  rejected: "Отклонён",
+};
+
+function formatReplyDate(value: string) {
+  return new Intl.DateTimeFormat("ru-RU", { timeZone: "UTC" }).format(new Date(value));
+}
+
+export function PublicProfile({ profile, posts, likes, comments = [], followers = [], following = [], loading, likesLoading, commentsLoading = false, followListsLoading = false, viewerId, currentUser = null, onOpenPost, onToggleFollow, onToggleListFollow, onEditProfile, onLogout, onNotice, isOnline = false }: PublicProfileProps) {
   const [tab, setTab] = useState<Tab>("posts");
   const [followListTab, setFollowListTab] = useState<"followers" | "following">("followers");
   const [followPending, setFollowPending] = useState(false);
@@ -52,10 +65,12 @@ export function PublicProfile({ profile, posts, likes, followers = [], following
   const isOwner = viewerId === profile.id;
   const showingPosts = tab === "posts";
   const showingLikes = tab === "likes";
+  const showingAnswers = tab === "answers";
   const showingSubscriptions = tab === "subscriptions";
   const visiblePosts = showingLikes ? likes : posts;
   const postsLoading = showingLikes ? likesLoading : loading;
   const visibleFollowList = followListTab === "followers" ? followers : following;
+  const showReplyStatus = currentUser?.role === "admin" && currentUser.id === profile.id;
   const profileUrl = new URL(`/users/${profile.id}`, window.location.origin).href;
 
   useEffect(() => {
@@ -163,6 +178,21 @@ export function PublicProfile({ profile, posts, likes, followers = [], following
             </article>
           ))}
           {!postsLoading && !visiblePosts.length && <p className="empty-comments">{showingLikes ? "Понравившихся публикаций пока нет." : "Публикаций пока нет."}</p>}
+        </section>
+      ) : showingAnswers ? (
+        <section className="public-profile-replies" role="tabpanel" aria-label="Ответы пользователя">
+          {commentsLoading && <div className="comment-skeleton"><i /><i /><i /></div>}
+          {!commentsLoading && comments.map((comment) => (
+            <article className="public-profile-reply" key={comment.id}>
+              <div className="public-profile-reply-meta">
+                <a href={`/posts/${comment.post.slug}`}>{comment.post.title}</a>
+                <time dateTime={comment.created_at}>{formatReplyDate(comment.created_at)}</time>
+                {showReplyStatus && <span className={`public-profile-reply-status ${comment.status}`}>{replyStatusLabel[comment.status]}</span>}
+              </div>
+              <p>{comment.body}</p>
+            </article>
+          ))}
+          {!commentsLoading && !comments.length && <p className="empty-comments">Пока нет ответов. Ваши ответы появятся здесь.</p>}
         </section>
       ) : showingSubscriptions ? (
         <section className="public-profile-follow-lists" role="tabpanel" aria-label="Подписки пользователя">

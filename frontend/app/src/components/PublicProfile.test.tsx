@@ -27,6 +27,14 @@ const post = {
   author: { id: 7, name: "Мария", avatar_url: "/media/maria.webp" },
 };
 
+const reply = {
+  id: 31,
+  body: "Совет по маршруту",
+  created_at: "2026-08-11T09:30:00Z",
+  status: "pending" as const,
+  post: { slug: "portugal-guide", title: "Гид по Португалии" },
+};
+
 describe("PublicProfile", () => {
   it("shows the online indicator only when App marks the profile as currently online", () => {
     const commonProps = {
@@ -47,7 +55,7 @@ describe("PublicProfile", () => {
     expect(screen.queryByLabelText("Мария сейчас на платформе")).toBeNull();
   });
 
-  it("shows public author data and makes only the publications tab functional", () => {
+  it("shows public author data, replies empty state and publications", () => {
     const onOpenPost = vi.fn();
     render(<PublicProfile profile={profile} posts={[post]} likes={[]} loading={false} likesLoading={false} viewerId={profile.id} onOpenPost={onOpenPost} onToggleFollow={vi.fn()} />);
 
@@ -57,11 +65,69 @@ describe("PublicProfile", () => {
     expect(screen.getByText("Гид по Бали")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("tab", { name: "Ответы" }));
-    expect(screen.getByText("Скоро здесь появятся ответы пользователя.")).toBeTruthy();
+    expect(screen.getByText("Пока нет ответов. Ваши ответы появятся здесь.")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("tab", { name: "Публикации" }));
     fireEvent.click(screen.getByRole("button", { name: "Читать публикацию: Гид по Бали" }));
     expect(onOpenPost).toHaveBeenCalledWith(post);
+  });
+
+  it("shows replies with article context and status labels only to an admin on their own profile", () => {
+    const { rerender } = render(
+      <PublicProfile
+        profile={profile}
+        posts={[]}
+        likes={[]}
+        comments={[reply]}
+        commentsLoading={false}
+        currentUser={{ id: profile.id, role: "admin" }}
+        loading={false}
+        likesLoading={false}
+        viewerId={profile.id}
+        onOpenPost={vi.fn()}
+        onToggleFollow={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: "Ответы" }));
+    expect(screen.getByText("Совет по маршруту")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Гид по Португалии" }).getAttribute("href")).toBe("/posts/portugal-guide");
+    expect(screen.getByText("11.08.2026")).toBeTruthy();
+    expect(screen.getByText("На проверке")).toBeTruthy();
+
+    rerender(
+      <PublicProfile
+        profile={profile}
+        posts={[]}
+        likes={[]}
+        comments={[reply]}
+        commentsLoading={false}
+        currentUser={{ id: 9, role: "admin" }}
+        loading={false}
+        likesLoading={false}
+        viewerId={9}
+        onOpenPost={vi.fn()}
+        onToggleFollow={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText("На проверке")).toBeNull();
+
+    rerender(
+      <PublicProfile
+        profile={profile}
+        posts={[]}
+        likes={[]}
+        comments={[reply]}
+        commentsLoading={false}
+        currentUser={{ id: profile.id, role: "reader" }}
+        loading={false}
+        likesLoading={false}
+        viewerId={profile.id}
+        onOpenPost={vi.fn()}
+        onToggleFollow={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText("На проверке")).toBeNull();
   });
 
   it("shows real follower counters and lets a visitor follow another profile only", async () => {

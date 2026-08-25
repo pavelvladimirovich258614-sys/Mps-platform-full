@@ -9,7 +9,9 @@ from sqlalchemy.schema import CreateTable
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.profile import published_countries_query
+from app.models.comment import Comment
 from app.models.post import Country, Post, PostStatus, PostType, post_likes
+from app.models.review import ModerationStatus
 from app.models.user import Role, User, UserFollow
 
 
@@ -204,6 +206,53 @@ async def test_public_profile_likes_returns_only_published_posts(client, test_ap
 
     assert response.status_code == 200
     assert [post["slug"] for post in response.json()] == ["liked-post"]
+
+
+async def test_public_profile_comments_respect_owner_visibility_and_include_post_context(client, test_app):
+    now = datetime.now(UTC)
+    async with test_app.state.database.session_factory() as session:
+        profile = User(email="comments-profile@example.test", name="Автор ответов")
+        viewer = User(email="comments-viewer@example.test", name="Посетитель")
+        other_author = User(email="comments-other@example.test", name="Другой автор")
+        country = Country(name="Комментарии", flag_emoji="💬")
+        session.add_all([profile, viewer, other_author, country])
+        await session.flush()
+        post = Post(
+            type=PostType.ARTICLE,
+            title="Гид по Португалии",
+            slug="portugal-guide",
+            body="Текст публикации",
+            author_id=other_author.id,
+            country_id=country.id,
+            status=PostStatus.PUBLISHED,
+            published_at=now,
+        )
+        session.add(post)
+        await session.flush()
+        session.add_all([
+            Comment(post_id=post.id, user_id=profile.id, body="Одобренный ответ", status=ModerationStatus.APPROVED, created_at=now - timedelta(minutes=3)),
+            Comment(post_id=post.id, user_id=profile.id, body="Ответ на проверке", status=ModerationStatus.PENDING, created_at=now - timedelta(minutes=2)),
+            Comment(post_id=post.id, user_id=profile.id, body="Отклонённый ответ", status=ModerationStatus.REJECTED, created_at=now - timedelta(minutes=1)),
+            Comment(post_id=post.id, user_id=other_author.id, body="Чужой комментарий", status=ModerationStatus.APPROVED, created_at=now),
+        ])
+        await session.commit()
+
+    owner = await client.get(f"/api/v1/users/{profile.id}/comments", headers=auth_headers(test_app, profile))
+    visitor = await client.get(f"/api/v1/users/{profile.id}/comments", headers=auth_headers(test_app, viewer))
+    guest = await client.get(f"/api/v1/users/{profile.id}/comments")
+
+    assert owner.status_code == 200
+    assert [(item["body"], item["status"]) for item in owner.json()] == [
+        ("Отклонённый ответ", "rejected"),
+        ("Ответ на проверке", "pending"),
+        ("Одобренный ответ", "approved"),
+    ]
+    assert all(item["created_at"] for item in owner.json())
+    assert all(item["post"] == {"slug": "portugal-guide", "title": "Гид по Португалии"} for item in owner.json())
+    assert visitor.status_code == 200
+    assert [(item["body"], item["status"]) for item in visitor.json()] == [("Одобренный ответ", "approved")]
+    assert guest.status_code == 200
+    assert [(item["body"], item["status"]) for item in guest.json()] == [("Одобренный ответ", "approved")]
 
 
 async def test_public_profile_follow_lists_are_public_ordered_and_viewer_aware(client, test_app):
