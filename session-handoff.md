@@ -1,8 +1,15 @@
 # Session handoff — МПС
 
-## Current verified state — 2026-08-25
+## Current verified state — 2026-08-26
 
-F15–F35 are complete and production-deployed. The production revision is `86a67e5` (`main`, `origin/main` and VPS `/opt/mps-platform` synchronized); `mps-backend` is active, Alembic is `20260825_0012 (head)`, and `deploy/smoke.sh` passed. F35 completes the personal cabinet: all PublicProfile tabs use real data — «Активность», «Публикации», «Ответы», «Лайки» and «Подписки».
+F15–F35 are complete and production-deployed. The production revision remains `86a67e5` (`main`, `origin/main` and VPS `/opt/mps-platform` synchronized); `mps-backend` is active, Alembic is `20260825_0012 (head)`, and `deploy/smoke.sh` passed. F36 Package 1 is local-only and not deployed: it adds forum topic/message keyset pagination, SQL search, grouped country counts and migration `20260826_0013`; F36 remains `in_progress` until Packages 2–4.
+
+## F36 Package 1 — local completion, deployment unapproved
+
+- API contract: `GET /countries/{country_id}/topics` and `GET /topics/{topic_id}/messages` return `{items, next_cursor}`. They accept `limit` 1–50 (default 20) and opaque `id DESC` keyset `cursor`; the frontend appends subsequent results behind «Показать ещё» and removes the control on `next_cursor=null`.
+- Scalability changes: topic search uses SQL `ILIKE`; country cards use one `LEFT JOIN + GROUP BY` count query. `20260826_0013` adds `ix_forum_topics_country_id_created_at_id`, `ix_forum_topics_author_id`, and `ix_forum_messages_topic_id_created_at_id`.
+- Verification: backend RED — 3 expected failures; GREEN `test_forum.py` — 7 passed, including temporary PostgreSQL 16 Cyrillic search. Temporary PostgreSQL migration and all three indexes were observed. Frontend RED exposed the array-to-page-envelope crash; GREEN `Forum.test.tsx` — 2 passed. Full backend — 83 passed in 69.10s; frontend — 19 files / 114 passed; build — success, 115 modules. `./init.sh` stopped only at the external global Hermes/desktop pip-check before MPS tests.
+- Next approved work candidate: F36 Package 2 — atomic forum write counters/topic quota and write rate limiting. Do not deploy Package 1 or alter the known Unisender/HostKey boundary without separate approval.
 
 ## F35 complete cycle
 

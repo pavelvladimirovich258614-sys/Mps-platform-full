@@ -72,7 +72,7 @@ function installApi(detailResult: DetailResult = "ok", currentUser: Record<strin
     if (path === "/api/v1/posts/17" && init?.method === "DELETE") return new Response(null, { status: 204 });
     if (path === "/api/v1/posts/17/comments") return jsonResponse(200, []);
     if (path === "/api/v1/countries") return jsonResponse(200, [{ id: 1, name: "ОАЭ", topics_count: 0 }]);
-    if (path === "/api/v1/countries/1/topics") return jsonResponse(200, []);
+    if (path === "/api/v1/countries/1/topics") return jsonResponse(200, { items: [], next_cursor: null });
     if (path === "/api/v1/online") return jsonResponse(200, online);
     if (path === "/api/v1/notifications") return jsonResponse(200, { items: [] });
     if (path === "/api/v1/auth/logout") return new Response(null, { status: 204 });

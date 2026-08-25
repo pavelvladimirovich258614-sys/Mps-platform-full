@@ -15,6 +15,7 @@ export type Question = { id: number; target: "manager" | "lawyer"; body: string;
 export type Country = { id: number; name: string; topics_count: number };
 export type Topic = { id: number; title: string; messages_count: number };
 export type ForumMessage = { id: number; body: string; author: { id: number; name: string; avatar_url: string | null }; is_ai: boolean };
+export type ForumPage<T> = { items: T[]; next_cursor: string | null };
 export type Notification = { id: number; type: string; payload: Record<string, unknown>; is_read: boolean; created_at: string };
 export type OnlineUser = { id: number; name: string; avatar_url: string | null };
 export type PublicProfile = { id: number; name: string; avatar_url: string | null; bio: string | null; posts_count: number; followers_count: number; following_count: number; is_following: boolean; countries: Array<{ id: number; name: string; flag_emoji: string }> };
@@ -169,7 +170,34 @@ export function usePost(slug?: string) {
 export const useReviews = () => { const resource = useResource(() => api<Review[]>("/reviews"), []); const create = async (body: Omit<Review, "id" | "status" | "photo_url">) => apiJson<Review>("/reviews", "POST", body); return { ...resource, create }; };
 export const useSubscribe = () => ({ subscribe: (email: string) => apiJson<{ email: string; confirmed: boolean }>("/subscribe", "POST", { email }) });
 export const useQA = () => { const resource = useResource(() => api<Question[]>("/qa/my"), []); const create = async (target: Question["target"], body: string) => { const item = await apiJson<Question>("/qa", "POST", { target, body }); resource.setValue((current) => [...(current ?? []), item]); return item; }; return { ...resource, create }; };
-export const useForum = (countryId?: number, topicId?: number) => ({ countries: useResource(() => api<Country[]>("/countries"), []), topics: useResource(() => countryId ? api<Topic[]>(`/countries/${countryId}/topics`) : Promise.resolve([]), [countryId]), messages: useResource(() => topicId ? api<ForumMessage[]>(`/topics/${topicId}/messages`) : Promise.resolve([]), [topicId]), createTopic: (title: string) => apiJson<Topic>(`/countries/${countryId}/topics`, "POST", { title }), createMessage: (body: string) => apiJson<ForumMessage>(`/topics/${topicId}/messages`, "POST", { body }) });
+function useForumPage<T>(path: string | null, deps: unknown[]) {
+  const resource = useResource(() => path ? api<ForumPage<T>>(path) : Promise.resolve({ items: [], next_cursor: null }), deps);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadMore = useCallback(async () => {
+    const cursor = resource.value?.next_cursor;
+    if (!path || !cursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await api<ForumPage<T>>(`${path}?cursor=${encodeURIComponent(cursor)}`);
+      resource.setValue((current) => {
+        const known = new Set((current?.items ?? []).map((item) => (item as { id: number }).id));
+        return { items: [...(current?.items ?? []), ...page.items.filter((item) => !known.has((item as { id: number }).id))], next_cursor: page.next_cursor };
+      });
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, path, resource.value?.next_cursor]);
+  return { ...resource, items: resource.value?.items ?? [], hasMore: Boolean(resource.value?.next_cursor), loadingMore, loadMore };
+}
+export function useForum(countryId?: number, topicId?: number) {
+  return {
+    countries: useResource(() => api<Country[]>("/countries"), []),
+    topics: useForumPage<Topic>(countryId ? `/countries/${countryId}/topics` : null, [countryId]),
+    messages: useForumPage<ForumMessage>(topicId ? `/topics/${topicId}/messages` : null, [topicId]),
+    createTopic: (title: string) => apiJson<Topic>(`/countries/${countryId}/topics`, "POST", { title }),
+    createMessage: (body: string) => apiJson<ForumMessage>(`/topics/${topicId}/messages`, "POST", { body }),
+  };
+}
 export const useNotifications = () => { const resource = useResource(() => api<{ items: Notification[] }>("/notifications"), []); const read = async (ids?: number[]) => { await apiJson<{ updated: number }>("/notifications/read", "PATCH", ids ? { ids } : {}); await resource.reload(); }; return { ...resource, items: resource.value?.items ?? [], read }; };
 export function useOnline(viewerId?: number) {
   const resource = useResource(() => api<OnlineUser[]>("/online"), [viewerId]);

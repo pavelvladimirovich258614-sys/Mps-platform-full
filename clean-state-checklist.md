@@ -1,5 +1,15 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 72 F36 Package 1 local completion — 2026-08-26
+
+- [x] Scope is limited to forum read scalability: topic/message keyset pagination, SQL topic search, aggregate country counts, database indexes, frontend page accumulation and their tests. Concurrency/rate limiting, deletion, forum naming, email and production configuration are untouched.
+- [x] RED backend `D:\Python312\python.exe -m pytest tests/test_forum.py -q --color=no --basetemp D:\AI\tmp\mps-f36-p1-red` — 3 expected failures: missing page envelopes for topics/messages and four SELECTs for three country counts. GREEN with a temporary PostgreSQL 16 URL — 7 passed, including real Cyrillic `ILIKE` search.
+- [x] Migration `20260826_0013` upgraded the isolated PostgreSQL test database. Observed indexes: `ix_forum_topics_country_id_created_at_id`, `ix_forum_topics_author_id`, `ix_forum_messages_topic_id_created_at_id`.
+- [x] RED frontend `npm test -- --run src/components/Forum.test.tsx` exposed the changed page-envelope/array crash. GREEN same target — 2 passed: topics and messages append a second page and hide «Показать ещё» at `next_cursor=null`.
+- [x] Full backend with temporary PostgreSQL search verification — 83 passed in 69.10s. Full frontend — 19 files / 114 passed. `npm run build` — success, 115 modules, standard chunk-size warning only. `git diff --check` is clean.
+- [x] Final `./init.sh` outside sandbox stopped only at the agreed external global Hermes/desktop `pip check` before MPS tests; no external-environment repair was attempted.
+- [x] F36 remains the sole `in_progress` feature. Package 1 is local-only; production deploy is unapproved. Next scope is separately approved Package 2: atomic counters/quota and forum write rate limiting.
+
 ## Session 71 F15–F35 final production closeout — 2026-08-25
 
 - [x] Scope is tracker-only: only `claude-progress.md`, `session-handoff.md` and this checklist are changed. No MPS code, database, deployment configuration, email transport or production state is changed in this closeout.

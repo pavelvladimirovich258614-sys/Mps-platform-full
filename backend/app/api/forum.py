@@ -1,8 +1,10 @@
+import base64
+import json
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps import get_current_user, get_db
@@ -23,21 +25,40 @@ class MessageIn(BaseModel):
     body: str = Field(min_length=1)
 
 
+def encode_forum_cursor(item_id: int) -> str:
+    payload = json.dumps({"id": item_id}, separators=(",", ":"))
+    return base64.urlsafe_b64encode(payload.encode()).decode().rstrip("=")
+
+
+def decode_forum_cursor(cursor: str) -> int:
+    try:
+        padding = "=" * (-len(cursor) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(cursor + padding))
+        item_id = int(payload["id"])
+        if item_id < 1:
+            raise ValueError
+        return item_id
+    except (KeyError, TypeError, ValueError, UnicodeDecodeError):
+        raise HTTPException(422, "Некорректный курсор форума")
+
+
 @router.get("/countries")
 async def countries(session: AsyncSession = Depends(get_db)):
-    """Возвращает активные страны и число тем в каждой без побочных эффектов."""
-    rows = (await session.scalars(
-        select(Country).where(Country.is_active.is_(True)).order_by(Country.sort_order)
+    """Возвращает активные страны и число тем в каждой одним агрегирующим запросом."""
+    rows = (await session.execute(
+        select(Country, func.count(ForumTopic.id).label("topics_count"))
+        .outerjoin(ForumTopic, ForumTopic.country_id == Country.id)
+        .where(Country.is_active.is_(True))
+        .group_by(Country.id, Country.name, Country.flag_emoji, Country.sort_order, Country.is_active)
+        .order_by(Country.sort_order, Country.id)
     )).all()
     return [
         {
             "id": country.id,
             "name": country.name,
-            "topics_count": await session.scalar(
-                select(func.count()).select_from(ForumTopic).where(ForumTopic.country_id == country.id)
-            ),
+            "topics_count": topics_count,
         }
-        for country in rows
+        for country, topics_count in rows
     ]
 
 
@@ -45,19 +66,29 @@ async def countries(session: AsyncSession = Depends(get_db)):
 async def topics(
     country_id: int,
     search: str | None = None,
+    limit: int = Query(default=20, ge=1, le=50),
+    cursor: str | None = None,
     session: AsyncSession = Depends(get_db),
 ):
-    """Возвращает темы страны; поиск casefold-совместим с кириллицей и не меняет БД."""
-    query = select(ForumTopic).where(ForumTopic.country_id == country_id)
-    rows = (await session.scalars(query)).all()
+    """Возвращает SQL-filtered keyset page тем страны."""
+    conditions = [ForumTopic.country_id == country_id]
     if search:
         term = search.casefold()
         stem = term[:-1] if len(term) > 3 else term
-        rows = [topic for topic in rows if term in topic.title.casefold() or stem in topic.title.casefold()]
-    return [
-        {"id": topic.id, "title": topic.title, "messages_count": topic.messages_count}
-        for topic in rows
-    ]
+        conditions.append(or_(ForumTopic.title.ilike(f"%{term}%"), ForumTopic.title.ilike(f"%{stem}%")))
+    if cursor:
+        conditions.append(ForumTopic.id < decode_forum_cursor(cursor))
+    rows = list((await session.scalars(
+        select(ForumTopic)
+        .where(*conditions)
+        .order_by(ForumTopic.id.desc())
+        .limit(limit + 1)
+    )).all())
+    page = rows[:limit]
+    return {
+        "items": [{"id": topic.id, "title": topic.title, "messages_count": topic.messages_count} for topic in page],
+        "next_cursor": encode_forum_cursor(page[-1].id) if len(rows) > limit else None,
+    }
 
 
 @router.post("/countries/{country_id}/topics", status_code=201)
@@ -85,17 +116,28 @@ async def create_topic(
 
 
 @router.get("/topics/{topic_id}/messages")
-async def messages(topic_id: int, session: AsyncSession = Depends(get_db)):
-    """Возвращает сообщения темы с автором и признаком ответа Иришки без побочных эффектов."""
+async def messages(
+    topic_id: int,
+    limit: int = Query(default=20, ge=1, le=50),
+    cursor: str | None = None,
+    session: AsyncSession = Depends(get_db),
+):
+    """Возвращает keyset page сообщений темы с автором и признаком ответа Иришки."""
+    conditions = [ForumMessage.topic_id == topic_id]
+    if cursor:
+        conditions.append(ForumMessage.id < decode_forum_cursor(cursor))
     rows = (
         await session.execute(
             select(ForumMessage, User)
             .join(User, User.id == ForumMessage.author_id)
-            .where(ForumMessage.topic_id == topic_id)
-            .order_by(ForumMessage.id)
+            .where(*conditions)
+            .order_by(ForumMessage.id.desc())
+            .limit(limit + 1)
         )
     ).all()
-    return [
+    page = rows[:limit]
+    return {
+        "items": [
         {
             "id": message.id,
             "body": message.body,
@@ -106,8 +148,10 @@ async def messages(topic_id: int, session: AsyncSession = Depends(get_db)):
             },
             "is_ai": message.is_ai,
         }
-        for message, author in rows
-    ]
+        for message, author in page
+        ],
+        "next_cursor": encode_forum_cursor(page[-1][0].id) if len(rows) > limit else None,
+    }
 
 
 @router.post("/topics/{topic_id}/messages", status_code=201)

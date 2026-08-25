@@ -671,6 +671,23 @@
       ],
       "evidence": "Sessions 1–3 are deployed: subscriptions `fe00787`, replies `72ce494`, Likes UX `c12e102` (backend restart/readiness, production frontend build and deploy/smoke.sh all passed). Session 4a deployed at `2e58222`: backup before migration, PostgreSQL `20260825_0012` upgrade/backfill, backend readiness and smoke passed; production activity_log count was 4 with verified sample rows. 2026-08-25 Session 4b: backend RED `tests/test_activity_feed.py` — 2 expected 404 failures; GREEN — 2 passed. Frontend RED — Activity placeholder failure; GREEN targeted PublicProfile + routing — 33 passed. Full backend — 79 passed in 23.39s; full frontend — 18 files / 112 passed; `npm run build` succeeded (115 modules, standard chunk-size warning only). Final `./init.sh` stopped only at the unrelated external Hermes/desktop global pip check before MPS tests.",
       "notes": "F35 is locally passing: all five profile tabs now use real data. Session 4b adds GET /users/{id}/activity with opaque (created_at,id) keyset cursor, chunked batch context resolution and owner/public visibility filtering; the frontend has a paginated Activity timeline and exact empty state. Activity events are post_published, comment_created, post_liked and user_followed. Session 4b production deployment remains separately approved and has not been performed."
+    },
+    {
+      "id": "F36",
+      "priority": 36,
+      "area": "forum",
+      "title": "Форум по странам: масштабируемость, удаление и название раздела",
+      "user_visible_behavior": "Будут определены и после отдельного согласования устранены риски масштабирования, добавлены согласованные права удаления тем и сообщений, а раздел получит ясное название форума.",
+      "status": "in_progress",
+      "verification": [
+        "Пакет 1: RED/GREEN backend pagination, SQL search and grouped country counts",
+        "Пакет 1: RED/GREEN frontend accumulated pages and Show more controls",
+        "D:\\Python312\\python.exe -m pytest tests -q with temporary PostgreSQL search verification",
+        "cd frontend/app && npm test && npm run build",
+        "./init.sh outside sandbox; external Hermes pip check is tracked separately"
+      ],
+      "evidence": "2026-08-26 Package 1: backend RED 3 expected failures (missing page envelopes and N+1 counts); GREEN test_forum.py — 7 passed, including real temporary PostgreSQL 16 Cyrillic ILIKE search. Migration 20260826_0013 created ix_forum_topics_country_id_created_at_id, ix_forum_topics_author_id and ix_forum_messages_topic_id_created_at_id on temporary PostgreSQL. Frontend RED crashed on the changed page envelope; GREEN Forum.test.tsx — 2 passed. Full backend — 83 passed in 69.10s; full frontend — 19 files / 114 passed; npm run build — success, 115 modules. ./init.sh stopped only at external global/Hermes pip check before MPS tests.",
+      "notes": "Package 1 is locally complete and not deployed. Topic/message endpoints now return {items,next_cursor}, use opaque id DESC keyset cursors (limit 1..50, default 20), and frontend accumulates pages with Show more. Country counts use one LEFT JOIN + GROUP BY query; search runs in SQL. Deferred packages: 2 concurrency/rate limiting, 3 author/admin deletion, 4 forum naming. Production deploy requires separate approval."
     }
   ]
 }
