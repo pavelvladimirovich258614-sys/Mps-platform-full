@@ -53,6 +53,10 @@ function formatReplyDate(value: string) {
   return new Intl.DateTimeFormat("ru-RU", { timeZone: "UTC" }).format(new Date(value));
 }
 
+function formatLikedDate(value: string) {
+  return new Intl.DateTimeFormat("ru-RU", { timeZone: "UTC" }).format(new Date(value));
+}
+
 export function PublicProfile({ profile, posts, likes, comments = [], followers = [], following = [], loading, likesLoading, commentsLoading = false, followListsLoading = false, viewerId, currentUser = null, onOpenPost, onToggleFollow, onToggleListFollow, onEditProfile, onLogout, onNotice, isOnline = false }: PublicProfileProps) {
   const [tab, setTab] = useState<Tab>("posts");
   const [followListTab, setFollowListTab] = useState<"followers" | "following">("followers");
@@ -171,8 +175,10 @@ export function PublicProfile({ profile, posts, likes, comments = [], followers 
           {postsLoading && <div className="comment-skeleton"><i /><i /><i /></div>}
           {!postsLoading && visiblePosts.map((post) => (
             <article key={post.id} className="public-profile-post">
+              {showingLikes && post.cover_url?.trim() && <img className="public-profile-liked-cover" src={post.cover_url.trim()} alt={`Обложка: ${post.title}`} />}
               <p className="post-tag">{post.type === "article" ? "Статья" : post.type === "video_review" ? "Видеообзор" : "Фишка"}</p>
               <h2>{post.title}</h2>
+              {showingLikes && post.liked_at && <p className="public-profile-liked-date">Понравилось {formatLikedDate(post.liked_at)}</p>}
               <RichTextContent html={post.body} className="post-body-excerpt" />
               <button onClick={() => onOpenPost(post)} aria-label={`Читать публикацию: ${post.title}`}>Читать публикацию →</button>
             </article>

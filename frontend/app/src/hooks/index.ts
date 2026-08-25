@@ -6,7 +6,7 @@ import type { Comment, ReactionResult } from "../api/comments";
 export type { Comment } from "../api/comments";
 
 export type User = { id: number; email: string | null; name: string; avatar_url: string | null; bio: string | null; role: string; is_anonymous: boolean };
-export type ApiPost = { id: number; type: "article" | "fishka" | "tip" | "video_review"; title: string; slug: string; body: string; cover_url?: string | null; views: number; likes_count: number; shot_at: string | null; author: { id: number; name: string; avatar_url: string | null } };
+export type ApiPost = { id: number; type: "article" | "fishka" | "tip" | "video_review"; title: string; slug: string; body: string; cover_url?: string | null; liked_at?: string | null; views: number; likes_count: number; shot_at: string | null; author: { id: number; name: string; avatar_url: string | null } };
 export type PostDraft = { title: string; type: "article"; body: string; status: "draft" | "published"; cover_url?: string | null };
 export type DraftSummary = { id: number; title: string; updated_at: string };
 export type DraftPost = ApiPost & { status: "draft"; updated_at: string };
@@ -50,7 +50,8 @@ export const useDrafts = (enabled: boolean) => useResource(() => enabled ? api<D
 export const getDraft = (postId: number) => api<DraftPost>(`/posts/drafts/${postId}`);
 export const usePostLike = () => ({ toggle: (postId: number) => apiJson<{ likes_count: number }>(`/posts/${postId}/like`, "POST") });
 export const useAuthorPosts = (authorId?: number) => useResource(() => authorId ? api<ApiPost[]>(`/posts?author_id=${authorId}`) : Promise.resolve([]), [authorId]);
-export const useLikedPosts = (userId?: number) => useResource(() => userId ? api<ApiPost[]>(`/users/${userId}/likes`) : Promise.resolve([]), [userId]);
+export const getLikedPosts = (userId: number) => api<ApiPost[]>(`/users/${userId}/likes`);
+export const useLikedPosts = (userId?: number) => useResource(() => userId ? getLikedPosts(userId) : Promise.resolve([]), [userId]);
 export const useProfileFollowers = (userId?: number) => useResource(() => userId ? api<PublicProfileFollow[]>(`/users/${userId}/followers`) : Promise.resolve([]), [userId]);
 export const useProfileFollowing = (userId?: number) => useResource(() => userId ? api<PublicProfileFollow[]>(`/users/${userId}/following`) : Promise.resolve([]), [userId]);
 export const useProfileComments = (userId?: number) => useResource(() => userId ? api<PublicProfileComment[]>(`/users/${userId}/comments`) : Promise.resolve([]), [userId]);

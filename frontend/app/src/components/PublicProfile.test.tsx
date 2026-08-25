@@ -21,6 +21,8 @@ const post = {
   title: "Гид по Бали",
   slug: "bali-guide",
   body: "Большой материал о путешествии.",
+  cover_url: "/media/bali-cover.webp",
+  liked_at: "2026-08-11T09:30:00Z",
   views: 12,
   likes_count: 3,
   shot_at: null,
@@ -229,7 +231,7 @@ describe("PublicProfile", () => {
   });
 
   it("loads real liked posts in the likes tab", () => {
-    render(
+    const { rerender } = render(
       <PublicProfile
         profile={profile}
         posts={[]}
@@ -244,7 +246,23 @@ describe("PublicProfile", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: "Лайки" }));
     expect(screen.getByText("Гид по Бали")).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Обложка: Гид по Бали" })).toBeTruthy();
+    expect(screen.getByText("Понравилось 11.08.2026")).toBeTruthy();
     expect(screen.queryByText("Скоро здесь появятся понравившиеся публикации.")).toBeNull();
+
+    rerender(
+      <PublicProfile
+        profile={profile}
+        posts={[]}
+        likes={[{ ...post, cover_url: "   " }]}
+        loading={false}
+        likesLoading={false}
+        viewerId={profile.id}
+        onOpenPost={vi.fn()}
+        onToggleFollow={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole("img", { name: "Обложка: Гид по Бали" })).toBeNull();
   });
 
   it("shows follower and following lists and toggles a listed person's follow state", async () => {

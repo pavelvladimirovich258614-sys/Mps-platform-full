@@ -15,7 +15,7 @@ import { PublicProfile } from "./components/PublicProfile";
 import { QA } from "./components/QA";
 import { Reviews } from "./components/Reviews";
 import { Subscribe } from "./components/Subscribe";
-import { getDraft, type ApiPost, useAuthorPosts, useAuth, useDrafts, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, useProfileComments, useProfileFollowers, useProfileFollowing, usePublicProfile, usePublicSettings, useUserFollow } from "./hooks";
+import { getDraft, getLikedPosts, type ApiPost, useAuthorPosts, useAuth, useDrafts, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, useProfileComments, useProfileFollowers, useProfileFollowing, usePublicProfile, usePublicSettings, useUserFollow } from "./hooks";
 import { pathForRoute, type PathRoute, routeFromPath } from "./router";
 
 function routeForPage(page: Page): PathRoute {
@@ -42,6 +42,7 @@ export function App() {
   const [toast, setToast] = useState("");
   const [devRole, setDevRole] = useState<string | null>(null);
   const [likesByPostId, setLikesByPostId] = useState<Record<number, number>>({});
+  const [likedPostsByUserId, setLikedPostsByUserId] = useState<Record<number, ApiPost[]>>({});
   const [editingPost, setEditingPost] = useState<EditablePost | null>(null);
 
   const auth = useAuth();
@@ -62,6 +63,11 @@ export function App() {
   const profileFollowers = useProfileFollowers(route.page === "profile" ? route.userId : undefined);
   const profileFollowing = useProfileFollowing(route.page === "profile" ? route.userId : undefined);
   const userFollow = useUserFollow();
+
+  useEffect(() => {
+    if (route.page !== "profile" || likedPosts.loading || likedPosts.value === null) return;
+    setLikedPostsByUserId((current) => current[route.userId] === undefined ? { ...current, [route.userId]: likedPosts.value ?? [] } : current);
+  }, [likedPosts.loading, likedPosts.value, route]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -119,9 +125,12 @@ export function App() {
       setOverlay("profile");
       return;
     }
+    const currentUser = auth.user;
     try {
       const result = await postLike.toggle(post.id);
       setLikesByPostId((current) => ({ ...current, [post.id]: result.likes_count }));
+      const refreshedLikes = await getLikedPosts(currentUser.id);
+      setLikedPostsByUserId((current) => ({ ...current, [currentUser.id]: refreshedLikes }));
     } catch (cause) {
       showError(cause instanceof Error ? cause.message : "Не удалось изменить лайк");
     }
@@ -218,7 +227,7 @@ export function App() {
       <PublicProfile
         profile={publicProfile.value}
         posts={authorPosts.value ?? []}
-        likes={likedPosts.value ?? []}
+        likes={likedPostsByUserId[publicProfile.value.id] ?? likedPosts.value ?? []}
         comments={profileComments.value ?? []}
         followers={profileFollowers.value ?? []}
         following={profileFollowing.value ?? []}

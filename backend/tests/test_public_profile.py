@@ -169,6 +169,7 @@ async def test_follow_rejects_self_duplicate_and_hidden_or_banned_profiles(clien
 
 
 async def test_public_profile_likes_returns_only_published_posts(client, test_app):
+    liked_at = datetime(2026, 8, 25, 9, 30, tzinfo=UTC)
     async with test_app.state.database.session_factory() as session:
         user = User(email="likes-user@example.test", name="Любитель фишек")
         author = User(email="likes-author@example.test", name="Автор")
@@ -197,8 +198,8 @@ async def test_public_profile_likes_returns_only_published_posts(client, test_ap
         session.add_all([published, draft])
         await session.flush()
         await session.execute(post_likes.insert(), [
-            {"post_id": published.id, "user_id": user.id},
-            {"post_id": draft.id, "user_id": user.id},
+            {"post_id": published.id, "user_id": user.id, "created_at": liked_at},
+            {"post_id": draft.id, "user_id": user.id, "created_at": liked_at},
         ])
         await session.commit()
 
@@ -206,6 +207,7 @@ async def test_public_profile_likes_returns_only_published_posts(client, test_ap
 
     assert response.status_code == 200
     assert [post["slug"] for post in response.json()] == ["liked-post"]
+    assert response.json()[0]["liked_at"] == liked_at.isoformat()
 
 
 async def test_public_profile_comments_respect_owner_visibility_and_include_post_context(client, test_app):

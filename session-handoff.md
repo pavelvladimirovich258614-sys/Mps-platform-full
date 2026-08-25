@@ -2,7 +2,7 @@
 
 ## Current verified state — 2026-08-25
 
-F01–F34 remain passing and deployed. F35 remains `in_progress`; Sessions 1–2 are deployed, with Session 2 at revision `72ce494`. The previous frontend dist is recoverable at `/root/backups/mps-frontend-f35-s2-20260825T010604Z`.
+F01–F34 remain passing and deployed. F35 remains `in_progress`; Sessions 1–2 are deployed at `72ce494`, while Session 3 Likes UX is locally verified and awaits separate deployment approval. The previous frontend dist is recoverable at `/root/backups/mps-frontend-f35-s2-20260825T010604Z`.
 
 ## F35 Session 1 — subscriptions and publications baseline
 
@@ -25,9 +25,16 @@ F01–F34 remain passing and deployed. F35 remains `in_progress`; Sessions 1–2
 - Status badges are strict: only `currentUser.role === 'admin' && currentUser.id === profile.id` shows them. Admin viewing another profile and every non-admin see no badge.
 - RED backend was 1 expected 404 / 9 passed; GREEN 10 passed. RED frontend was 3 expected failures / 27 passed; GREEN targeted 30 passed. Full backend 73 passed in 20.15s, full frontend 18 files / 109 passed, build success with 115 modules. Final init stopped only at the external Hermes/desktop pip-check blocker before MPS tests. Approved rollout fast-forwarded VPS `fe00787 → 72ce494`, Alembic check passed, backend became ready, remote frontend build and `deploy/smoke.sh` passed; served bundle and public comments API returned 200 evidence.
 
+## F35 Session 3 — Likes UX locally complete, not deployed
+
+- Public `GET /users/{id}/likes` now emits `liked_at` normalized to UTC from `post_likes.created_at`; no migration and no access change.
+- Likes cards render a non-empty real cover, «Понравилось {дата}» and retain only «Читать публикацию» — no like/dislike card button or gradient fallback.
+- App refreshes an App-level current-user likes cache after each successful in-tab toggle; there is intentionally no cross-window synchronization.
+- RED backend was 1 expected failure / 9 passed; GREEN 10 passed. RED frontend was 2 expected failures / 29 passed; GREEN targeted 31 passed. Full backend 73 passed in 22.95s, full frontend 18 files / 110 passed, build success with 115 modules. Final init stopped only at the external Hermes/desktop pip-check blocker before MPS tests.
+
 ## Next task
 
-Obtain separate approval to deploy F35 Session 2, or continue only an independently approved remaining F35 sub-session. Likes stay as the existing liked-posts list. Activity remains separate pending an explicit product decision.
+Obtain separate approval to deploy F35 Session 3, or continue only an independently approved remaining F35 sub-session. Activity remains separate pending an explicit product decision.
 
 ## Known boundary
 

@@ -148,7 +148,7 @@ async def public_profile(
 async def public_profile_likes(user_id: int, session: AsyncSession = Depends(get_db)) -> list[dict]:
     await get_public_profile_user(session, user_id)
     posts = (await session.execute(
-        select(Post, User)
+        select(Post, User, post_likes.c.created_at.label("liked_at"))
         .join(post_likes, post_likes.c.post_id == Post.id)
         .join(User, User.id == Post.author_id)
         .where(
@@ -157,7 +157,10 @@ async def public_profile_likes(user_id: int, session: AsyncSession = Depends(get
         )
         .order_by(post_likes.c.created_at.desc(), Post.id.desc())
     )).all()
-    return [post_dto(post, author) for post, author in posts]
+    return [
+        {**post_dto(post, author), "liked_at": (liked_at if liked_at.tzinfo else liked_at.replace(tzinfo=UTC)).isoformat()}
+        for post, author, liked_at in posts
+    ]
 
 
 @router.get("/users/{user_id}/comments")

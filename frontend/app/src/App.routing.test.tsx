@@ -46,13 +46,14 @@ const jsonResponse = (status: number, body: unknown) => new Response(JSON.string
 
 type DetailResult = "ok" | "missing" | "network";
 
-function installApi(detailResult: DetailResult = "ok", currentUser: Record<string, unknown> | null = null, posts: ApiPost[] = [post], online: Array<{ id: number; name: string; avatar_url: string | null }> = [], profileComments: unknown[] = []) {
+function installApi(detailResult: DetailResult = "ok", currentUser: Record<string, unknown> | null = null, posts: ApiPost[] = [post], online: Array<{ id: number; name: string; avatar_url: string | null }> = [], profileComments: unknown[] = [], profileLikes: ApiPost[] = []) {
   let likesCount = post.likes_count;
+  let currentProfileLikes = profileLikes;
   const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
     const url = new URL(String(input));
     const path = url.pathname;
     if (path === "/api/v1/users/7/profile") return jsonResponse(200, publicProfile);
-    if (path === "/api/v1/users/7/likes") return jsonResponse(200, []);
+    if (path === "/api/v1/users/7/likes") return jsonResponse(200, currentProfileLikes);
     if (path === "/api/v1/users/7/comments") return jsonResponse(200, profileComments);
     if (path === "/api/v1/users/7/followers" || path === "/api/v1/users/7/following") return jsonResponse(200, []);
     if (path === "/api/v1/posts/bali-guide") {
@@ -63,6 +64,7 @@ function installApi(detailResult: DetailResult = "ok", currentUser: Record<strin
     if (path === "/api/v1/posts") return jsonResponse(200, posts);
     if (path === "/api/v1/posts/17/like") {
       likesCount = likesCount === post.likes_count ? likesCount + 1 : likesCount - 1;
+      currentProfileLikes = currentProfileLikes.some((item) => item.id === post.id) ? [] : [{ ...post, liked_at: "2026-08-25T09:30:00Z" }];
       return jsonResponse(200, { likes_count: likesCount });
     }
     if (path === "/api/v1/posts/17" && init?.method === "PATCH") return jsonResponse(200, { ...post, ...JSON.parse(String(init.body)) });
@@ -147,6 +149,25 @@ describe("App pathname routing", () => {
       "https://mir.pod-solncem.ru/api/v1/users/7/comments",
       expect.any(Object),
     );
+  });
+
+  it("refreshes the current user's shared liked-posts state after a like toggle", async () => {
+    window.history.replaceState({}, "", "/users/7");
+    const fetchMock = installApi("ok", {
+      id: 7, email: null, name: "Мария", avatar_url: null, bio: null, role: "reader", is_anonymous: false,
+    }, [post], [], [], [post]);
+    setAccessToken("reader-access-token");
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Лайки" }));
+    fireEvent.click(screen.getByRole("button", { name: "Читать публикацию: Гид по Бали" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Нравится: 3" }));
+
+    await waitFor(() => expect(fetchMock.mock.calls.filter(([input]) => new URL(String(input)).pathname === "/api/v1/users/7/likes")).toHaveLength(2));
+    window.history.back();
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    fireEvent.click(await screen.findByRole("tab", { name: "Лайки" }));
+    expect(await screen.findByText("Понравившихся публикаций пока нет.")).toBeTruthy();
   });
 
   it("passes the current online list to the public profile indicator", async () => {
