@@ -1,5 +1,15 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 71 F15–F35 final production closeout — 2026-08-25
+
+- [x] Scope is tracker-only: only `claude-progress.md`, `session-handoff.md` and this checklist are changed. No MPS code, database, deployment configuration, email transport or production state is changed in this closeout.
+- [x] F35 is fully `passing` and deployed at `86a67e5`. All five PublicProfile tabs use real data: Publications, Replies, Likes, Subscriptions and Activity.
+- [x] F35 evidence is complete: subscriptions lists and per-person follow state; owner/public comments visibility with admin-own-only labels; Likes cover/date and same-tab cache refresh; ActivityLog migration/backfill/atomic reversible hooks; public Activity API/UI with opaque keyset pagination and «Показать ещё».
+- [x] Fresh full verification on `86a67e5`: `D:\Python312\python.exe -m pytest tests -q --color=no --basetemp .pytest-f35-closeout-backend` — 79 passed in 20.90s; `npm test -- --reporter=dot` — 18 files / 112 passed; `npm run build` — success, 115 modules, standard chunk-size warning only.
+- [x] Final `./init.sh` outside sandbox stopped only at the agreed external Hermes/desktop global `pip check` before MPS tests; no repair was attempted because it is outside MPS scope.
+- [x] Production evidence: VPS `2e58222 → 86a67e5`, Alembic `20260825_0012 (head)`, backend ready on attempt 2, frontend `index-CwPpAkwf.js`, `deploy/smoke.sh` `[OK]`, public API `items=4`, `next_cursor=null`, and live browser Activity displayed Pavel's publication, like and two comments dated 24.08.2026.
+- [x] Known external boundary remains Unisender/HostKey network blockage; `EMAIL_LOGIN_ENABLED=false` keeps Telegram as the only visible login path. Next candidate is read-only diagnosis of slow personal-profile loading (F32 from the original findings list), not an implementation task.
+
 ## Session 65 final F15–F34 handoff — 2026-08-25
 
 ## Session 70 F35 Session 4b local completion — 2026-08-25
