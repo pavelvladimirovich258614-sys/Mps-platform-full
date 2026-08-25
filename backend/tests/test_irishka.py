@@ -1,6 +1,6 @@
 from datetime import UTC,datetime,timedelta
 import pytest,respx,httpx
-from sqlalchemy import select
+from sqlalchemy import event,select
 from app.models.forum import ForumTopic,ForumMessage
 from app.models.post import Country
 from app.models.setting import Setting
@@ -33,3 +33,18 @@ async def test_irishka_second_run_does_not_duplicate(test_app):
  assert await run(test_app.state.database.session_factory,test_app.state.settings)==1
  assert await run(test_app.state.database.session_factory,test_app.state.settings)==0
  async with test_app.state.database.session_factory() as s:assert len((await s.scalars(select(ForumMessage))).all())==1
+
+
+@respx.mock
+async def test_irishka_uses_atomic_message_counter_increment(test_app):
+ async with test_app.state.database.session_factory() as s:
+  c=Country(name="Atomic",flag_emoji="🏖",sort_order=3);u=User(email="atomic-user@example.com",name="u");a=User(email="irishka@system.local",name="Иришка · ИИ-помощник",role="editor");s.add_all([c,u,a,Setting(key="irishka_enabled",value="true"),Setting(key="irishka_delay_min",value="30")]);await s.flush();t=ForumTopic(country_id=c.id,author_id=u.id,title="Совет",created_at=datetime.now(UTC)-timedelta(minutes=31));s.add(t);await s.commit()
+ respx.post("https://api.minimax.io/v1/chat/completions").mock(return_value=httpx.Response(200,json={"choices":[{"message":{"content":"Ответ"}}]}))
+ statements=[]
+ def record(_, __, statement, ___, ____, _____): statements.append(statement.upper().replace(" ",""))
+ engine=test_app.state.database.engine.sync_engine;event.listen(engine,"before_cursor_execute",record)
+ try:
+  assert await run(test_app.state.database.session_factory,test_app.state.settings)==1
+ finally:
+  event.remove(engine,"before_cursor_execute",record)
+ assert any("UPDATEFORUM_TOPICSSETMESSAGES_COUNT=(FORUM_TOPICS.MESSAGES_COUNT+" in statement for statement in statements)

@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps import get_current_user, get_db
@@ -12,6 +12,7 @@ from app.models.forum import ForumMessage, ForumTopic
 from app.models.notification import Notification
 from app.models.post import Country
 from app.models.user import Role, User
+from app.rate_limit import forum_user_or_ip_key, limiter
 
 
 router = APIRouter(tags=["forum"])
@@ -92,6 +93,7 @@ async def topics(
 
 
 @router.post("/countries/{country_id}/topics", status_code=201)
+@limiter.limit("5/minute", key_func=forum_user_or_ip_key)
 async def create_topic(
     country_id: int,
     payload: TopicIn,
@@ -103,6 +105,7 @@ async def create_topic(
     if await session.get(Country, country_id) is None:
         raise HTTPException(404, "Страна не найдена")
     if user.role not in (Role.EDITOR, Role.ADMIN):
+        await session.execute(select(User.id).where(User.id == user.id).with_for_update())
         count = await session.scalar(
             select(func.count()).select_from(ForumTopic).where(ForumTopic.author_id == user.id)
         )
@@ -155,9 +158,11 @@ async def messages(
 
 
 @router.post("/topics/{topic_id}/messages", status_code=201)
+@limiter.limit("10/minute", key_func=forum_user_or_ip_key)
 async def message(
     topic_id: int,
     payload: MessageIn,
+    request: Request,
     session: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -170,8 +175,17 @@ async def message(
     forum_message = ForumMessage(topic_id=topic_id, author_id=user.id, body=payload.body)
     session.add(forum_message)
     await session.flush()
-    topic.messages_count += 1
-    topic.last_message_at = datetime.now(UTC)
+    updated = await session.execute(
+        update(ForumTopic)
+        .where(ForumTopic.id == topic_id, ForumTopic.is_locked.is_(False))
+        .values(
+            messages_count=ForumTopic.messages_count + 1,
+            last_message_at=datetime.now(UTC),
+        )
+    )
+    if updated.rowcount != 1:
+        await session.rollback()
+        raise HTTPException(423, "Тема закрыта")
     if topic.author_id != user.id:
         session.add(
             Notification(

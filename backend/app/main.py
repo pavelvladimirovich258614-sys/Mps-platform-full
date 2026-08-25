@@ -3,8 +3,9 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
 import jwt
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from redis.asyncio import Redis
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -30,6 +31,13 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.services.irishka import run as run_irishka
 
 
+async def rate_limit_exceeded_handler(_: Request, __: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Слишком много запросов. Попробуйте через минуту."},
+    )
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Create the configured FastAPI application."""
 
@@ -47,6 +55,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = app_settings
     app.state.redis = Redis.from_url(app_settings.redis_url, decode_responses=False)
     app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
     app.add_middleware(SlowAPIMiddleware)
 
     @app.middleware("http")

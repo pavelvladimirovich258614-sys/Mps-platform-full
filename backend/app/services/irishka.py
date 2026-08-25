@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.models.forum import ForumMessage, ForumTopic
 from app.models.question import Question, QuestionTarget
@@ -74,8 +74,15 @@ async def run(session_factory, settings) -> int:
             session.add(
                 ForumMessage(topic_id=topic.id, author_id=assistant.id, body=text, is_ai=True)
             )
-            topic.messages_count += 1
-            topic.last_message_at = datetime.now(UTC)
+            await session.flush()
+            await session.execute(
+                update(ForumTopic)
+                .where(ForumTopic.id == topic.id)
+                .values(
+                    messages_count=ForumTopic.messages_count + 1,
+                    last_message_at=datetime.now(UTC),
+                )
+            )
             made += 1
 
         await session.commit()

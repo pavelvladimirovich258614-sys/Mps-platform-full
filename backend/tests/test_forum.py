@@ -1,8 +1,10 @@
+import asyncio
 import os
 
 import fakeredis.aioredis
 import httpx,pytest,pytest_asyncio
-from sqlalchemy import event, select
+from sqlalchemy import event, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import Settings
 from app.db import Base
 from app.main import create_app
@@ -170,3 +172,78 @@ async def test_forum_postgresql_search_is_cyrillic_case_insensitive(postgresql_f
 
  assert response.status_code==200
  assert [item["id"] for item in response.json()["items"]]==[created.json()["id"]]
+
+
+async def test_forum_postgresql_concurrent_topic_limit_is_atomic(postgresql_forum_client, monkeypatch):
+ client,app=postgresql_forum_client
+ c=await country(app);reader=await user(app,"concurrent-topics@example.com")
+ async with app.state.database.session_factory() as s:
+  s.add_all([ForumTopic(country_id=c.id,author_id=reader.id,title="Уже первая"),ForumTopic(country_id=c.id,author_id=reader.id,title="Уже вторая")]);await s.commit()
+
+ original_scalar=AsyncSession.scalar
+ async def delayed_topic_count(self,statement,*args,**kwargs):
+  if "FORUM_TOPICS" in str(statement).upper() and "COUNT" in str(statement).upper():
+   statement=statement.add_columns(func.pg_sleep(0.15))
+  return await original_scalar(self,statement,*args,**kwargs)
+ monkeypatch.setattr(AsyncSession,"scalar",delayed_topic_count)
+
+ responses=await asyncio.gather(*[
+  client.post(f"/api/v1/countries/{c.id}/topics",headers=hdr(app,reader),json={"title":f"Параллельная {n}"})
+  for n in range(5)
+ ])
+
+ assert [response.status_code for response in responses].count(201)==1
+ assert [response.status_code for response in responses].count(403)==4
+ assert all("лимит" in response.json()["detail"].lower() for response in responses if response.status_code==403)
+
+
+async def test_forum_postgresql_concurrent_messages_increment_counter_atomically(postgresql_forum_client, monkeypatch):
+ client,app=postgresql_forum_client
+ c=await country(app);author=await user(app,"message-author@example.com");sender=await user(app,"message-sender@example.com")
+ async with app.state.database.session_factory() as s:
+  topic=ForumTopic(country_id=c.id,author_id=author.id,title="Счётчик");s.add(topic);await s.commit();await s.refresh(topic);topic_id=topic.id
+
+ original_get=AsyncSession.get
+ async def delayed_topic_read(self,entity,ident,*args,**kwargs):
+  value=await original_get(self,entity,ident,*args,**kwargs)
+  if entity is ForumTopic:
+   await asyncio.sleep(0.15)
+  return value
+ monkeypatch.setattr(AsyncSession,"get",delayed_topic_read)
+
+ responses=await asyncio.gather(*[
+  client.post(f"/api/v1/topics/{topic_id}/messages",headers=hdr(app,sender),json={"body":f"Сообщение {n}"})
+  for n in range(5)
+ ])
+
+ assert all(response.status_code==201 for response in responses)
+ async with app.state.database.session_factory() as s:
+  topic=await s.get(ForumTopic,topic_id)
+  assert topic.messages_count==5
+
+
+async def test_forum_topic_rate_limit_is_per_authenticated_user(client,test_app):
+ c=await country(test_app);first=await user(test_app,"topic-rate-first@example.com",Role.EDITOR);second=await user(test_app,"topic-rate-second@example.com",Role.EDITOR)
+ for n in range(5):
+  response=await client.post(f"/api/v1/countries/{c.id}/topics",headers=hdr(test_app,first),json={"title":f"Тема {n}"})
+  assert response.status_code==201
+
+ limited=await client.post(f"/api/v1/countries/{c.id}/topics",headers=hdr(test_app,first),json={"title":"Лишняя тема"})
+ other_user=await client.post(f"/api/v1/countries/{c.id}/topics",headers=hdr(test_app,second),json={"title":"Тема другого"})
+
+ assert limited.status_code==429
+ assert "слишком много" in limited.json()["detail"].lower()
+ assert other_user.status_code==201
+
+
+async def test_forum_message_rate_limit_returns_russian_429(client,test_app):
+ c=await country(test_app);author=await user(test_app,"message-rate-author@example.com",Role.EDITOR);sender=await user(test_app,"message-rate-sender@example.com")
+ topic=(await client.post(f"/api/v1/countries/{c.id}/topics",headers=hdr(test_app,author),json={"title":"Тема для лимита"})).json()
+ for n in range(10):
+  response=await client.post(f"/api/v1/topics/{topic['id']}/messages",headers=hdr(test_app,sender),json={"body":f"Сообщение {n}"})
+  assert response.status_code==201
+
+ limited=await client.post(f"/api/v1/topics/{topic['id']}/messages",headers=hdr(test_app,sender),json={"body":"Лишнее сообщение"})
+
+ assert limited.status_code==429
+ assert "слишком много" in limited.json()["detail"].lower()

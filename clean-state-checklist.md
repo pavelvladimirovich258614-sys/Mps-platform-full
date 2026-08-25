@@ -1,5 +1,15 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 73 F36 Package 2 local completion — 2026-08-26
+
+- [x] F36 remains the sole `in_progress` feature. Scope is limited to forum write atomicity and per-user rate limiting; deletion, naming, email transport, frontend behavior and production configuration are untouched.
+- [x] RED on temporary PostgreSQL 16: five concurrent POST topics crossed a remaining single-slot quota; five concurrent messages left `messages_count=1`; topic/message 429 contracts were absent; Иришка issued a non-atomic counter UPDATE.
+- [x] GREEN `D:\Python312\python.exe -m pytest tests/test_forum.py tests/test_irishka.py -q --color=no --basetemp D:\AI\tmp\mps-f36-p2-green-1` — 17 passed in 9.04s. PostgreSQL tests prove `SELECT FOR UPDATE` admits only the remaining topic slot and SQL `messages_count = messages_count + 1` retains every concurrent increment.
+- [x] Full backend pytest completed successfully against the same temporary PostgreSQL. Frontend regression `npm run test:quiet` — 19 files / 114 passed; `npm run build` — success, 115 modules, only the standard chunk-size warning.
+- [x] Final `./init.sh` outside sandbox stopped only at agreed external global Hermes/desktop `pip check` conflicts before MPS tests; no external-environment repair was attempted.
+- [x] Package 1 rollout is recorded correctly: `61ff1a5` synchronized local/origin/VPS, fresh readable PostgreSQL backup, Alembic `20260826_0013`, backend health, frontend publish and `deploy/smoke.sh` all passed.
+- [x] Package 2 production deployment is intentionally unperformed and needs separate approval. Current SlowAPI storage is process-local; production remains one backend worker, while any multi-worker future needs Redis-backed limiter storage.
+
 ## Session 72 F36 Package 1 local completion — 2026-08-26
 
 - [x] Scope is limited to forum read scalability: topic/message keyset pagination, SQL topic search, aggregate country counts, database indexes, frontend page accumulation and their tests. Concurrency/rate limiting, deletion, forum naming, email and production configuration are untouched.
@@ -8,7 +18,7 @@
 - [x] RED frontend `npm test -- --run src/components/Forum.test.tsx` exposed the changed page-envelope/array crash. GREEN same target — 2 passed: topics and messages append a second page and hide «Показать ещё» at `next_cursor=null`.
 - [x] Full backend with temporary PostgreSQL search verification — 83 passed in 69.10s. Full frontend — 19 files / 114 passed. `npm run build` — success, 115 modules, standard chunk-size warning only. `git diff --check` is clean.
 - [x] Final `./init.sh` outside sandbox stopped only at the agreed external global Hermes/desktop `pip check` before MPS tests; no external-environment repair was attempted.
-- [x] F36 remains the sole `in_progress` feature. Package 1 is local-only; production deploy is unapproved. Next scope is separately approved Package 2: atomic counters/quota and forum write rate limiting.
+- [x] F36 remains the sole `in_progress` feature. Package 1 was subsequently deployed at `61ff1a5` after separate approval: fresh readable backup, Alembic `20260826_0013`, backend health, rebuilt frontend, served bundle and smoke all passed. Package 2 is now locally complete; its own deployment remains unapproved.
 
 ## Session 71 F15–F35 final production closeout — 2026-08-25
 
