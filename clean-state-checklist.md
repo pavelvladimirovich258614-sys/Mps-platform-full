@@ -11,7 +11,7 @@
 - [x] RED frontend — 3 expected failures / 27 passed: stale empty text, no reply list and no profile comments load. GREEN targeted PublicProfile + routing — 30 passed, including admin-own-only status badges and article context/date.
 - [x] Full backend — 73 passed in 20.15s. Full frontend — 18 files / 109 passed. `npm run build` — success, 115 modules; only standard chunk-size warning.
 - [x] Final `./init.sh` outside sandbox stopped only at the agreed external Hermes/desktop global `pip check` before MPS tests; no attempt was made to modify that environment.
-- [x] No production deployment was performed for Session 2. It awaits separate approval; no migration or dependency change is required.
+- [x] Approved Session 2 rollout completed: `72ce494` pushed; VPS fast-forwarded `fe00787 → 72ce494`; Alembic check passed; `mps-backend` restarted and readiness became active. Frontend rollback is `/root/backups/mps-frontend-f35-s2-20260825T010604Z`; remote build, served `index-DQG_KskE.js`, public comments endpoint `200` with 2 items and `deploy/smoke.sh` passed. No migration or dependency change was required.
 
 - [x] F35 remains the single `in_progress` feature; F34 remains `passing`. Session 1 scope was the Publications regression baseline and Subscriptions lists only.
 - [x] RED backend: new followers/following contract failed with missing-route 404 — 1 expected failure / 8 passed. GREEN `D:\Python312\python.exe -m pytest tests/test_public_profile.py -q --color=no --basetemp .pytest-f35-green-backend` — 9 passed.

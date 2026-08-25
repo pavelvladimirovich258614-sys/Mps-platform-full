@@ -2,7 +2,7 @@
 
 ## Current verified state — 2026-08-25
 
-F01–F34 remain passing and deployed. F35 remains `in_progress`; Session 1 is deployed at revision `fe00787`, while Session 2 is locally verified and awaits separate deployment approval. The previous frontend dist is recoverable at `/root/backups/mps-frontend-f35-20260825T002954Z`.
+F01–F34 remain passing and deployed. F35 remains `in_progress`; Sessions 1–2 are deployed, with Session 2 at revision `72ce494`. The previous frontend dist is recoverable at `/root/backups/mps-frontend-f35-s2-20260825T010604Z`.
 
 ## F35 Session 1 — subscriptions and publications baseline
 
@@ -18,12 +18,12 @@ F01–F34 remain passing and deployed. F35 remains `in_progress`; Session 1 is d
 - Full backend — 72 passed in 22.10s; full frontend — 18 files / 107 passed; Vite production build — success, 115 modules.
 - Final `./init.sh` stopped only at the external Hermes/desktop global `pip check`, before MPS tests. This external blocker is unchanged.
 
-## F35 Session 2 — replies locally complete, not deployed
+## F35 Session 2 — replies deployed
 
 - `GET /users/{id}/comments` returns own comments with `body`, `created_at`, `status`, `post.slug`, and `post.title`, ordered newest first. The authenticated profile owner sees all own approved/pending/rejected rows; guests and any other viewer see only approved rows.
 - PublicProfile renders article link, UTC date and exact empty state: «Пока нет ответов. Ваши ответы появятся здесь.»
 - Status badges are strict: only `currentUser.role === 'admin' && currentUser.id === profile.id` shows them. Admin viewing another profile and every non-admin see no badge.
-- RED backend was 1 expected 404 / 9 passed; GREEN 10 passed. RED frontend was 3 expected failures / 27 passed; GREEN targeted 30 passed. Full backend 73 passed in 20.15s, full frontend 18 files / 109 passed, build success with 115 modules. Final init stopped only at the external Hermes/desktop pip-check blocker before MPS tests.
+- RED backend was 1 expected 404 / 9 passed; GREEN 10 passed. RED frontend was 3 expected failures / 27 passed; GREEN targeted 30 passed. Full backend 73 passed in 20.15s, full frontend 18 files / 109 passed, build success with 115 modules. Final init stopped only at the external Hermes/desktop pip-check blocker before MPS tests. Approved rollout fast-forwarded VPS `fe00787 → 72ce494`, Alembic check passed, backend became ready, remote frontend build and `deploy/smoke.sh` passed; served bundle and public comments API returned 200 evidence.
 
 ## Next task
 
