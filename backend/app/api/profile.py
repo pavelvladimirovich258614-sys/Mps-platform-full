@@ -34,6 +34,42 @@ async def followers_count(session: AsyncSession, user_id: int) -> int:
     ) or 0
 
 
+async def public_follow_list(
+    session: AsyncSession,
+    user_id: int,
+    viewer: User | None,
+    *,
+    followers: bool,
+) -> list[dict]:
+    await get_public_profile_user(session, user_id)
+    person_id = UserFollow.follower_id if followers else UserFollow.following_id
+    relation = UserFollow.following_id == user_id if followers else UserFollow.follower_id == user_id
+    rows = (await session.execute(
+        select(UserFollow, User)
+        .join(User, User.id == person_id)
+        .where(relation, User.is_anonymous.is_(False), User.is_banned.is_(False))
+        .order_by(UserFollow.created_at.desc(), User.id.desc())
+    )).all()
+    person_ids = [person.id for _, person in rows]
+    viewer_following_ids: set[int] = set()
+    if viewer is not None and person_ids:
+        viewer_following_ids = set((await session.scalars(
+            select(UserFollow.following_id).where(
+                UserFollow.follower_id == viewer.id,
+                UserFollow.following_id.in_(person_ids),
+            )
+        )).all())
+    return [
+        {
+            "id": person.id,
+            "name": person.name,
+            "avatar_url": person.avatar_url,
+            "is_following": person.id in viewer_following_ids,
+        }
+        for _, person in rows
+    ]
+
+
 def published_countries_query(user_id: int):
     """Return unique, display-ordered countries used in an author's publications."""
     return (
@@ -120,6 +156,24 @@ async def public_profile_likes(user_id: int, session: AsyncSession = Depends(get
         .order_by(post_likes.c.created_at.desc(), Post.id.desc())
     )).all()
     return [post_dto(post, author) for post, author in posts]
+
+
+@router.get("/users/{user_id}/followers")
+async def public_profile_followers(
+    user_id: int,
+    session: AsyncSession = Depends(get_db),
+    viewer: User | None = Depends(get_optional_current_user),
+) -> list[dict]:
+    return await public_follow_list(session, user_id, viewer, followers=True)
+
+
+@router.get("/users/{user_id}/following")
+async def public_profile_following(
+    user_id: int,
+    session: AsyncSession = Depends(get_db),
+    viewer: User | None = Depends(get_optional_current_user),
+) -> list[dict]:
+    return await public_follow_list(session, user_id, viewer, followers=False)
 
 
 @router.post("/users/{user_id}/follow", status_code=201)

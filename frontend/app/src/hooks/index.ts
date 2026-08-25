@@ -18,6 +18,7 @@ export type ForumMessage = { id: number; body: string; author: { id: number; nam
 export type Notification = { id: number; type: string; payload: Record<string, unknown>; is_read: boolean; created_at: string };
 export type OnlineUser = { id: number; name: string; avatar_url: string | null };
 export type PublicProfile = { id: number; name: string; avatar_url: string | null; bio: string | null; posts_count: number; followers_count: number; following_count: number; is_following: boolean; countries: Array<{ id: number; name: string; flag_emoji: string }> };
+export type PublicProfileFollow = { id: number; name: string; avatar_url: string | null; is_following: boolean };
 export type PublicSettings = { legal_name: string | null; legal_inn: string | null; legal_ogrn: string | null; contact_email: string | null; contact_phone: string | null; contact_address: string | null; comments_moderation_enabled: boolean };
 export type TelegramLoginPayload = { id: number; first_name: string; last_name?: string; username?: string; photo_url?: string; auth_date: number; hash: string };
 
@@ -49,6 +50,14 @@ export const getDraft = (postId: number) => api<DraftPost>(`/posts/drafts/${post
 export const usePostLike = () => ({ toggle: (postId: number) => apiJson<{ likes_count: number }>(`/posts/${postId}/like`, "POST") });
 export const useAuthorPosts = (authorId?: number) => useResource(() => authorId ? api<ApiPost[]>(`/posts?author_id=${authorId}`) : Promise.resolve([]), [authorId]);
 export const useLikedPosts = (userId?: number) => useResource(() => userId ? api<ApiPost[]>(`/users/${userId}/likes`) : Promise.resolve([]), [userId]);
+export const useProfileFollowers = (userId?: number) => useResource(() => userId ? api<PublicProfileFollow[]>(`/users/${userId}/followers`) : Promise.resolve([]), [userId]);
+export const useProfileFollowing = (userId?: number) => useResource(() => userId ? api<PublicProfileFollow[]>(`/users/${userId}/following`) : Promise.resolve([]), [userId]);
+export const useUserFollow = () => ({
+  toggle: async (userId: number, isFollowing: boolean) => {
+    const result = await apiJson<{ is_following: boolean }>(`/users/${userId}/follow`, isFollowing ? "DELETE" : "POST");
+    return result.is_following;
+  },
+});
 export function usePublicProfile(userId?: number) {
   const resource = useResource(() => userId ? api<PublicProfile>(`/users/${userId}/profile`) : Promise.resolve(null), [userId]);
   const toggleFollow = async () => {

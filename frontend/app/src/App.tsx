@@ -15,7 +15,7 @@ import { PublicProfile } from "./components/PublicProfile";
 import { QA } from "./components/QA";
 import { Reviews } from "./components/Reviews";
 import { Subscribe } from "./components/Subscribe";
-import { getDraft, type ApiPost, useAuthorPosts, useAuth, useDrafts, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, usePublicProfile, usePublicSettings } from "./hooks";
+import { getDraft, type ApiPost, useAuthorPosts, useAuth, useDrafts, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, useProfileFollowers, useProfileFollowing, usePublicProfile, usePublicSettings, useUserFollow } from "./hooks";
 import { pathForRoute, type PathRoute, routeFromPath } from "./router";
 
 function routeForPage(page: Page): PathRoute {
@@ -58,6 +58,9 @@ export function App() {
   const publicProfile = usePublicProfile(route.page === "profile" ? route.userId : undefined);
   const authorPosts = useAuthorPosts(route.page === "profile" ? route.userId : undefined);
   const likedPosts = useLikedPosts(route.page === "profile" ? route.userId : undefined);
+  const profileFollowers = useProfileFollowers(route.page === "profile" ? route.userId : undefined);
+  const profileFollowing = useProfileFollowing(route.page === "profile" ? route.userId : undefined);
+  const userFollow = useUserFollow();
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -215,8 +218,11 @@ export function App() {
         profile={publicProfile.value}
         posts={authorPosts.value ?? []}
         likes={likedPosts.value ?? []}
+        followers={profileFollowers.value ?? []}
+        following={profileFollowing.value ?? []}
         loading={authorPosts.loading}
         likesLoading={likedPosts.loading}
+        followListsLoading={profileFollowers.loading || profileFollowing.loading}
         viewerId={auth.user?.id ?? null}
         isOnline={Boolean(online.value?.some((person) => person.id === publicProfile.value?.id))}
         onOpenPost={openArticle}
@@ -228,6 +234,14 @@ export function App() {
             await publicProfile.toggleFollow();
           } catch (cause) {
             showError(cause instanceof Error ? cause.message : "Не удалось изменить подписку");
+          }
+        }}
+        onToggleListFollow={async (userId, isFollowing) => {
+          try {
+            return await userFollow.toggle(userId, isFollowing);
+          } catch (cause) {
+            showError(cause instanceof Error ? cause.message : "Не удалось изменить подписку");
+            throw cause;
           }
         }}
       />

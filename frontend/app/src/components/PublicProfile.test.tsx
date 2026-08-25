@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { PublicProfile } from "./PublicProfile";
@@ -179,5 +179,36 @@ describe("PublicProfile", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Лайки" }));
     expect(screen.getByText("Гид по Бали")).toBeTruthy();
     expect(screen.queryByText("Скоро здесь появятся понравившиеся публикации.")).toBeNull();
+  });
+
+  it("shows follower and following lists and toggles a listed person's follow state", async () => {
+    const onToggleListFollow = vi.fn().mockResolvedValue(true);
+    render(
+      <PublicProfile
+        profile={{ ...profile, is_following: true }}
+        posts={[]}
+        likes={[]}
+        followers={[{ id: 11, name: "Новый подписчик", avatar_url: "/media/follower.webp", is_following: false }]}
+        following={[{ id: 12, name: "Автор маршрутов", avatar_url: null, is_following: true }]}
+        loading={false}
+        likesLoading={false}
+        followListsLoading={false}
+        viewerId={9}
+        onOpenPost={vi.fn()}
+        onToggleFollow={vi.fn()}
+        onToggleListFollow={onToggleListFollow}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: "Подписки" }));
+    expect(screen.getByText("Новый подписчик")).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Аватар Новый подписчик" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Подписаться" }));
+    await waitFor(() => expect(onToggleListFollow).toHaveBeenCalledWith(11, false));
+    expect(await screen.findByRole("button", { name: "Подписан" })).toBeTruthy();
+
+    fireEvent.click(within(screen.getByRole("tablist", { name: "Списки подписок" })).getByRole("tab", { name: "Подписки" }));
+    expect(screen.getByText("Автор маршрутов")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Подписан" })).toBeTruthy();
   });
 });

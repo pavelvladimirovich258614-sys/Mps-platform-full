@@ -653,6 +653,24 @@
       ],
       "evidence": "2026-08-25 diagnosis: backend HTTP middleware refreshes authenticated User.last_seen_at; GET /online returns non-anonymous users active within 120 seconds, including avatar_url; no WebSocket is used. RED `npm test -- --run src/components/Layout.test.tsx src/components/PublicProfile.test.tsx src/hooks/useAuth.test.tsx src/hooks/useOnline.test.tsx src/App.routing.test.tsx --reporter=dot` — 4 expected failures / 28 passed: no avatar image/anchored dot in Layout, no profile indicator and no App presence propagation. GREEN targeted command — 5 files / 32 passed. Backend presence regression `D:\\Python312\\python.exe -m pytest tests/test_presence.py -q --color=no --basetemp D:\\AI\\tmp\\mps-f34-presence` — 2 passed. Full backend `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp D:\\AI\\tmp\\mps-f34-full-backend` — 71 passed in 18.75s. Full frontend `npm test` — 18 files / 106 passed. `npm run build` — success, 115 modules; standard Vite chunk-size warning only. Final `./init.sh` installed MPS requirements then stopped only at unrelated external Hermes/desktop global pip-check conflicts; MPS suites were separately green.",
       "notes": "Presence semantics remain last_seen_at within 120 seconds, with no WebSocket change. Layout now uses online avatar_url with a gradient fallback and anchors the dot inside the avatar wrapper; PublicProfile receives isOnline from /online. useOnline refreshes after authentication and every 30 seconds with interval cleanup. Header already rerenders current avatar from useAuth state after PATCH /me; that state update is regression-covered. Backend/API/database/dependencies/email infrastructure are unchanged. Production deployment requires separate approval."
+    },
+    {
+      "id": "F35",
+      "priority": 35,
+      "area": "profile",
+      "title": "Личный кабинет: реальные вкладки профиля и подписки",
+      "user_visible_behavior": "Публичный профиль показывает реальные данные во вкладках «Публикации», «Ответы», «Лайки» и «Подписки», а также согласованную ленту «Активность»; посетитель видит корректное состояние подписки и может подписаться или отписаться.",
+      "status": "in_progress",
+      "verification": [
+        "Диагностика существующих API и продуктовых решений до плана",
+        "RED/GREEN контракты для каждого согласованного блока F35",
+        "cd frontend/app && npm test",
+        "cd frontend/app && npm run build",
+        "cd backend && python -m pytest tests -q",
+        "./init.sh outside sandbox; внешний Hermes pip check отслеживается отдельно"
+      ],
+      "evidence": "2026-08-25 Session 1: RED backend `D:\\Python312\\python.exe -m pytest tests/test_public_profile.py -q --color=no --basetemp .pytest-f35-red-backend` — 1 expected failure / 8 passed: оба follow-list route отсутствовали (404). GREEN same suite — 9 passed. RED frontend `npm test -- --run src/components/PublicProfile.test.tsx --reporter=dot` — 1 expected failure / 6 passed: вкладка оставалась заглушкой. GREEN targeted `npm test -- --run src/components/PublicProfile.test.tsx src/App.routing.test.tsx --reporter=dot` — 28 passed. Full backend — 72 passed in 22.10s; full frontend — 18 files / 107 passed; `npm run build` — success, 115 modules. Final `./init.sh` stopped only at the unrelated external Hermes/desktop global pip check before MPS tests.",
+      "notes": "F35 остаётся in_progress. Session 1 complete locally: existing `GET /posts?author_id=` is regression-covered; `GET /users/{id}/followers` and `/following` return public `id/name/avatar_url/is_following` lists ordered by follow created_at descending; PublicProfile renders both lists and per-person follow toggle. Зафиксировано Павлом: «Ответы» = собственные комментарии пользователя, empty-state «Пока нет ответов. Ваши ответы появятся здесь.»; это следующая под-сессия. «Лайки» остаются текущим списком публикаций, которые лайкнул пользователь, без изменения. «Активность» требует отдельного решения о составе и сортировке. Не путать email subscriptions с направленной таблицей user_follows. Production deploy требует отдельного подтверждения."
     }
   ]
 }

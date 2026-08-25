@@ -2,6 +2,16 @@
 
 ## Session 65 final F15–F34 handoff — 2026-08-25
 
+## Session 66 F35 Session 1 local completion — 2026-08-25
+
+- [x] F35 remains the single `in_progress` feature; F34 remains `passing`. Session 1 scope was the Publications regression baseline and Subscriptions lists only.
+- [x] RED backend: new followers/following contract failed with missing-route 404 — 1 expected failure / 8 passed. GREEN `D:\Python312\python.exe -m pytest tests/test_public_profile.py -q --color=no --basetemp .pytest-f35-green-backend` — 9 passed.
+- [x] RED frontend: PublicProfile subscriptions tab remained the placeholder — 1 expected failure / 6 passed. GREEN `npm test -- --run src/components/PublicProfile.test.tsx src/App.routing.test.tsx --reporter=dot` — 28 passed.
+- [x] New API scope is read-only lists: public `id/name/avatar_url/is_following`, filtering anonymous/banned users and ordering by follow creation time. Existing follow POST/DELETE is reused; no migration or dependency change.
+- [x] Full backend: 72 passed in 22.10s. Full frontend: 18 files / 107 passed. `npm run build`: success, 115 modules; only the standard chunk-size warning.
+- [x] Final `./init.sh` outside sandbox stopped only on the agreed external Hermes/desktop global `pip check` before MPS tests; no attempt was made to modify that environment.
+- [x] Production deploy was not performed and remains separately approved. Next F35 sub-session is own-comments «Ответы» with exact empty state «Пока нет ответов. Ваши ответы появятся здесь.»
+
 - [x] Scope is tracker-only: only `claude-progress.md`, `session-handoff.md` and this checklist changed; no application, dependency, configuration, service or production-content mutation occurred.
 - [x] F29 completed production avatar-picker alignment: F25 MIME formats and same-file input reset.
 - [x] F30 completed production draft-card delete with existing confirmation/DELETE contract, without opening composer.

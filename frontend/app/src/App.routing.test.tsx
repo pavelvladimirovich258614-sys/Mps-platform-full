@@ -53,6 +53,7 @@ function installApi(detailResult: DetailResult = "ok", currentUser: Record<strin
     const path = url.pathname;
     if (path === "/api/v1/users/7/profile") return jsonResponse(200, publicProfile);
     if (path === "/api/v1/users/7/likes") return jsonResponse(200, []);
+    if (path === "/api/v1/users/7/followers" || path === "/api/v1/users/7/following") return jsonResponse(200, []);
     if (path === "/api/v1/posts/bali-guide") {
       if (detailResult === "missing") return jsonResponse(404, { detail: "Публикация не найдена" });
       if (detailResult === "network") throw new TypeError("Failed to fetch");
@@ -121,6 +122,10 @@ describe("App pathname routing", () => {
       "https://mir.pod-solncem.ru/api/v1/users/7/profile",
       expect.any(Object),
     );
+    expect(fetchMock.mock.calls.some(([input]) => {
+      const url = new URL(String(input));
+      return url.pathname === "/api/v1/posts" && url.searchParams.get("author_id") === "7";
+    })).toBe(true);
   });
 
   it("passes the current online list to the public profile indicator", async () => {

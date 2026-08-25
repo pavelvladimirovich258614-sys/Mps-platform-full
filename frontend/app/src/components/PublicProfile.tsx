@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { ApiPost, PublicProfile as PublicProfileData } from "../hooks";
+import type { ApiPost, PublicProfile as PublicProfileData, PublicProfileFollow } from "../hooks";
 import { RichTextContent } from "./RichTextContent";
 
 type Tab = "activity" | "posts" | "answers" | "likes" | "subscriptions";
@@ -9,11 +9,15 @@ type PublicProfileProps = {
   profile: PublicProfileData;
   posts: ApiPost[];
   likes: ApiPost[];
+  followers?: PublicProfileFollow[];
+  following?: PublicProfileFollow[];
   loading: boolean;
   likesLoading: boolean;
+  followListsLoading?: boolean;
   viewerId: number | null;
   onOpenPost: (post: ApiPost) => void;
   onToggleFollow: () => Promise<void>;
+  onToggleListFollow?: (userId: number, isFollowing: boolean) => Promise<boolean>;
   onEditProfile?: () => void;
   onLogout?: () => Promise<void>;
   onNotice?: (message: string) => void;
@@ -36,17 +40,22 @@ function countLabel(count: number, singular: string, few: string, many: string) 
   return `${count} ${many}`;
 }
 
-export function PublicProfile({ profile, posts, likes, loading, likesLoading, viewerId, onOpenPost, onToggleFollow, onEditProfile, onLogout, onNotice, isOnline = false }: PublicProfileProps) {
+export function PublicProfile({ profile, posts, likes, followers = [], following = [], loading, likesLoading, followListsLoading = false, viewerId, onOpenPost, onToggleFollow, onToggleListFollow, onEditProfile, onLogout, onNotice, isOnline = false }: PublicProfileProps) {
   const [tab, setTab] = useState<Tab>("posts");
+  const [followListTab, setFollowListTab] = useState<"followers" | "following">("followers");
   const [followPending, setFollowPending] = useState(false);
+  const [listFollowPendingId, setListFollowPendingId] = useState<number | null>(null);
+  const [listFollowOverrides, setListFollowOverrides] = useState<Record<number, boolean>>({});
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const current = tabs.find((item) => item.id === tab) ?? tabs[1];
   const isOwner = viewerId === profile.id;
   const showingPosts = tab === "posts";
   const showingLikes = tab === "likes";
+  const showingSubscriptions = tab === "subscriptions";
   const visiblePosts = showingLikes ? likes : posts;
   const postsLoading = showingLikes ? likesLoading : loading;
+  const visibleFollowList = followListTab === "followers" ? followers : following;
   const profileUrl = new URL(`/users/${profile.id}`, window.location.origin).href;
 
   useEffect(() => {
@@ -63,6 +72,17 @@ export function PublicProfile({ profile, posts, likes, loading, likesLoading, vi
       await onToggleFollow();
     } finally {
       setFollowPending(false);
+    }
+  };
+  const toggleListFollow = async (person: PublicProfileFollow) => {
+    if (!onToggleListFollow) return;
+    const isFollowing = listFollowOverrides[person.id] ?? person.is_following;
+    setListFollowPendingId(person.id);
+    try {
+      const updated = await onToggleListFollow(person.id, isFollowing);
+      setListFollowOverrides((current) => ({ ...current, [person.id]: updated }));
+    } finally {
+      setListFollowPendingId(null);
     }
   };
 
@@ -143,6 +163,24 @@ export function PublicProfile({ profile, posts, likes, loading, likesLoading, vi
             </article>
           ))}
           {!postsLoading && !visiblePosts.length && <p className="empty-comments">{showingLikes ? "Понравившихся публикаций пока нет." : "Публикаций пока нет."}</p>}
+        </section>
+      ) : showingSubscriptions ? (
+        <section className="public-profile-follow-lists" role="tabpanel" aria-label="Подписки пользователя">
+          <div className="public-profile-follow-list-tabs" role="tablist" aria-label="Списки подписок">
+            <button role="tab" aria-selected={followListTab === "followers"} className={followListTab === "followers" ? "current" : ""} onClick={() => setFollowListTab("followers")}>Подписчики</button>
+            <button role="tab" aria-selected={followListTab === "following"} className={followListTab === "following" ? "current" : ""} onClick={() => setFollowListTab("following")}>Подписки</button>
+          </div>
+          {followListsLoading && <div className="comment-skeleton"><i /><i /><i /></div>}
+          {!followListsLoading && visibleFollowList.map((person) => {
+            const isFollowing = listFollowOverrides[person.id] ?? person.is_following;
+            const pending = listFollowPendingId === person.id;
+            return <article className="public-profile-follow-person" key={person.id}>
+              <span className="public-profile-follow-avatar">{person.avatar_url ? <img src={person.avatar_url} alt={`Аватар ${person.name || "пользователя"}`} /> : <span aria-hidden="true" />}</span>
+              <strong>{person.name || "Путешественник"}</strong>
+              {viewerId !== person.id && onToggleListFollow && <button onClick={() => void toggleListFollow(person)} disabled={pending}>{pending ? "Сохраняем…" : isFollowing ? "Подписан" : "Подписаться"}</button>}
+            </article>;
+          })}
+          {!followListsLoading && !visibleFollowList.length && <p className="empty-comments">{followListTab === "followers" ? "Подписчиков пока нет." : "Подписок пока нет."}</p>}
         </section>
       ) : (
         <section className="public-profile-empty" role="tabpanel">

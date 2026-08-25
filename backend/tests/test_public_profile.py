@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import jwt
@@ -204,6 +204,53 @@ async def test_public_profile_likes_returns_only_published_posts(client, test_ap
 
     assert response.status_code == 200
     assert [post["slug"] for post in response.json()] == ["liked-post"]
+
+
+async def test_public_profile_follow_lists_are_public_ordered_and_viewer_aware(client, test_app):
+    now = datetime.now(UTC)
+    async with test_app.state.database.session_factory() as session:
+        profile = User(email="profile@example.test", name="Профиль")
+        old_follower = User(email="old-follower@example.test", name="Ранний подписчик", avatar_url="/media/old.webp")
+        new_follower = User(email="new-follower@example.test", name="Новый подписчик")
+        older_author = User(email="older-author@example.test", name="Старый автор")
+        newer_author = User(email="newer-author@example.test", name="Новый автор", avatar_url="/media/new.webp")
+        viewer = User(email="viewer@example.test", name="Смотрящий")
+        hidden = User(email="hidden-follow@example.test", name="Скрытый", is_anonymous=True)
+        banned = User(email="banned-follow@example.test", name="Заблокированный", is_banned=True)
+        session.add_all([profile, old_follower, new_follower, older_author, newer_author, viewer, hidden, banned])
+        await session.flush()
+        session.add_all([
+            UserFollow(follower_id=old_follower.id, following_id=profile.id, created_at=now - timedelta(hours=2)),
+            UserFollow(follower_id=new_follower.id, following_id=profile.id, created_at=now - timedelta(hours=1)),
+            UserFollow(follower_id=hidden.id, following_id=profile.id, created_at=now),
+            UserFollow(follower_id=profile.id, following_id=older_author.id, created_at=now - timedelta(hours=2)),
+            UserFollow(follower_id=profile.id, following_id=newer_author.id, created_at=now - timedelta(hours=1)),
+            UserFollow(follower_id=profile.id, following_id=banned.id, created_at=now),
+            UserFollow(follower_id=viewer.id, following_id=old_follower.id, created_at=now),
+            UserFollow(follower_id=viewer.id, following_id=newer_author.id, created_at=now),
+        ])
+        await session.commit()
+
+    anonymous_followers = await client.get(f"/api/v1/users/{profile.id}/followers")
+    viewer_followers = await client.get(
+        f"/api/v1/users/{profile.id}/followers", headers=auth_headers(test_app, viewer)
+    )
+    viewer_following = await client.get(
+        f"/api/v1/users/{profile.id}/following", headers=auth_headers(test_app, viewer)
+    )
+
+    assert anonymous_followers.status_code == 200
+    assert anonymous_followers.json() == [
+        {"id": new_follower.id, "name": "Новый подписчик", "avatar_url": None, "is_following": False},
+        {"id": old_follower.id, "name": "Ранний подписчик", "avatar_url": "/media/old.webp", "is_following": False},
+    ]
+    assert viewer_followers.status_code == 200
+    assert viewer_followers.json()[1]["is_following"] is True
+    assert viewer_following.status_code == 200
+    assert viewer_following.json() == [
+        {"id": newer_author.id, "name": "Новый автор", "avatar_url": "/media/new.webp", "is_following": True},
+        {"id": older_author.id, "name": "Старый автор", "avatar_url": None, "is_following": False},
+    ]
 
 
 def test_public_profile_countries_distinct_query_is_postgresql_compatible():
