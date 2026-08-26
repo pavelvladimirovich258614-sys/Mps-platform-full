@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     refresh_token_days: int = 30
     auth_bot_token: str = ""
     relay_bot_token: str = ""
+    telegram_webhook_secret: str = ""
     admin_tg_id: str = ""
     managers_chat_id: str = ""
     lawyer_tg_id: str = ""

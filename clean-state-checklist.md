@@ -1,5 +1,15 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 85 F41 local code completion — 2026-08-26
+
+- [x] Scope is backend webhook transport, the dormant optional bridge adapter, outbound relay token redaction, backend tests and trackers. No migration, frontend source, production .env, webhook registration, token replacement, queued Telegram update or production database row changed.
+- [x] RED target `tests/test_qa.py -k "telegram_webhook or telegram_relay_error"` — 5 expected failures: absent endpoint returned 404; raw HTTPStatusError included test token URL.
+- [x] GREEN same target — 5 passed: missing/wrong webhook secret returns 401 without persisting; manager and lawyer replies update Question; ERROR/raised relay failure do not contain the token.
+- [x] Full Q&A suite — 14 passed. Full backend in complete Windows-safe groups — 26 passed; 46 passed/3 skipped; 29 passed; 12 passed — 113 passed/3 skipped total; collect-only — 116.
+- [x] Final `./init.sh` outside sandbox stopped only at the known external Hermes/desktop global pip-check conflicts before MPS pytest; no environment repair was attempted.
+- [x] F41 is marked `passing` as code with activation explicitly deferred: only after separate approval may a fresh BotFather token and generated TELEGRAM_WEBHOOK_SECRET be written on the VPS and setWebhook called. Pending updates must not be dropped.
+- [x] Before the authorised local commit: run `git diff --check`, validate feature_list.json, inspect staged allowlist and confirm clean status after commit.
+
 ## Session 84 F42 local completion — 2026-08-26
 
 - [x] Scope is limited to the shared MiniMax response sanitizer, direct-Q&A regression tests and feature trackers. No API contract, frontend source, database, migration, credential or production state changed.
@@ -8,7 +18,7 @@
 - [x] Full backend in complete Windows-safe groups — 26 passed; 46 passed/3 skipped; 24 passed; 12 passed — 108 passed/3 skipped total.
 - [x] `npm run build` — success, 116 modules; standard Vite chunk-size warning only. Frontend source and API contract did not change, so no frontend test suite was required.
 - [x] Final `./init.sh` outside sandbox stopped only at the known external Hermes/desktop global `pip check` conflicts before MPS pytest; no environment repair was attempted.
-- [x] F42 is marked `passing` with evidence. Push and production deployment remain explicitly unapproved; run final diff/JSON/staged-file checks before the authorised local commit.
+- [x] F42 was subsequently pushed and deployed backend-only at `3d6ac1c`: a fresh PostgreSQL backup preceded healthy mps-backend restart and deploy/smoke.sh pass; frontend was unchanged.
 
 ## Session 83 F41 read-only relay diagnosis — 2026-08-26
 

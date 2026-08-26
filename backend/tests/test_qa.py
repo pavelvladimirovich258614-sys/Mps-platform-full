@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import logging
 import time
 
 import httpx
@@ -9,7 +10,9 @@ import respx
 from sqlalchemy import select
 
 from app.models.notification import Notification
-from app.models.question import Question
+from app.models.question import Question, QuestionTarget
+from app.models.user import User
+from app.services import tg_relay
 
 
 def telegram_payload():
@@ -28,6 +31,84 @@ async def client(test_app):
 async def headers(client):
     response = await client.post("/api/v1/auth/telegram", json=telegram_payload())
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
+async def open_question(test_app, target: QuestionTarget) -> int:
+    async with test_app.state.database.session_factory() as session:
+        user = User(email=f"webhook-{target.value}@example.com", name="Клиент")
+        session.add(user)
+        await session.flush()
+        question = Question(user_id=user.id, target=target, body="Нужен ответ")
+        session.add(question)
+        await session.commit()
+        return question.id
+
+
+def telegram_reply_payload(question_id: int, chat_id: int) -> dict:
+    return {
+        "update_id": 10,
+        "message": {
+            "message_id": 20,
+            "from": {"id": 30, "first_name": "Павел", "last_name": "Менеджеров"},
+            "chat": {"id": chat_id, "type": "supergroup"},
+            "text": "Ответ из Telegram",
+            "reply_to_message": {"message_id": 19, "text": f"#Q{question_id}\nНужен ответ"},
+        },
+    }
+
+
+@pytest.mark.parametrize("secret", [None, "wrong-secret"])
+async def test_telegram_webhook_rejects_missing_or_invalid_secret(client, test_app, secret):
+    question_id = await open_question(test_app, QuestionTarget.MANAGER)
+    headers = {} if secret is None else {"X-Telegram-Bot-Api-Secret-Token": secret}
+
+    response = await client.post(
+        "/api/v1/internal/telegram-webhook",
+        headers=headers,
+        json=telegram_reply_payload(question_id, -100100),
+    )
+
+    assert response.status_code == 401
+    async with test_app.state.database.session_factory() as session:
+        assert (await session.get(Question, question_id)).answer is None
+
+
+@pytest.mark.parametrize(
+    ("target", "chat_id"),
+    [(QuestionTarget.MANAGER, -100100), (QuestionTarget.LAWYER, 200200)],
+)
+async def test_telegram_webhook_saves_manager_and_lawyer_replies(client, test_app, target, chat_id):
+    question_id = await open_question(test_app, target)
+
+    response = await client.post(
+        "/api/v1/internal/telegram-webhook",
+        headers={"X-Telegram-Bot-Api-Secret-Token": "webhook-test-secret"},
+        json=telegram_reply_payload(question_id, chat_id),
+    )
+
+    assert response.status_code == 200
+    async with test_app.state.database.session_factory() as session:
+        question = await session.get(Question, question_id)
+        assert question.answer == "Ответ из Telegram"
+        assert question.answered_by_name == "Павел Менеджеров"
+
+
+@respx.mock
+async def test_telegram_relay_error_logs_without_bot_token(test_app, caplog):
+    relay_token = test_app.state.settings.relay_bot_token
+    route = respx.post(f"https://api.telegram.org/bot{relay_token}/sendMessage").mock(
+        return_value=httpx.Response(503, json={"ok": False})
+    )
+    question = Question(id=77, target=QuestionTarget.MANAGER, body="Проверка")
+    caplog.set_level(logging.ERROR, logger="app.services.tg_relay")
+
+    with pytest.raises(Exception) as error:
+        await tg_relay.send(test_app.state.settings, question)
+
+    assert route.called
+    assert relay_token not in str(error.value)
+    assert "Telegram relay failed" in caplog.text
+    assert relay_token not in caplog.text
 
 
 @respx.mock

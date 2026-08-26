@@ -1,6 +1,7 @@
 import hmac
 import logging
 from datetime import UTC,datetime
+from typing import Any
 from fastapi import APIRouter,Depends,Header,HTTPException,Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +14,7 @@ from app.schemas.f05 import AnswerIn,IrishkaQuestionIn,QuestionIn
 from app.services import tg_relay
 from app.services.irishka_knowledge import find_relevant_entries
 from app.services.minimax import generate_completion
+from app.services.telegram_qa import parse_qa_reply
 router=APIRouter(tags=["qa"])
 IRISHKA_PROMPT = (
     "Ты Иришка, дружелюбный ИИ-помощник турагентства «Под солнцем». "
@@ -24,6 +26,17 @@ IRISHKA_UNAVAILABLE_ANSWER = "Иришка временно не может от
 IRISHKA_SNIPPET_MAX_CHARS = 1200
 logger = logging.getLogger(__name__)
 def dto(q): return {"id":q.id,"target":q.target.value,"body":q.body,"status":q.status.value,"answer":q.answer,"tg_message_id":q.tg_message_id}
+
+
+async def persist_answer(payload:AnswerIn,session:AsyncSession):
+ q=await session.get(Question,payload.question_id)
+ if q is None: raise HTTPException(404,"Вопрос не найден")
+ if q.status==QuestionStatus.ANSWERED:
+  if q.answer==payload.answer and q.answered_by_name==payload.answered_by_name: return dto(q)
+  raise HTTPException(409,"На вопрос уже дан другой ответ")
+ if q.status!=QuestionStatus.OPEN: raise HTTPException(409,"Вопрос уже закрыт")
+ q.status=QuestionStatus.ANSWERED;q.answer=payload.answer;q.answered_by_name=payload.answered_by_name;q.answered_at=datetime.now(UTC);session.add(Notification(user_id=q.user_id,type="qa_answered",payload={"question_id":q.id}));await session.commit();return dto(q)
+
 @router.post("/qa",status_code=201)
 async def create(payload:QuestionIn,request:Request,session:AsyncSession=Depends(get_db),user:User=Depends(get_current_user)):
  q=Question(user_id=user.id,target=payload.target,body=payload.body);session.add(q);await session.commit();await session.refresh(q);q.tg_message_id=await tg_relay.send(request.app.state.settings,q);await session.commit();return dto(q)
@@ -46,10 +59,19 @@ async def answer(payload:AnswerIn,request:Request,x_bot_bridge_secret:str|None=H
  200 with the question, 401 for bad secret, 404 for unknown question. No Telegram call.
  """
  if not x_bot_bridge_secret or not hmac.compare_digest(x_bot_bridge_secret,request.app.state.settings.bot_bridge_secret): raise HTTPException(401,"Недействительный внутренний секрет")
- q=await session.get(Question,payload.question_id)
- if q is None: raise HTTPException(404,"Вопрос не найден")
- if q.status==QuestionStatus.ANSWERED:
-  if q.answer==payload.answer and q.answered_by_name==payload.answered_by_name: return dto(q)
-  raise HTTPException(409,"На вопрос уже дан другой ответ")
- if q.status!=QuestionStatus.OPEN: raise HTTPException(409,"Вопрос уже закрыт")
- q.status=QuestionStatus.ANSWERED;q.answer=payload.answer;q.answered_by_name=payload.answered_by_name;q.answered_at=datetime.now(UTC);session.add(Notification(user_id=q.user_id,type="qa_answered",payload={"question_id":q.id}));await session.commit();return dto(q)
+ return await persist_answer(payload,session)
+
+
+@router.post("/internal/telegram-webhook")
+async def telegram_webhook(
+ payload:dict[str,Any],
+ request:Request,
+ x_telegram_bot_api_secret_token:str|None=Header(None,alias="X-Telegram-Bot-Api-Secret-Token"),
+ session:AsyncSession=Depends(get_db),
+):
+ """Accept a secret-protected Telegram update and persist a valid Q&A reply."""
+ settings=request.app.state.settings
+ if not settings.telegram_webhook_secret or not x_telegram_bot_api_secret_token or not hmac.compare_digest(x_telegram_bot_api_secret_token,settings.telegram_webhook_secret): raise HTTPException(401,"Недействительный Telegram webhook secret")
+ answer_payload=parse_qa_reply(payload,managers_chat_id=settings.managers_chat_id,lawyer_tg_id=settings.lawyer_tg_id)
+ if answer_payload is not None: await persist_answer(answer_payload,session)
+ return {"ok":True}

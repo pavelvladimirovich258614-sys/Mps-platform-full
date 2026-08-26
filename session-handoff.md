@@ -6,14 +6,21 @@
 - F38 remains `in_progress`: Packages 1 (`9d18156`), 2 (`a97327c`) and 3 (`21e55ac`) are production-deployed. Do not start the separately deferred duplicate-run protection or Иришка admin settings UI without a new plan and approval.
 - F39 is passing and production-deployed at `e688773`. The default public feed excludes fishka, `/fishki` requests `type=fishka`, and author-profile queries retain all published post types.
 - F40 is passing and production-deployed at `4f868ef`: its frontend bundle was rebuilt with production VITE values, `localhost` absent, and smoke passed; mps-backend stayed active without restart.
-- F41 is `in_progress` as read-only diagnosis. Outbound MPS Q&A relay works, but incoming Telegram replies cannot be received: the current relay bot has an empty webhook URL and 4 pending updates, while MPS has no long-polling worker. The only active polling service is a separate Pod Solncem bot (id 8911332115); it does not import MPS `bot_bridge`, while the relay bot is id 8982961972. #Q4 remains MANAGER/OPEN without answer.
-- F42 is locally `passing`: the shared MiniMax transport strips only a complete leading `<think>…</think>` block, so both direct «Иришка ИИ» Q&A and forum autoreply expose only the final answer. No API, frontend or schema change occurred; push/deploy are unapproved.
+- F41 is locally `passing` as code. `POST /api/v1/internal/telegram-webhook` fail-closes on the Telegram secret header, accepts reply updates only from the configured manager chat or lawyer account, and reuses the Question/Notification transition. Outbound relay errors now have token-free logs and exceptions. Runtime activation awaits a new BotFather token, server secret and explicit setWebhook approval; the four queued Telegram updates are intentionally preserved.
+- F42 is `passing` and production-deployed at `3d6ac1c`: the shared MiniMax transport strips a complete leading `<think>…</think>` block before direct Q&A or forum autoreply returns the answer. Backend restart health and smoke passed; frontend was unchanged.
+
+## F41 local implementation evidence
+
+- RED `D:\Python312\python.exe -m pytest tests/test_qa.py -k "telegram_webhook or telegram_relay_error" -q --color=no --basetemp D:\AI\tmp\mps-f41-red-contract` — 5 expected failures: missing route returned 404 and raw HTTPStatusError included the test token URL.
+- GREEN same target — 5 passed: absent/wrong secret → 401 without persistence; manager and lawyer replies both answer their Question; the emitted ERROR and raised exception omit the token.
+- Full `test_qa.py` — 14 passed. Full backend groups — 26 passed; 46 passed/3 skipped; 29 passed; 12 passed — 113 passed/3 skipped total; collect-only 116.
+- Activation command is prepared but not executed: `curl --fail-with-body --silent --show-error --data-urlencode 'url=https://mir.pod-solncem.ru/api/v1/internal/telegram-webhook' --data-urlencode "secret_token=${TELEGRAM_WEBHOOK_SECRET}" --data-urlencode 'allowed_updates=["message"]' "https://api.telegram.org/bot${RELAY_BOT_TOKEN}/setWebhook"`. It intentionally omits `drop_pending_updates` to retain pending replies.
 
 ## F42 evidence
 
 - RED `D:\Python312\python.exe -m pytest tests/test_qa.py -k reasoning -q --color=no --basetemp D:\AI\tmp\mps-f42-red-outside` — 1 expected failure / 2 passed: `/qa/irishka` returned the raw `<think>` prefix.
 - GREEN same target — 3 passed: closed leading reasoning is removed, normal text is unchanged, and unclosed `<think>` remains unchanged to avoid data loss.
-- Full backend: 26 passed; 46 passed/3 skipped; 24 passed; 12 passed — 108 passed/3 skipped total. `npm run build` — success, 116 modules, standard Vite chunk-size warning. `./init.sh` stopped only at the external Hermes/desktop global `pip check`.
+- Full backend: 26 passed; 46 passed/3 skipped; 24 passed; 12 passed — 108 passed/3 skipped total. `npm run build` — success, 116 modules, standard Vite chunk-size warning. `./init.sh` stopped only at the external Hermes/desktop global `pip check`. `3d6ac1c` was subsequently deployed backend-only with a fresh PostgreSQL backup, healthy restart and smoke pass.
 
 ## F41 evidence
 
@@ -25,4 +32,4 @@
 
 ## Next action and boundaries
 
-Create the authorised local F42 commit, then wait for separate push/deploy approval. Await an explicit F41 plan/approval before registering a webhook, changing a bot service, consuming the queued updates, or modifying `bot_bridge`. The likely F41 implementation must select one inbound transport for the current relay bot and include manager plus lawyer routing. Do not touch F37 C/D, F38 deferred work, Unisender/HostKey/email or MiniMax credentials.
+Create the authorised local F41 commit, then wait for separate push/deploy approval. Do not register the webhook, generate or write TELEGRAM_WEBHOOK_SECRET, replace RELAY_BOT_TOKEN, restart production backend or consume queued updates until the owner supplies the new token and explicitly authorizes activation. Do not touch F37 C/D, F38 deferred work, Unisender/HostKey/email or MiniMax credentials.

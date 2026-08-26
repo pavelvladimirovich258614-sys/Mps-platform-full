@@ -1,11 +1,5 @@
 # Мост ответов Telegram
 
-Этот модуль подключается к существующему боту «Под солнцем»: он ловит reply менеджера на сообщение с `#Q{id}` и вызывает backend `POST /api/v1/internal/qa-answer`.
+Этот необязательный aiogram-адаптер пересылает reply из чата менеджеров или лички юриста в backend `POST /api/v1/internal/telegram-webhook`. Backend остаётся единственной точкой разбора `#Q{id}` и проверки источника ответа.
 
-Установка в окружении существующего бота:
-
-```bash
-pip install -r bot_bridge/requirements.txt
-```
-
-Подключение: импортируйте `build_router` из `bot_bridge.aiogram_router`, передайте URL backend, `BOT_BRIDGE_SECRET` и ID чата менеджеров, затем вызовите `dp.include_router(router)`. Секрет и chat ID должны поступать из конфигурации бота, а не из кода.
+Подключение: импортируйте `build_router` из `bot_bridge.aiogram_router`, передайте URL backend, `TELEGRAM_WEBHOOK_SECRET`, `MANAGERS_CHAT_ID` и необязательный `LAWYER_TG_ID`, затем вызовите `dp.include_router(router)`. Все значения должны поступать из конфигурации, а не из кода.
