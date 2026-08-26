@@ -1,5 +1,17 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 88 F44 local completion — 2026-08-26
+
+- [x] Scope is limited to the Q&A one-shot deep-link, bell/acknowledgement/answer presentation, owner soft archive, migration `20260826_0015`, regression tests and trackers. No push, production database, configuration, service or deployment state changed.
+- [x] Package A RED — 4 expected failures / 33 passed; GREEN — 3 files / 37 passed. Deep-link selects once and leaves all three tabs free; bell, guidance message and distinct incoming answer are covered.
+- [x] Package B RED backend — 2 expected failures / 14 deselected; RED frontend — 2 expected failures / 5 passed. GREEN backend — 2 passed / 14 deselected; GREEN frontend — 2 files / 7 passed.
+- [x] Archive is owner-only and non-destructive: `/qa/my` hides archived rows, the database retains them, and a late Telegram reply clears `archived_at` and restores the answered thread.
+- [x] Full backend — 115 passed / 3 skipped. Full frontend — 21 test files / 134 tests passed.
+- [x] `npm run build` — success, 116 modules; standard Vite chunk-size warning only. Alembic single head is `20260826_0015`.
+- [x] Final `./init.sh` outside sandbox stopped only at the known external Hermes/desktop global pip-check conflicts before MPS tests; no environment repair was attempted. The complete MPS suites were run separately and passed.
+- [x] `feature_list.json` records F44 as `passing`; progress and handoff state that production needs a fresh PostgreSQL backup, migration, backend restart and frontend rebuild under separate approval.
+- [x] Before the authorised local commit: validated JSON, ran `git diff --check`, inspected the exact staged name-status and created the local commit. Push/deploy remain unapproved; final status was checked after the commit.
+
 ## Session 87 F43 local completion — 2026-08-26
 
 - [x] Scope is frontend Q&A notification deep-link, correct manager/lawyer label, conditional polling, regression tests and trackers. No backend, API, database, migration, credential or production state changed.

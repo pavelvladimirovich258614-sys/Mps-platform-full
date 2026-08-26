@@ -374,6 +374,10 @@ describe("App pathname routing", () => {
     expect(within(linkedQuestion).getByText("Нужна консультация")).toBeTruthy();
     expect(within(linkedQuestion).getByText("Ответ юриста")).toBeTruthy();
     expect(scrollIntoViewMock).toHaveBeenCalled();
+    for (const tab of ["Менеджер", "Иришка ИИ", "Юрист"]) {
+      fireEvent.click(screen.getByRole("button", { name: tab }));
+      await waitFor(() => expect(screen.getByRole("button", { name: tab }).classList.contains("current")).toBe(true));
+    }
     expect(fetchMock.mock.calls.some(([input, init]) => {
       if (new URL(String(input)).pathname !== "/api/v1/notifications/read" || (init as RequestInit).method !== "PATCH") return false;
       return JSON.parse(String((init as RequestInit).body)).ids?.[0] === 92;

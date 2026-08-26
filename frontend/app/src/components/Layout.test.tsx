@@ -9,6 +9,27 @@ const callbacks = {
 };
 
 describe("Layout presence", () => {
+  it("uses an accessible bell icon for notifications", () => {
+    render(
+      <Layout
+        {...callbacks}
+        page="feed"
+        theme="dark"
+        notificationsOpen={false}
+        unreadCount={2}
+        userName="Павел"
+        online={[]}
+        publicSettings={null}
+      >
+        <main>Лента</main>
+      </Layout>,
+    );
+
+    const notifications = screen.getByRole("button", { name: "Уведомления" });
+    expect(notifications.querySelector("svg[data-icon='bell']")).toBeTruthy();
+    expect(notifications.textContent).not.toContain("♧");
+  });
+
   it("uses the forum wording in navigation and footer", () => {
     render(
       <Layout

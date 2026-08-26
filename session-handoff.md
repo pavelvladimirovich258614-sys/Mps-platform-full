@@ -8,7 +8,16 @@
 - F40 is passing and production-deployed at `4f868ef`: its frontend bundle was rebuilt with production VITE values, `localhost` absent, and smoke passed; mps-backend stayed active without restart.
 - F41 is fully `passing`, deployed and production-activated at `1782b5a`. `POST /api/v1/internal/telegram-webhook` fail-closes on the Telegram secret header, accepts reply updates only from the configured manager chat or lawyer account, and reuses the Question/Notification transition. setWebhook is registered at the production HTTPS endpoint; live manager and lawyer replies are persisted end-to-end. Outbound relay errors have token-free logs and exceptions.
 - F42 is `passing` and production-deployed at `3d6ac1c`: the shared MiniMax transport strips a complete leading `<think>…</think>` block before direct Q&A or forum autoreply returns the answer. Backend restart health and smoke passed; frontend was unchanged.
-- F43 is `passing` locally and not deployed: qa_answered notifications display the linked Question's manager/lawyer source, open the correct Q&A tab and focus the exact thread. An open modal polls every 30 seconds only while an unanswered Question exists and stops after answer or unmount.
+- F43 is `passing` and production-deployed at `2ffb60d`: qa_answered notifications display the linked Question's manager/lawyer source, open the correct Q&A tab and focus the exact thread. An open modal polls every 30 seconds only while an unanswered Question exists and stops after answer or unmount.
+- F44 is `passing` locally and not deployed. Its one-shot deep-link no longer locks tabs; the Q&A header has an accessible bell, manager/lawyer submissions show a local guidance message and incoming answers use a separate dark-red bubble. Owner history clearing is a server-side soft archive through migration `20260826_0015`; late Telegram answers restore archived threads.
+
+## F44 evidence
+
+- Package A RED — 4 expected failures / 33 passed; GREEN — 3 files / 37 passed. Covered one-shot deep-link/free tab switching, inline bell accessibility, manager/lawyer-only acknowledgement and distinct incoming-answer markup/styles.
+- Package B RED backend — 2 expected failures / 14 deselected; RED frontend — 2 expected failures / 5 passed. GREEN backend — 2 passed / 14 deselected; GREEN frontend — 2 files / 7 passed.
+- Full backend — 115 passed / 3 skipped. Full frontend — 21 files / 134 passed. `npm run build` — success, 116 modules, standard chunk-size warning only. Alembic has one head, `20260826_0015`; `git diff --check` passed.
+- Archive semantics: `PATCH /qa/my/archive` affects only the authenticated owner's Questions; `/qa/my` excludes archived rows without deleting them. The Telegram webhook can still answer by ID and clears `archived_at`, so the completed thread becomes visible again.
+- Deployment boundary: local code only. A separate approval must cover push, fresh PostgreSQL backup, migration, backend restart and frontend deployment.
 
 ## F43 evidence
 
@@ -41,4 +50,4 @@
 
 ## Next action and boundaries
 
-Commit the approved F43 frontend/tests/trackers locally, then wait for separate push/deploy approval. Do not touch F37 C/D, F38 deferred work, Unisender/HostKey/email or MiniMax credentials.
+Commit the approved F44 backend/frontend/tests/migration/trackers locally, then wait for separate push/deploy approval. Do not touch F37 C/D, F38 deferred work, Unisender/HostKey/email or MiniMax credentials.

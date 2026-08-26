@@ -3,6 +3,7 @@ import hmac
 import json
 import logging
 import time
+from datetime import UTC, datetime
 
 import httpx
 import pytest
@@ -15,8 +16,8 @@ from app.models.user import User
 from app.services import tg_relay
 
 
-def telegram_payload():
-    payload = {"id": 501, "first_name": "Клиент", "auth_date": int(time.time())}
+def telegram_payload(user_id: int = 501):
+    payload = {"id": user_id, "first_name": "Клиент", "auth_date": int(time.time())}
     check = "\n".join(f"{key}={payload[key]}" for key in sorted(payload))
     payload["hash"] = hmac.new(hashlib.sha256(b"test-auth-bot-token").digest(), check.encode(), hashlib.sha256).hexdigest()
     return payload
@@ -28,8 +29,8 @@ async def client(test_app):
         yield async_client
 
 
-async def headers(client):
-    response = await client.post("/api/v1/auth/telegram", json=telegram_payload())
+async def headers(client, user_id: int = 501):
+    response = await client.post("/api/v1/auth/telegram", json=telegram_payload(user_id))
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
@@ -129,6 +130,66 @@ async def test_qa_relay_answer_and_notification(client):
 async def test_qa_rejects_invalid_target_and_secret(client):
     assert (await client.post("/api/v1/qa", headers=await headers(client), json={"target": "other", "body": "x"})).status_code == 422
     assert (await client.post("/api/v1/internal/qa-answer", json={"question_id": 1, "answer": "x", "answered_by_name": "x"})).status_code == 401
+
+
+async def test_archive_my_questions_hides_them_without_deleting_or_touching_foreign_rows(client, test_app):
+    owner_headers = await headers(client, 601)
+    foreign_headers = await headers(client, 602)
+    async with test_app.state.database.session_factory() as session:
+        owner = await session.scalar(select(User).where(User.tg_id == 601))
+        foreign = await session.scalar(select(User).where(User.tg_id == 602))
+        own_questions = [
+            Question(user_id=owner.id, target=QuestionTarget.MANAGER, body="Первый вопрос"),
+            Question(user_id=owner.id, target=QuestionTarget.LAWYER, body="Второй вопрос"),
+        ]
+        foreign_question = Question(user_id=foreign.id, target=QuestionTarget.MANAGER, body="Чужой вопрос")
+        session.add_all([*own_questions, foreign_question])
+        await session.commit()
+        own_ids = [question.id for question in own_questions]
+        foreign_id = foreign_question.id
+
+    assert (await client.patch("/api/v1/qa/my/archive")).status_code == 401
+    response = await client.patch("/api/v1/qa/my/archive", headers=owner_headers)
+
+    assert response.status_code == 200
+    assert response.json() == {"archived_count": 2}
+    assert (await client.get("/api/v1/qa/my", headers=owner_headers)).json() == []
+    assert [item["id"] for item in (await client.get("/api/v1/qa/my", headers=foreign_headers)).json()] == [foreign_id]
+    async with test_app.state.database.session_factory() as session:
+        archived = [await session.get(Question, question_id) for question_id in own_ids]
+        untouched = await session.get(Question, foreign_id)
+        assert all(question is not None and question.archived_at is not None for question in archived)
+        assert untouched is not None and untouched.archived_at is None
+
+
+async def test_late_telegram_reply_restores_an_archived_question(client, test_app):
+    owner_headers = await headers(client, 603)
+    async with test_app.state.database.session_factory() as session:
+        owner = await session.scalar(select(User).where(User.tg_id == 603))
+        question = Question(
+            user_id=owner.id,
+            target=QuestionTarget.MANAGER,
+            body="Архивированный открытый вопрос",
+            archived_at=datetime.now(UTC),
+        )
+        session.add(question)
+        await session.commit()
+        question_id = question.id
+
+    response = await client.post(
+        "/api/v1/internal/telegram-webhook",
+        headers={"X-Telegram-Bot-Api-Secret-Token": "webhook-test-secret"},
+        json=telegram_reply_payload(question_id, -100100),
+    )
+
+    assert response.status_code == 200
+    async with test_app.state.database.session_factory() as session:
+        restored = await session.get(Question, question_id)
+        assert restored.answer == "Ответ из Telegram"
+        assert restored.archived_at is None
+        notification = await session.scalar(select(Notification).where(Notification.user_id == owner.id))
+        assert notification is not None and notification.payload == {"question_id": question_id}
+    assert [item["id"] for item in (await client.get("/api/v1/qa/my", headers=owner_headers)).json()] == [question_id]
 
 
 @respx.mock

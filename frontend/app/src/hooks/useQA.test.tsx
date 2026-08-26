@@ -56,4 +56,19 @@ describe("useQA live refresh", () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it("archives the current user's visible question history and clears local state", async () => {
+    const openQuestion: Question = { id: 44, target: "manager", body: "Вопрос", status: "open", answer: null };
+    const fetchMock = vi.mocked(fetch)
+      .mockResolvedValueOnce(response([openQuestion]))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ archived_count: 1 }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    const { result } = renderHook(() => useQA());
+    await act(flushRequests);
+
+    await act(async () => { await result.current.archive(); });
+
+    expect(new URL(String(fetchMock.mock.calls[1][0])).pathname).toBe("/api/v1/qa/my/archive");
+    expect(fetchMock.mock.calls[1][1]?.method).toBe("PATCH");
+    expect(result.current.value).toEqual([]);
+  });
 });

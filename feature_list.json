@@ -807,6 +807,22 @@
       ],
       "evidence": "2026-08-26 RED→GREEN frontend evidence. RED `npm test -- --run src/App.routing.test.tsx src/hooks/useQA.test.tsx` — 3 expected failures / 30 passed: qa_answered rows were not interactive and `useQA` fetched only once instead of polling. GREEN same target — 33 passed. Regression coverage proves that qa_answered resolves its label from payload.question_id plus Question.target, opens the correct manager/lawyer tab, renders and scrolls to the exact question thread, and marks only the clicked notification read. Fake-timer coverage proves 30-second polling while an open Question exists, automatic stop after it becomes answered, and interval cleanup on unmount. Full frontend suite — 21 files / 129 tests passed. `npm run build` — success, 116 modules, standard Vite chunk-size warning only. Final `./init.sh` stopped only at the explicitly excluded external Hermes/desktop global pip-check before MPS tests.",
       "notes": "Completed locally 2026-08-26, awaiting separate push/deploy approval. Frontend-only implementation: App carries question_id into the Q&A overlay; Notifications resolves manager/lawyer text from `/qa/my`, uses a neutral fallback if the linked Question is unavailable, and marks only the clicked row read. QA selects the linked target and gives the exact thread a one-time focus/scroll marker. `useQA` polls `/qa/my` every 30 seconds only while the mounted modal has an open Question and stops after answer or unmount. No backend, API, schema, migration, credential or production state changed."
+    },
+    {
+      "id": "F44",
+      "priority": 44,
+      "area": "frontend-qa",
+      "title": "Вопрос-ответ: свободные вкладки после deep-link и улучшение UX треда",
+      "user_visible_behavior": "Deep-link открывает нужный вопрос только один раз и не блокирует вкладки; уведомления имеют понятную иконку, после отправки видна подсказка, ответы визуально отличаются, а очистка истории имеет безопасную и явно подтверждённую семантику.",
+      "status": "passing",
+      "verification": [
+        "RED frontend test: после открытия Q&A через deep-link пользователь свободно переключается между Менеджером, Юристом и Иришкой ИИ",
+        "RED frontend tests: bell-иконка доступна, manager/lawyer-вопрос показывает системную подсказку, ответ имеет отдельный визуальный класс",
+        "После продуктового решения по очистке: RED backend/frontend tests для выбранной archive/delete семантики и confirm",
+        "GREEN target tests, полный релевантный suite, npm run build и ./init.sh; внешний Hermes pip check фиксируется отдельно"
+      ],
+      "evidence": "2026-08-26 Package A RED: `npm test -- --run src/App.routing.test.tsx src/components/QA.test.tsx src/components/Layout.test.tsx` produced the four expected failures with 33 passing tests: deep-link re-selected its original tab, the bell SVG and acknowledgement were absent, and an answer lacked a distinct element. GREEN target: 3 files / 37 passed. Package B RED backend: `tests/test_qa.py -k \"archive or late_telegram\"` produced 2 expected failures (missing route/model field); frontend hook/QA target produced 2 expected failures / 5 passed (missing archive function/button). GREEN Package B targets: backend 2 passed / 14 deselected; frontend 2 files / 7 passed. Full backend: 115 passed / 3 skipped. Full frontend: 21 files / 134 passed. `npm run build` succeeded (116 modules; standard chunk warning only). Alembic has the single head `20260826_0015`; `git diff --check` passed. Final `./init.sh` stopped only at the separately known external Hermes/desktop global pip-check conflicts before MPS tests; no environment repair was attempted.",
+      "notes": "Package A makes the notification deep-link one-shot, preserves free switching among all three tabs, uses an accessible inline bell SVG, shows a local manager/lawyer acknowledgement and styles agency answers separately. Package B adds nullable `Question.archived_at`, owner-only bulk `PATCH /qa/my/archive`, hides archived rows from `/qa/my`, and supplies a confirmation UI. Soft-archived rows remain in the database; a later Telegram webhook answer clears `archived_at`, so the answered thread returns instead of breaking F41. Completed locally; migration and frontend/backend rollout require separate production approval and a fresh database backup."
     }
   ]
 }

@@ -184,8 +184,13 @@ export const useQA = () => {
     resource.setValue((current) => [...(current ?? []), item]);
     return item;
   };
+  const archive = async () => {
+    const result = await apiJson<{ archived_count: number }>("/qa/my/archive", "PATCH");
+    resource.setValue([]);
+    return result;
+  };
   const askIrishka = (text: string) => apiJson<{ answer: string }>("/qa/irishka", "POST", { text });
-  return { ...resource, create, askIrishka };
+  return { ...resource, create, archive, askIrishka };
 };
 export const useQAQuestions = (enabled: boolean) => useResource(
   () => enabled ? api<Question[]>("/qa/my") : Promise.resolve([]),

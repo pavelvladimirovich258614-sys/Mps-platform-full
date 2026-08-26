@@ -3,7 +3,7 @@ import logging
 from datetime import UTC,datetime
 from typing import Any
 from fastapi import APIRouter,Depends,Header,HTTPException,Request
-from sqlalchemy import select
+from sqlalchemy import select,update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.deps import get_current_user,get_db
 from app.models.notification import Notification
@@ -35,13 +35,18 @@ async def persist_answer(payload:AnswerIn,session:AsyncSession):
   if q.answer==payload.answer and q.answered_by_name==payload.answered_by_name: return dto(q)
   raise HTTPException(409,"На вопрос уже дан другой ответ")
  if q.status!=QuestionStatus.OPEN: raise HTTPException(409,"Вопрос уже закрыт")
- q.status=QuestionStatus.ANSWERED;q.answer=payload.answer;q.answered_by_name=payload.answered_by_name;q.answered_at=datetime.now(UTC);session.add(Notification(user_id=q.user_id,type="qa_answered",payload={"question_id":q.id}));await session.commit();return dto(q)
+ q.status=QuestionStatus.ANSWERED;q.answer=payload.answer;q.answered_by_name=payload.answered_by_name;q.answered_at=datetime.now(UTC);q.archived_at=None;session.add(Notification(user_id=q.user_id,type="qa_answered",payload={"question_id":q.id}));await session.commit();return dto(q)
 
 @router.post("/qa",status_code=201)
 async def create(payload:QuestionIn,request:Request,session:AsyncSession=Depends(get_db),user:User=Depends(get_current_user)):
  q=Question(user_id=user.id,target=payload.target,body=payload.body);session.add(q);await session.commit();await session.refresh(q);q.tg_message_id=await tg_relay.send(request.app.state.settings,q);await session.commit();return dto(q)
 @router.get("/qa/my")
-async def mine(session:AsyncSession=Depends(get_db),user:User=Depends(get_current_user)): return [dto(q) for q in (await session.scalars(select(Question).where(Question.user_id==user.id))).all()]
+async def mine(session:AsyncSession=Depends(get_db),user:User=Depends(get_current_user)): return [dto(q) for q in (await session.scalars(select(Question).where(Question.user_id==user.id,Question.archived_at.is_(None)))).all()]
+@router.patch("/qa/my/archive")
+async def archive_mine(session:AsyncSession=Depends(get_db),user:User=Depends(get_current_user)):
+ result=await session.execute(update(Question).where(Question.user_id==user.id,Question.archived_at.is_(None)).values(archived_at=datetime.now(UTC)))
+ await session.commit()
+ return {"archived_count":result.rowcount or 0}
 @router.post("/qa/irishka")
 @limiter.limit("10/minute", key_func=forum_user_or_ip_key)
 async def ask_irishka(payload:IrishkaQuestionIn,request:Request,user:User=Depends(get_current_user)):
