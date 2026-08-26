@@ -1,5 +1,16 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 82 F40 local completion — 2026-08-26
+
+- [x] Scope is limited to the Q&A footer layout, its frontend regression test, Vitest CSS-test support and the F40 trackers. No API, database, dependency, credential or production code/configuration changed in this part.
+- [x] First F40 part remains live-verified: the approved relay configuration repair confirmed the intended bot and delivery for lawyer #Q2 and manager #Q3. Their shared numerical `message_id=5` is valid because Telegram numbers messages independently per chat.
+- [x] RED `npm test -- --run src/components/QA.test.tsx` — 1 expected failure: the shared footer had no dedicated responsive composer contract.
+- [x] GREEN same target — 1 passed: Manager, Lawyer and Иришка ИИ each have a 100%-wide, 96px-minimum textarea, a consent checkbox/policy link and an independently classed submit control. Vitest now loads the actual stylesheet through `css: true`.
+- [x] Full frontend `npm test -- --run` — 20 files / 125 passed. `npm run build` — success, 116 modules; standard Vite chunk-size warning only.
+- [x] Final `./init.sh` outside sandbox stopped only at the known external Hermes/desktop global `pip check` before MPS pytest; no external environment repair was attempted.
+- [x] `feature_list.json` is updated with relay and CSS evidence, F40 is marked `passing`, and progress/handoff are current. Production CSS rollout is intentionally unapproved.
+- [x] Before commit: run `git diff --check`, validate `feature_list.json`, inspect the staged file list and confirm a clean working tree after the authorised local commit.
+
 ## Session 81 F39 local verification — 2026-08-26
 
 - [x] Scope is limited to default public post-list filtering, the `/fishki` fetch parameter, a defensive Feed filter, regression tests and trackers. No migration, CSS, credentials or production state changed.
