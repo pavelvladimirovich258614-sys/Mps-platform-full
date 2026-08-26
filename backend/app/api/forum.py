@@ -229,6 +229,7 @@ async def delete_message(
         raise HTTPException(403, "Недостаточно прав")
 
     topic_id = forum_message.topic_id
+    message_id = forum_message.id
     await session.delete(forum_message)
     await session.flush()
     newest_remaining_message_at = (
@@ -236,12 +237,20 @@ async def delete_message(
         .where(ForumMessage.topic_id == topic_id)
         .scalar_subquery()
     )
+    has_newer_message = (
+        select(ForumMessage.id)
+        .where(ForumMessage.topic_id == topic_id, ForumMessage.id > message_id)
+        .exists()
+    )
     await session.execute(
         update(ForumTopic)
         .where(ForumTopic.id == topic_id)
         .values(
             messages_count=case((ForumTopic.messages_count > 0, ForumTopic.messages_count - 1), else_=0),
-            last_message_at=func.coalesce(newest_remaining_message_at, ForumTopic.created_at),
+            last_message_at=case(
+                (has_newer_message, ForumTopic.last_message_at),
+                else_=func.coalesce(newest_remaining_message_at, ForumTopic.created_at),
+            ),
         )
     )
     await session.commit()

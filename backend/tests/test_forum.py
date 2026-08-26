@@ -295,15 +295,24 @@ async def test_forum_message_deletion_allows_author_and_admin_and_updates_count(
 async def test_forum_message_deletion_recalculates_last_message_at(client, test_app):
  c=await country(test_app);author=await user(test_app,"delete-latest-topic@example.com",Role.EDITOR);sender=await user(test_app,"delete-latest-author@example.com")
  topic=(await client.post(f"/api/v1/countries/{c.id}/topics",headers=hdr(test_app,author),json={"title":"Порядок сообщений"})).json()
- older_at=datetime(2026,1,1,10,0,0);newer_at=older_at+timedelta(minutes=5)
+ older_at=datetime(2026,1,1,10,0,0);middle_at=older_at+timedelta(minutes=3);newer_at=older_at+timedelta(minutes=5);last_message_at=newer_at+timedelta(seconds=1)
  async with test_app.state.database.session_factory() as s:
   s.add_all([
    ForumMessage(topic_id=topic["id"],author_id=sender.id,body="Старое",created_at=older_at),
+   ForumMessage(topic_id=topic["id"],author_id=sender.id,body="Среднее",created_at=middle_at),
    ForumMessage(topic_id=topic["id"],author_id=sender.id,body="Новое",created_at=newer_at),
   ])
-  saved=await s.get(ForumTopic,topic["id"]);saved.messages_count=2;saved.last_message_at=newer_at
+  saved=await s.get(ForumTopic,topic["id"]);saved.messages_count=3;saved.last_message_at=last_message_at
   await s.commit()
+  middle=await s.scalar(select(ForumMessage).where(ForumMessage.topic_id==topic["id"],ForumMessage.created_at==middle_at))
   newest=await s.scalar(select(ForumMessage).where(ForumMessage.topic_id==topic["id"],ForumMessage.created_at==newer_at))
+
+ removed=await client.delete(f"/api/v1/messages/{middle.id}",headers=hdr(test_app,sender))
+ assert removed.status_code==204
+ async with test_app.state.database.session_factory() as s:
+  saved=await s.get(ForumTopic,topic["id"])
+  assert saved.messages_count==2
+  assert saved.last_message_at==last_message_at
 
  removed=await client.delete(f"/api/v1/messages/{newest.id}",headers=hdr(test_app,sender))
  assert removed.status_code==204
