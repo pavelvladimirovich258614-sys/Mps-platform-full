@@ -97,6 +97,30 @@ async def test_irishka_answers_with_relevant_knowledge_without_creating_question
         assert (await session.scalars(select(Question))).all() == []
 
 
+@pytest.mark.parametrize(
+    ("raw_answer", "visible_answer"),
+    [
+        ("<think>Internal reasoning that must stay hidden.</think>\nФинальный ответ для путешественника.", "Финальный ответ для путешественника."),
+        ("Ответ без reasoning возвращается как есть.", "Ответ без reasoning возвращается как есть."),
+        ("<think>Незакрытый служебный блок", "<think>Незакрытый служебный блок"),
+    ],
+)
+@respx.mock
+async def test_irishka_hides_only_a_closed_leading_reasoning_block(client, raw_answer, visible_answer):
+    respx.post("https://api.minimax.io/v1/chat/completions").mock(
+        return_value=httpx.Response(200, json={"choices": [{"message": {"content": raw_answer}}]})
+    )
+
+    response = await client.post(
+        "/api/v1/qa/irishka",
+        headers=await headers(client),
+        json={"text": "Что посмотреть в Шардже?"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"answer": visible_answer}
+
+
 @respx.mock
 async def test_irishka_rejects_irrelevant_question_without_minimax_call(client):
     route = respx.post("https://api.minimax.io/v1/chat/completions").mock(

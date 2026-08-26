@@ -8,6 +8,16 @@ MINIMAX_TIMEOUT_SECONDS = 30.0
 MINIMAX_MAX_ATTEMPTS = 3
 
 
+def visible_completion_content(content: str) -> str:
+    """Remove a complete leading MiniMax reasoning block without losing malformed content."""
+
+    leading = content.lstrip()
+    if not leading.startswith("<think>"):
+        return content
+    _, closing_tag, answer = leading.partition("</think>")
+    return answer.strip() if closing_tag else content
+
+
 async def generate_completion(
     settings,
     *,
@@ -35,7 +45,7 @@ async def generate_completion(
                     },
                 )
                 response.raise_for_status()
-                return response.json()["choices"][0]["message"]["content"]
+                return visible_completion_content(response.json()["choices"][0]["message"]["content"])
             except httpx.HTTPStatusError as error:
                 if error.response.status_code < 500:
                     logger.error("MiniMax отклонил запрос для %s: HTTP %s", context_label, error.response.status_code)

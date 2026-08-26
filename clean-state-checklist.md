@@ -1,5 +1,25 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 84 F42 local completion — 2026-08-26
+
+- [x] Scope is limited to the shared MiniMax response sanitizer, direct-Q&A regression tests and feature trackers. No API contract, frontend source, database, migration, credential or production state changed.
+- [x] RED target `tests/test_qa.py -k reasoning` — 1 expected failure / 2 passed: the endpoint exposed the complete `<think>…</think>` prefix.
+- [x] GREEN same target — 3 passed: a closed leading reasoning block is removed; ordinary text and unclosed `<think>` content are returned unchanged.
+- [x] Full backend in complete Windows-safe groups — 26 passed; 46 passed/3 skipped; 24 passed; 12 passed — 108 passed/3 skipped total.
+- [x] `npm run build` — success, 116 modules; standard Vite chunk-size warning only. Frontend source and API contract did not change, so no frontend test suite was required.
+- [x] Final `./init.sh` outside sandbox stopped only at the known external Hermes/desktop global `pip check` conflicts before MPS pytest; no environment repair was attempted.
+- [x] F42 is marked `passing` with evidence. Push and production deployment remain explicitly unapproved; run final diff/JSON/staged-file checks before the authorised local commit.
+
+## Session 83 F41 read-only relay diagnosis — 2026-08-26
+
+- [x] Scope is diagnosis and tracker evidence only. No application code, Telegram configuration, systemd service, queued update, backend environment or production database row was changed.
+- [x] Current relay bot identity is verified without printing its token. `getWebhookInfo` reports an empty URL and `pending_update_count=4`; this rules out an active webhook delivery path.
+- [x] No MPS long-polling worker/process is present. The separate active `pod-solncem-bot.service` polls another bot and has no `bot_bridge` / `qa-answer` integration.
+- [x] MPS backend, system and nginx logs for the current day contain no inbound bridge request. Technical DB check confirms #Q4 remains MANAGER/OPEN with no answer while its outgoing Telegram message ID exists.
+- [x] Source inspection confirms a same-group reply would expose `reply_to_message` and the current router can parse #Q{id}; its manager-only chat filter remains a separate lawyer-direction risk.
+- [x] `./init.sh` outside sandbox stopped only at the known external Hermes/desktop global `pip check` conflicts before MPS pytest; no repair was attempted.
+- [x] F41 is registered `in_progress` with read-only evidence. An explicit plan/approval is required before any inbound transport configuration or code change.
+
 ## Session 82 F40 local completion — 2026-08-26
 
 - [x] Scope is limited to the Q&A footer layout, its frontend regression test, Vitest CSS-test support and the F40 trackers. No API, database, dependency, credential or production code/configuration changed in this part.
