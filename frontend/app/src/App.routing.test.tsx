@@ -214,6 +214,7 @@ describe("App pathname routing", () => {
     render(<App />);
 
     expect(await screen.findByRole("heading", { level: 1, name: "Фишки" })).toBeTruthy();
+    expect(screen.getByText("Секреты удачных поездок — от тех, кто уже там побывал")).toBeTruthy();
     expect(screen.getByRole("heading", { level: 2, name: fishka.title })).toBeTruthy();
     expect(screen.getByText("💡")).toBeTruthy();
     expect(screen.queryByRole("heading", { level: 2, name: post.title })).toBeNull();
