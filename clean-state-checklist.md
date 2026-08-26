@@ -6,7 +6,8 @@
 - [x] RED backend `tests/test_forum.py -k deletion` — 3 expected failures because both DELETE routes returned 404. GREEN same target — 3 passed; full forum suite — 11 passed / 3 PostgreSQL-only skipped.
 - [x] RED frontend `Forum.test.tsx` — 2 expected failures for absent delete controls. GREEN same target — 5 passed: author/admin visibility for topics and messages, no DELETE before confirmation, DELETE after confirmation and immediate removal from UI.
 - [x] Full backend pytest completed successfully. Full frontend `npm test -- --run` — 19 files / 117 passed; `npm run build` — success, 115 modules, standard chunk-size warning only. Final `./init.sh` stopped only at the agreed external global Hermes/desktop `pip check` conflicts before MPS tests; no external-environment repair was attempted.
-- [x] Package 2 rollout is recorded correctly: `6128c74` synchronized local/origin/VPS; backend restart, smoke and live counter/rate-limit check passed. Package 3 production deployment remains explicitly unapproved.
+- [x] Package 2 rollout is recorded correctly: `6128c74` synchronized local/origin/VPS; backend restart, smoke and live counter/rate-limit check passed.
+- [x] Package 3 rollout: `cc89d2b` plus hotfix `0bc8c3e` synchronized local/origin/VPS; fresh nonempty PostgreSQL backup, backend restart/health, frontend rollback copy + rebuild, and `deploy/smoke.sh` passed. Live synthetic API scenario verified non-latest deletion preserves `last_message_at`, latest deletion recalculates it, and topic deletion removes it from the country list.
 
 ## Session 73 F36 Package 2 local completion — 2026-08-26
 

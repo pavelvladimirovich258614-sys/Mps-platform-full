@@ -2,7 +2,7 @@
 
 ## Current verified state — 2026-08-26
 
-F15–F35 are complete and production-deployed. F36 Packages 1–2 are production-deployed at `61ff1a5` and `6128c74` (`main`, `origin/main` and VPS `/opt/mps-platform` synchronized): Package 1 had a fresh PostgreSQL backup and Alembic `20260826_0013`; Package 2 restarted the backend and passed smoke/live synthetic checks. Package 3 is locally complete and F36 remains `in_progress` until Package 4.
+F15–F35 are complete and production-deployed. F36 Packages 1–3 are production-deployed at `61ff1a5`, `6128c74` and `0bc8c3e` (`main`, `origin/main` and VPS `/opt/mps-platform` synchronized): Package 1 had a fresh PostgreSQL backup and Alembic `20260826_0013`; Packages 2–3 restarted the backend and passed smoke/live synthetic checks. F36 remains `in_progress` until Package 4.
 
 ## F36 Package 1 — production deployed
 
@@ -11,13 +11,13 @@ F15–F35 are complete and production-deployed. F36 Packages 1–2 are productio
 - Verification: backend RED — 3 expected failures; GREEN `test_forum.py` — 7 passed, including temporary PostgreSQL 16 Cyrillic search. Temporary PostgreSQL migration and all three indexes were observed. Frontend RED exposed the array-to-page-envelope crash; GREEN `Forum.test.tsx` — 2 passed. Full backend — 83 passed in 69.10s; frontend — 19 files / 114 passed; build — success, 115 modules. `./init.sh` stopped only at the external global Hermes/desktop pip-check before MPS tests.
 - Production evidence: forum API observed a country with one topic and one message; both page responses had `next_cursor=null`, and the current production bundle was served after build. Do not alter the known Unisender/HostKey boundary without a separate decision.
 
-## F36 Package 3 — local completion, deployment unapproved
+## F36 Package 3 — production deployed
 
 - Backend: `DELETE /topics/{topic_id}` and `DELETE /messages/{message_id}` permit the author or `admin`, reject others with Russian 403 and absent resources with Russian 404. Topic deletion cascades to messages through the existing FK; SQLite enables `PRAGMA foreign_keys=ON` so local/test behavior matches PostgreSQL.
-- Message deletion: after the message flushes, one SQL `UPDATE` decrements `messages_count` without going below zero and recalculates `last_message_at` from `MAX(messages.created_at)`, falling back to `topic.created_at` when the topic becomes empty. This update and the DELETE commit together.
+- Message deletion: after the message flushes, one SQL `UPDATE` decrements `messages_count` without going below zero. It preserves `last_message_at` if a newer message remains; otherwise it recalculates from `MAX(messages.created_at)`, falling back to `topic.created_at` when the topic becomes empty. This update and the DELETE commit together.
 - Frontend: topic list items have additive `author_id`; the author/admin sees «Удалить» only for permitted topics/messages. The F15/F30 confirmation modal prevents DELETE until «Подтвердить удаление» and removes the confirmed item immediately from the current page.
 - RED→GREEN: backend RED — 3 expected 404 failures; GREEN deletion target — 3 passed; full forum suite — 11 passed / 3 PostgreSQL-only skipped. Frontend RED — 2 expected missing-control failures; GREEN target — 5 passed. Final backend pytest completed successfully; frontend — 19 files / 117 passed; build — success, 115 modules. `./init.sh` stopped only at the agreed external Hermes/desktop pip-check conflicts before MPS tests.
-- Deployment is not approved. No migration is needed, but before a rollout obtain explicit approval, create a fresh PostgreSQL backup, pull `main`, restart the backend, rebuild/publish frontend, and run smoke.
+- Production evidence: initial commit `cc89d2b` and hotfix `0bc8c3e` were synchronized to local/origin/VPS. Fresh PostgreSQL backup `mps-2026-08-25-204329.dump.gz` was nonempty; backend became healthy after restart; frontend rebuilt with rollback `/root/backups/mps-frontend-f36-p3-20260825T204509Z`; `deploy/smoke.sh` passed. A live authorized API scenario created only synthetic rows, proved non-latest deletion preserves `last_message_at` while decrementing the count, newest deletion recalculates it, and topic DELETE removes the topic from the country list.
 
 ## F36 Package 2 — production deployed
 
