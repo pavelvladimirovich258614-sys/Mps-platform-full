@@ -110,7 +110,7 @@ async def test_irishka_uses_explicit_30_second_minimax_timeout(test_app, monkeyp
   async def __aenter__(self): return self
   async def __aexit__(self, *_): return False
   async def post(self, *_args, **_kwargs): return httpx.Response(200,request=httpx.Request("POST","https://api.minimax.io/v1/chat/completions"),json={"choices":[{"message":{"content":"Ответ"}}]})
- monkeypatch.setattr("app.services.irishka.httpx.AsyncClient",Client)
+ monkeypatch.setattr("app.services.minimax.httpx.AsyncClient",Client)
  assert await run(test_app.state.database.session_factory,test_app.state.settings)==1
  assert observed==[httpx.Timeout(30.0)]
 

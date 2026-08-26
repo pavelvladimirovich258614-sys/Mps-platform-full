@@ -73,3 +73,54 @@ async def test_qa_answer_is_idempotent_only_for_exactly_matching_payload(client,
         question = await session.get(Question, question_id)
         assert question.answer == "Точный ответ"
         assert question.answered_by_name == "Менеджер"
+
+
+@respx.mock
+async def test_irishka_answers_with_relevant_knowledge_without_creating_question(client, test_app):
+    route = respx.post("https://api.minimax.io/v1/chat/completions").mock(
+        return_value=httpx.Response(200, json={"choices": [{"message": {"content": "В Шардже много пляжей."}}]})
+    )
+
+    response = await client.post(
+        "/api/v1/qa/irishka",
+        headers=await headers(client),
+        json={"text": "Что посмотреть в Шарджу?"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"answer": "В Шардже много пляжей."}
+    assert route.call_count == 1
+    payload = json.loads(route.calls[0].request.content)
+    assert "Шарджа" in payload["messages"][0]["content"]
+    assert "Что посмотреть в Шарджу?" == payload["messages"][1]["content"]
+    async with test_app.state.database.session_factory() as session:
+        assert (await session.scalars(select(Question))).all() == []
+
+
+@respx.mock
+async def test_irishka_rejects_irrelevant_question_without_minimax_call(client):
+    route = respx.post("https://api.minimax.io/v1/chat/completions").mock(
+        return_value=httpx.Response(200, json={"choices": [{"message": {"content": "Не должен быть вызван"}}]})
+    )
+
+    response = await client.post(
+        "/api/v1/qa/irishka",
+        headers=await headers(client),
+        json={"text": "Какая погода на Марсе?"},
+    )
+
+    assert response.status_code == 200
+    assert "менеджер" in response.json()["answer"].casefold()
+    assert route.call_count == 0
+
+
+async def test_irishka_rate_limit_is_per_authenticated_user(client):
+    auth_headers = await headers(client)
+    responses = [
+        await client.post("/api/v1/qa/irishka", headers=auth_headers, json={"text": f"qxznottravel{index}"})
+        for index in range(11)
+    ]
+
+    assert all(response.status_code == 200 for response in responses[:10])
+    assert responses[-1].status_code == 429
+    assert responses[-1].json()["detail"] == "Слишком много запросов. Попробуйте через минуту."

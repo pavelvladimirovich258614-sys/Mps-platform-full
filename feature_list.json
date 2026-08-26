@@ -710,19 +710,21 @@
       "id": "F38",
       "priority": 38,
       "area": "irishka",
-      "title": "Иришка: диагностика текущей архитектуры и ограничений",
-      "user_visible_behavior": "Без функциональных изменений: зафиксирована проверенная картина текущего фонового ИИ-помощника форума и рисков для следующего плана.",
+      "title": "Иришка: надёжность, интерактивный чат и база знаний",
+      "user_visible_behavior": "Авторизованный пользователь может открыть вкладку «Иришка ИИ» в «Вопрос-ответ», задать туристический вопрос и получить синхронный ответ MiniMax на основе локальной базы знаний; диалог не сохраняется и не затрагивает форумный scheduler.",
       "status": "in_progress",
       "verification": [
         "Read-only карта UI, API, scheduler, LLM-конфигурации и тестов Иришки",
         "Проверка текущего SQL-паттерна messages_count в services/irishka.py",
         "RED/GREEN tests/test_irishka.py для отправки manager Question через tg_relay и обработки Telegram-сбоя",
         "RED/GREEN tests/test_irishka.py для MiniMax timeout/retry и независимой обработки тем",
-        "cd backend && python -m pytest tests -q",
+        "RED/GREEN tests/test_qa.py для keyword-контекста, отказа без MiniMax и 429",
+        "RED/GREEN frontend App.routing.test.tsx для вкладки Иришки, ожидания и ответа",
+        "Полный backend pytest, frontend tests и npm run build",
         "./init.sh outside sandbox; внешний Hermes pip check отслеживается отдельно"
       ],
-      "evidence": "2026-08-26 diagnosis: read-only inspection of services/irishka.py, main.py, forum.py, qa.py, admin schema/API, Forum.tsx and tests/test_irishka.py. Package 1 RED `D:\\Python312\\python.exe -m pytest tests/test_irishka.py -q --color=no --basetemp D:\\AI\\tmp\\mps-f38-p1-red` — 3 expected failures / 6 passed: tg_relay.send awaited 0 times for price, visa and Telegram-failure scenarios. GREEN same suite — 9 passed in 2.91s. Package 2 RED `D:\\Python312\\python.exe -m pytest tests/test_irishka.py -q --color=no --basetemp D:\\AI\\tmp\\mps-f38-p2-red-timeout` — 6 expected failures / 9 passed: missing retries for timeout/500, no explicit timeout, unhandled 401/403 and a failed first topic aborted later topics. GREEN same suite — 15 passed in 6.19s. Full backend `D:\\Python312\\python.exe -m pytest tests -q --color=no --basetemp D:\\AI\\tmp\\mps-f38-p2-full-background --junitxml D:\\AI\\tmp\\mps-f38-p2-full-background.xml` — 101 passed, 3 skipped in 40.50s; JUnit failures=0, errors=0. Final ./init.sh stopped only at the known external global Hermes/desktop pip-check before MPS pytest.",
-      "notes": "Package 1 is production-deployed at 9d18156; Package 2 is locally complete and awaits separate production approval. F38 remains in_progress for later Irishka work. Price/visa/document triggers flush the manager Question, call tg_relay.send(settings, question) with the same #Q{id}\\n{body} contract as POST /qa, store tg_message_id on success and log/suppress only Telegram failures so the Question and AI forum response still commit. MiniMax now has an explicit 30-second timeout, three total attempts with 0.5/1.0-second exponential backoff only for timeout/network/5xx failures, no retry for 4xx, and topic-level error isolation. No direct topic route exists, so notification body remains the title without a link by product decision. messages_count remains atomically incremented in SQL. Remaining risks: all-topics plus per-topic query pattern, no row lock/unique guard across scheduler instances, locked topics and incomplete admin GET settings exposure. F37 remains in_progress: Sessions C/D are untouched."
+      "evidence": "2026-08-26 diagnosis and Packages 1–2 are recorded above. Package 3 RED backend `D:\\Python312\\python.exe -m pytest tests\\test_qa.py -q --color=no --basetemp D:\\AI\\tmp\\mps-f38-p3-backend-red` — 3 expected 404 failures for absent `/qa/irishka`; GREEN `tests\\test_qa.py tests\\test_irishka.py` — 21 passed in 9.83s. Frontend RED `npx vitest run src/App.routing.test.tsx --reporter=verbose` — 1 expected failure: absent «Иришка ИИ» button; GREEN — 28 passed. Final full backend was green in four complete Windows-safe shards: 38 passed/3 skipped, 28 passed, 11 passed, 27 passed — total 104 passed/3 skipped. Full frontend `npm test -- --run` — 19 files / 122 passed. `npm run build` — success, 116 modules; standard chunk-size warning only. Copied data file: 248 records, 247315 bytes, SHA-256 `FD8D446F520BE20837138CE4565A1E0D33907966FF0444AAC230AF0859A61C0C`. Final ./init.sh stopped only at the known external global Hermes/desktop pip-check before MPS pytest.",
+      "notes": "Packages 1 and 2 are production-deployed at 9d18156 and a97327c. Package 3 is locally verified and remains uncommitted/deployment-unapproved. It adds POST /qa/irishka for authenticated users, 10/minute verified-user rate limiting and no persistence to Question or ForumMessage. The local JSON search ranks at most five tag/text matches, including a narrow Russian word-form prefix match so «Шарджу» finds «Шарджа»; irrelevant queries return a manager referral without MiniMax. MiniMax transport is shared with the unchanged background scheduler and retains 30-second timeout plus transient-only retries. Remaining risks: keyword retrieval is MVP-quality, SlowAPI remains process-local, and F37 Sessions C/D are untouched."
     }
   ]
 }

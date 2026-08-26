@@ -171,7 +171,7 @@ export function usePost(slug?: string) {
 }
 export const useReviews = () => { const resource = useResource(() => api<Review[]>("/reviews"), []); const create = async (body: Omit<Review, "id" | "status" | "photo_url">) => apiJson<Review>("/reviews", "POST", body); return { ...resource, create }; };
 export const useSubscribe = () => ({ subscribe: (email: string) => apiJson<{ email: string; confirmed: boolean }>("/subscribe", "POST", { email }) });
-export const useQA = () => { const resource = useResource(() => api<Question[]>("/qa/my"), []); const create = async (target: Question["target"], body: string) => { const item = await apiJson<Question>("/qa", "POST", { target, body }); resource.setValue((current) => [...(current ?? []), item]); return item; }; return { ...resource, create }; };
+export const useQA = () => { const resource = useResource(() => api<Question[]>("/qa/my"), []); const create = async (target: Question["target"], body: string) => { const item = await apiJson<Question>("/qa", "POST", { target, body }); resource.setValue((current) => [...(current ?? []), item]); return item; }; const askIrishka = (text: string) => apiJson<{ answer: string }>("/qa/irishka", "POST", { text }); return { ...resource, create, askIrishka }; };
 function useForumPage<T>(path: string | null, deps: unknown[]) {
   const resource = useResource(() => path ? api<ForumPage<T>>(path) : Promise.resolve({ items: [], next_cursor: null }), deps);
   const [loadingMore, setLoadingMore] = useState(false);

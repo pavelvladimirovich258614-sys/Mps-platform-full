@@ -1,5 +1,14 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 80 F38 Package 3 local verification — 2026-08-26
+
+- [x] Scope is limited to the direct interactive Иришка Q&A endpoint, supplied local JSON knowledge base, shared MiniMax transport, existing QA modal, tests and trackers. No migration, scheduler business logic, Question/ForumMessage persistence, credentials or production state changed.
+- [x] Knowledge JSON was copied unchanged: 248 records, 247315 bytes, SHA-256 `FD8D446F520BE20837138CE4565A1E0D33907966FF0444AAC230AF0859A61C0C`.
+- [x] RED backend `tests/test_qa.py` — 3 expected missing-endpoint 404 failures; GREEN `tests/test_qa.py tests/test_irishka.py` — 21 passed. RED frontend `App.routing.test.tsx` — one expected absent «Иришка ИИ» control; GREEN — 28 passed.
+- [x] Final full backend regression was executed in complete short shards because the Windows foreground runner silently truncates a single >30s process: 38 passed/3 skipped, 28 passed, 11 passed, 27 passed — total 104 passed/3 skipped. Full frontend `npm test -- --run` — 19 files/122 passed; `npm run build` — success, 116 modules with the standard chunk-size warning only.
+- [x] Final `./init.sh` outside sandbox stopped only at the known external Hermes/desktop global `pip check` conflicts before MPS pytest; no environment repair was attempted.
+- [x] F38 remains `in_progress`; Packages 1 (`9d18156`) and 2 (`a97327c`) are production-deployed. Package 3 is not committed, pushed or deployed. `git diff --check` and final status are required immediately before any commit.
+
 ## Session 79 F38 Package 2 local completion — 2026-08-26
 
 - [x] Scope is limited to MiniMax timeout/retry and per-topic scheduler isolation in Иришка, its backend tests and trackers. Frontend, Alembic, LLM credentials/configuration, direct forum routes and production state are untouched.

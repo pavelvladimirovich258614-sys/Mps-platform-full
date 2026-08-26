@@ -9,9 +9,20 @@
 - Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15, I-16, I-18 и I-20 закрыты 2026-08-20. I-21 отложен до pre-launch юридической проверки. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
 - Auth/UI state: production build uses `https://mir.pod-solncem.ru/api/v1` and `Reg_Under_the_sun_bot`; F27 hides email form/copy, leaving Telegram Login Widget as the sole visible guest path. Re-enable only by setting `EMAIL_LOGIN_ENABLED` after Unisender/HostKey repair. F28 adds owner-only logout through the own public-profile ••• menu; visitors never receive it. F29 production picker accepts current JPEG/PNG/WebP/HEIC/HEIF/AVIF set and permits repeated selection of the same file. Role storage remains compatible with legacy `ADMIN` and current lower-case values.
 - Email state: UnisenderGo transport использует официальный default `goapi.unisender.ru` (с возможностью override на go1/go2) и `X-API-KEY`; payload `message/recipients/body/subject/from_email` проверен mock-тестами. Production delivery сейчас заблокирована внешним TCP timeout до сети Unisender `31.184.200.*:443`: goapi и go1 недоступны, при этом ya.ru/google.com доступны, а local UFW/iptables outgoing не блокируют. Email-код и digest не работают до восстановления маршрута или смены транспорта/provider.
-- Next best action: await separate approval for F38 Package 2 production deployment; do not start another Irishka package, F37 Session C or alter Unisender transport without a separate decision.
+- Next best action: await explicit confirmation to commit F38 Package 3, then separate approval for push and production deployment; do not start another Irishka package, F37 Session C or alter Unisender transport without a separate decision.
+
+- F38 update: Package 2 is production-deployed at `a97327c` (superseding the historical Package 2 wording above). Package 3 is locally verified, uncommitted and deployment-unapproved: it provides direct non-persistent «Иришка ИИ» Q&A with the supplied local knowledge base, shared MiniMax timeout/retry transport, and a 10/minute verified-user limit.
 
 ## Session Record
+
+### Session 80 — 2026-08-26 (Codex, F38 Package 3 interactive Иришка chat and knowledge base)
+- Goal: add a direct, non-persistent Q&A chat with Иришка, independent from the forum scheduler, grounded in the supplied 248-record local knowledge JSON.
+- Completed locally: copied the JSON unchanged to `backend/app/data/irishka_knowledge.json` (247315 bytes; SHA-256 recorded in F38 evidence). `POST /qa/irishka` requires authentication, limits a verified user to 10/minute, keyword-ranks up to five tag/text snippets and returns a MiniMax answer synchronously. No match returns a Russian manager referral without calling MiniMax; no `Question` or `ForumMessage` is created. A shared MiniMax transport preserves the existing 30s/three-attempt transient retry behaviour of the unchanged scheduler.
+- RED→GREEN: backend RED — 3 expected 404 failures; GREEN `tests/test_qa.py tests/test_irishka.py` — 21 passed in 9.83s. Frontend RED — one missing «Иришка ИИ» control; GREEN `App.routing.test.tsx` — 28 passed. Final full backend shards — 38 passed/3 skipped, 28 passed, 11 passed, 27 passed (104 passed/3 skipped total); frontend — 19 files / 122 passed; build succeeded with 116 modules and the standard chunk-size warning.
+- Evidence recorded: `feature_list.json` F38. `git diff --check` passed. Final `./init.sh` stopped only at the known external Hermes/desktop global pip-check before MPS pytest; no external repair was attempted.
+- Commits: none — awaiting explicit confirmation. Production: unapproved.
+- Known risks: keyword retrieval is deliberately MVP-level and SlowAPI remains process-local. No conversation history, vector search, scheduler behaviour or external configuration changed.
+- Next best action: review, then explicitly authorize the local Package 3 commit; push/deploy require their own approval.
 
 ### Session 79 — 2026-08-26 (Codex, F38 Package 2 MiniMax timeout, retry and scheduler isolation)
 - Goal: prevent one transient MiniMax failure from aborting the Иришка scheduler run, while avoiding retries for invalid credentials.

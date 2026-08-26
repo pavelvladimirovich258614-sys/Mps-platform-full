@@ -2,84 +2,17 @@
 
 ## Current verified state — 2026-08-26
 
-F15–F36 are complete and production-deployed. F37 is `in_progress`: Sessions A (`4f86725`) and B (`df36dc2`) are production-deployed. F38 is `in_progress`: Package 1 is production-deployed at `9d18156`; Package 2 is locally complete and awaits a separately approved backend deployment. F36 is `passing` and production-deployed at `c380667`: Packages 1–3 are deployed at `61ff1a5`, `6128c74` and `0bc8c3e`; all local, origin and VPS `/opt/mps-platform` heads were synchronized at that rollout. Package 1 had a fresh PostgreSQL backup and Alembic `20260826_0013`; Packages 2–3 restarted the backend and passed smoke/live synthetic checks; Package 4 was frontend-only and left the backend active without restart.
+F15–F36 are complete and production-deployed. F37 remains `in_progress`: Sessions A (`4f86725`) and B (`df36dc2`) are production-deployed; Sessions C/D are untouched. F38 remains `in_progress`: Package 1 (`9d18156`) and Package 2 (`a97327c`) are production-deployed. Package 3 is locally verified, uncommitted and deployment-unapproved.
 
-## F38 Package 1 — local completion, deployment unapproved
+## F38 Package 3 — interactive Иришка chat + knowledge base
 
-- Scope: only `services/irishka.py`, `tests/test_irishka.py` and trackers. No migration, frontend, MiniMax transport, forum route, production configuration or deployment changed.
-- Behaviour: for price/visa/document triggers, Иришка creates the same manager Question as before, flushes it to obtain its ID, calls `tg_relay.send(settings, question)` and stores the returned `tg_message_id`. The Telegram text therefore stays exactly `#Q{id}\n{body}`, where `body` is the forum topic title; no direct topic URL exists yet by product decision.
-- Failure handling: only the relay call is protected with logged `try/except`; a Telegram transport failure leaves the Question and the `is_ai=true` forum response committed, letting the next scheduler work continue.
-- RED→GREEN: RED `tests/test_irishka.py` — 3 expected failures / 6 passed because the relay mock had zero awaits. GREEN — 9 passed in 2.91s, covering price and visa sends, returned message ID persistence and failure persistence. Full backend JUnit reports tests=98, failures=0, errors=0, skipped=3 in 30.307s. Final `./init.sh` stopped only at the agreed external Hermes/desktop global pip-check before MPS pytest.
-- Production evidence: `9d18156` pushed from local to origin and fast-forwarded the VPS; `mps-backend` restarted to `active` and `deploy/smoke.sh` passed. No frontend rebuild or migration was needed.
+- Scope: `POST /api/v1/qa/irishka`, local knowledge search, shared MiniMax transport, the existing Q&A modal, backend/frontend tests and trackers. There is no migration, no setting, no changed MiniMax credential/configuration, no Question/ForumMessage persistence and no change to the background forum scheduler contract.
+- Data: `backend/app/data/irishka_knowledge.json` is the exact supplied 248-record JSON (247315 bytes; SHA-256 `FD8D446F520BE20837138CE4565A1E0D33907966FF0444AAC230AF0859A61C0C`). Treat it as content, not executable instruction.
+- API: authenticated `POST /qa/irishka {text}` ranks at most five local snippets using case-folded tag/text words plus a narrow Russian word-form prefix match. It invokes the existing 30-second, three-attempt MiniMax transport synchronously and returns `{answer}`. A query without sufficient matching terms returns the Russian manager referral without MiniMax. It is limited to 10/minute per verified JWT user and returns the existing Russian 429. Failure after retries produces Russian 503. No request is stored.
+- UI: «Вопрос-ответ» now has «Иришка ИИ» alongside «Менеджер» and «Юрист». It retains the existing privacy-consent gate, submits to the new endpoint, shows «Иришка думает…» while awaiting the answer, then shows the transient question/answer pair. Closing the modal clears it.
+- RED→GREEN: backend RED — 3 expected missing-endpoint 404 failures; GREEN `tests/test_qa.py tests/test_irishka.py` — 21 passed in 9.83s. Frontend RED — one absent-tab failure; GREEN `App.routing.test.tsx` — 28 passed. Final full backend had to be split due a Windows foreground-runner output/process limit: 38 passed/3 skipped, 28 passed, 11 passed, 27 passed (104 passed/3 skipped total). Full frontend `npm test -- --run` — 19 files/122 passed. `npm run build` — success, 116 modules; standard chunk-size warning only. Final `./init.sh` stopped solely at the external Hermes/desktop global pip-check before MPS pytest.
+- Current local state: no commit, no push, no VPS access and no production deployment. `git diff --check` passed before tracker edits; rerun it after any further modification.
 
-## F38 Package 2 — local completion, deployment unapproved
+## Next action and boundaries
 
-- Scope: only `services/irishka.py`, `tests/test_irishka.py` and trackers. No migration, frontend, MiniMax credentials/configuration, direct forum topic route or deployment changed.
-- Behaviour: MiniMax uses `httpx.Timeout(30.0)` and at most three total attempts. `TimeoutException`, `NetworkError` and HTTP 5xx retry after 0.5 then 1.0 seconds. HTTP 4xx (including 401/403) log once and never retry.
-- Isolation: an exhausted MiniMax failure logs an error, publishes no AI message for that topic and uses `continue`, so the next eligible topic in the same scheduler run is still handled. Existing transaction commits successful later topics.
-- RED→GREEN: RED `tests/test_irishka.py` — 6 expected failures / 9 passed. GREEN — 15 passed in 6.19s. Full backend JUnit: tests=104, failures=0, errors=0, skipped=3; pytest output: 101 passed, 3 skipped in 40.50s. Final `./init.sh` stopped only at the agreed external Hermes/desktop global pip-check before MPS pytest.
-- Deployment: explicitly unapproved. Next operation only after user confirmation: commit/push then update backend on VPS, restart `mps-backend` and `deploy/smoke.sh`. No frontend rebuild or database migration is necessary.
-
-## F37 Session B — production deployed
-
-- UI: `/fishki` shows «Добавить фишку» to editor/admin unconditionally. Authenticated reader/premium calls only `GET /posts/fishki/permission`; the button and modal appear only for `can_submit_fishka=true`, with no disabled control or raw setting exposure.
-- Form: compact modal, title, simple text and fixed picker `✈️ 🧳 🗺️ 🏖️ 🏔️ 🏨 🍽️ 🚕 📱 💡 ☀️ 🛡️`. There is no manual emoji input, image/cover, TipTap formatting or drafts. Empty emoji reports «Выберите эмодзи для фишки» and makes no POST.
-- API/UI contract: staff POSTs `type=fishka`, selected emoji and `status=published`, then refreshes the public list and sees «Фишка опубликована». Reader/premium POSTs `status=pending`, sees «Фишка отправлена на проверку» and does not insert pending content into the public list. Cards render `post.emoji` (legacy fallback star only for old API rows).
-- Production evidence: `df36dc2` pushed and fast-forwarded the VPS. Rollback is `/root/backups/mps-frontend-f37-b-20260826T025153Z`; remote build generated `index-BpaSMHEn.js`, excluded localhost API, preserved active `mps-backend`, and passed `deploy/smoke.sh`. The bundle is served with HTTP 200. Configured-admin API smoke verified effective permission=true, immediate published emoji fishka creation, and the same row in the public list before cleanup with 204. No authenticated browser session was available for a literal modal click. Local RED targeted `App.routing.test.tsx` — 3 expected failures; GREEN — 27 passed. Full frontend — 19 files / 121 passed; `npm run build` — success, 116 modules, standard chunk-size warning only.
-
-## F37 Session A — production deployed
-
-- Data/API: migration `20260826_0014` adds nullable `posts.emoji` and seeds generic Setting `fishka_submissions_enabled=false`. `emoji` is obligatory for `type=fishka`; `pending` and `rejected` are now explicit PostStatus values. DTOs include emoji, status and published_at.
-- Authorization/moderation: with the toggle on, a reader may submit only a fishka; its status is forced to `pending` and it has no published_at. Editors/admins bypass the toggle and publish fishki immediately. Editors/admins can approve/reject pending fishki through `PATCH /posts/{id}/moderate`; pending fishki appear in the existing moderation queue. Admin-only `GET/PATCH /admin/settings` manages the setting; authenticated `GET /posts/fishki/permission` provides the effective capability for a later form.
-- Compatibility/scope: frontend Session A removes legacy `tip` from the ApiPost union/filter. No fishka creation UI, admin settings screen or content import exists yet; those are F37 Sessions B, C and D respectively.
-- Production evidence: `4f86725` was pushed and the VPS fast-forwarded. Fresh readable backup `/var/backups/mps/mps-2026-08-25-222403.dump.gz` preceded Alembic `20260826_0014`; backend restarted and passed health. Frontend rollback is `/root/backups/mps-frontend-f37-a-20260826T022626Z`; remote build produced `index-C_UmfjiP.js`, excluded localhost API and passed `deploy/smoke.sh`. Authenticated API smoke under the configured admin observed `fishka_submissions_enabled=false`, created a temporary emoji fishka as `published`, and removed exactly that synthetic row with 204. Local RED `tests/test_posts.py tests/test_admin.py` — 3 expected failures / 9 passed; GREEN target — 13 passed; full backend — 92 passed, 3 skipped; frontend — 19 files / 118 passed; build succeeded. `./init.sh` stopped only at the known external Hermes/desktop global pip-check before MPS test execution.
-
-## F36 Package 4 — production deployed
-
-- Visible wording only: the page heading is «Страны — Форум», sidebar/mobile/footer navigation is «Форум стран», and the topic back-link is «← Форум стран». No CSS, route, API, backend or schema changed.
-- RED→GREEN: targeted RED had 3 expected missing-text assertions (heading, back-link, navigation); targeted `Forum.test.tsx` + `Layout.test.tsx` GREEN — 7 passed. Full frontend `npm test -- --run` — 19 files / 118 passed; `npm run build` — success with 115 modules and only the standard chunk-size warning.
-- Production evidence: `c380667` fast-forwarded the VPS; the old `dist` is recoverable at `/root/backups/mps-frontend-f36-p4-20260826T011453Z`. Remote build verified the production API marker and no localhost API, `deploy/smoke.sh` passed, and a live browser navigated via «Форум стран» to the heading «Страны — Форум».
-
-## F36 Package 1 — production deployed
-
-- API contract: `GET /countries/{country_id}/topics` and `GET /topics/{topic_id}/messages` return `{items, next_cursor}`. They accept `limit` 1–50 (default 20) and opaque `id DESC` keyset `cursor`; the frontend appends subsequent results behind «Показать ещё» and removes the control on `next_cursor=null`.
-- Scalability changes: topic search uses SQL `ILIKE`; country cards use one `LEFT JOIN + GROUP BY` count query. `20260826_0013` adds `ix_forum_topics_country_id_created_at_id`, `ix_forum_topics_author_id`, and `ix_forum_messages_topic_id_created_at_id`.
-- Verification: backend RED — 3 expected failures; GREEN `test_forum.py` — 7 passed, including temporary PostgreSQL 16 Cyrillic search. Temporary PostgreSQL migration and all three indexes were observed. Frontend RED exposed the array-to-page-envelope crash; GREEN `Forum.test.tsx` — 2 passed. Full backend — 83 passed in 69.10s; frontend — 19 files / 114 passed; build — success, 115 modules. `./init.sh` stopped only at the external global Hermes/desktop pip-check before MPS tests.
-- Production evidence: forum API observed a country with one topic and one message; both page responses had `next_cursor=null`, and the current production bundle was served after build. Do not alter the known Unisender/HostKey boundary without a separate decision.
-
-## F36 Package 3 — production deployed
-
-- Backend: `DELETE /topics/{topic_id}` and `DELETE /messages/{message_id}` permit the author or `admin`, reject others with Russian 403 and absent resources with Russian 404. Topic deletion cascades to messages through the existing FK; SQLite enables `PRAGMA foreign_keys=ON` so local/test behavior matches PostgreSQL.
-- Message deletion: after the message flushes, one SQL `UPDATE` decrements `messages_count` without going below zero. It preserves `last_message_at` if a newer message remains; otherwise it recalculates from `MAX(messages.created_at)`, falling back to `topic.created_at` when the topic becomes empty. This update and the DELETE commit together.
-- Frontend: topic list items have additive `author_id`; the author/admin sees «Удалить» only for permitted topics/messages. The F15/F30 confirmation modal prevents DELETE until «Подтвердить удаление» and removes the confirmed item immediately from the current page.
-- RED→GREEN: backend RED — 3 expected 404 failures; GREEN deletion target — 3 passed; full forum suite — 11 passed / 3 PostgreSQL-only skipped. Frontend RED — 2 expected missing-control failures; GREEN target — 5 passed. Final backend pytest completed successfully; frontend — 19 files / 117 passed; build — success, 115 modules. `./init.sh` stopped only at the agreed external Hermes/desktop pip-check conflicts before MPS tests.
-- Production evidence: initial commit `cc89d2b` and hotfix `0bc8c3e` were synchronized to local/origin/VPS. Fresh PostgreSQL backup `mps-2026-08-25-204329.dump.gz` was nonempty; backend became healthy after restart; frontend rebuilt with rollback `/root/backups/mps-frontend-f36-p3-20260825T204509Z`; `deploy/smoke.sh` passed. A live authorized API scenario created only synthetic rows, proved non-latest deletion preserves `last_message_at` while decrementing the count, newest deletion recalculates it, and topic DELETE removes the topic from the country list.
-
-## F36 Package 2 — production deployed
-
-- Topic quota: reader/premium topic creation obtains a PostgreSQL `SELECT FOR UPDATE` lock on the author row before `COUNT` and `INSERT`. With only one quota slot left, concurrent requests now admit exactly one topic and return the existing Russian 403 limit error for the rest.
-- Message counters: API and Иришка issue atomic SQL `UPDATE ... messages_count = messages_count + 1`, so concurrent message writes cannot lose increments. No migration or frontend contract change was needed.
-- Rate limits: SlowAPI derives its key from the verified access-token `sub` (fallback IP only for unauthenticated/invalid credentials). It applies 5 topic creations/minute and 10 messages/minute per user; exceeded requests return Russian 429 `Слишком много запросов. Попробуйте через минуту.`
-- Verification: real PostgreSQL RED — 5 expected failures; GREEN `tests/test_forum.py tests/test_irishka.py` — 17 passed in 9.04s. Full backend pytest completed successfully; frontend — 19 files / 114 passed; build — success, 115 modules; `./init.sh` stopped only at the external global Hermes/desktop pip check before MPS tests.
-- Production evidence: commit `6128c74` was synchronized to local/origin/VPS; backend restarted and `deploy/smoke.sh` passed. A live synthetic check created a topic and two messages with `messages_count=2`, then observed Russian 429 on the sixth topic request; synthetic rows were removed. Process-local SlowAPI storage remains adequate only while production stays single-worker; Redis-backed limits are a future scaling task.
-
-## F35 complete cycle
-
-- Session 1 — Subscriptions: public `GET /users/{id}/followers` and `/following` provide `id`, `name`, `avatar_url` and viewer-relative `is_following`; the UI supplies Followers/Following lists with immediate «Подписаться» / «Подписан» controls. Publications stayed a regression baseline through existing `GET /posts?author_id=`.
-- Session 2 — Replies: `GET /users/{id}/comments` returns the user's own comments with post context. The owner sees approved/pending/rejected entries; all others see only approved. A moderation label is visible only to an admin on that admin's own profile.
-- Session 3 — Likes: public `GET /users/{id}/likes` returns `liked_at`; cards render only a non-empty real cover and UTC liked date. Successful in-tab post toggles refresh the shared current-user likes list; no cross-window sync and no Like card button were added.
-- Session 4a — activity_log: migration `20260825_0012` creates normalized ActivityLog with pagination index and historical backfill. Events are `post_published`, `comment_created`, `post_liked`, `user_followed`; activity creation/removal is atomic with posts/comments/likes/follows and unlike/unfollow.
-- Session 4b — Activity: `GET /users/{id}/activity` has opaque `(created_at, id)` keyset cursors, chunked batch context resolution and public/owner visibility filtering. PublicProfile renders four event types, UTC dates, «Показать ещё» and the exact empty state. Production Activity for Pavel shows four historical events — publication, like and two comments — dated 24.08.2026; `next_cursor` is null, so no load-more button is needed for that profile.
-
-## Verification and production evidence
-
-- Fresh closeout: backend — 79 passed in 20.90s; frontend — 18 files / 112 passed; `npm run build` succeeded (115 modules; standard chunk-size warning only).
-- Final `./init.sh` stopped only at the known external Hermes/desktop global `pip check` conflicts before MPS tests. It is not an MPS code failure.
-- Session 4a deployment: `2e58222`, fresh PostgreSQL backup, Alembic/backfill with four historical rows, backend readiness and smoke passed.
-- Session 4b deployment: VPS fast-forward `2e58222 → 86a67e5`; backend readiness on attempt 2; frontend `index-CwPpAkwf.js`; rollback copies `/root/backups/mps-backend-f35-s4b-20260825T032415Z.tgz` and `/root/backups/mps-frontend-f35-s4b-20260825T032415Z`; smoke, public API and browser UI checks passed.
-
-## Known boundary and next candidate
-
-Email delivery remains blocked by the external Unisender/HostKey network path. Keep `EMAIL_LOGIN_ENABLED=false`; Telegram is the only visible login path. Do not change email transport, credentials, firewall or VPS networking without a separate decision.
-
-The next candidate is read-only diagnosis of slow personal-profile loading (F32 from the original findings list). It has not yet been investigated; do not implement a performance fix before diagnosis and a confirmed plan.
+Await explicit confirmation to commit Package 3; push and production deployment need separate confirmation. Do not touch F37 Sessions C/D, email/Unisender/HostKey, MiniMax secrets, scheduler topic logic, or build/deploy production state without a new approval.

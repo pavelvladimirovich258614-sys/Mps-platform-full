@@ -47,8 +47,9 @@ const jsonResponse = (status: number, body: unknown) => new Response(JSON.string
 
 type DetailResult = "ok" | "missing" | "network";
 type FishkaOptions = { canSubmit?: boolean };
+type QAOptions = { irishkaResponse?: Promise<Response> };
 
-function installApi(detailResult: DetailResult = "ok", currentUser: Record<string, unknown> | null = null, posts: ApiPost[] = [post], online: Array<{ id: number; name: string; avatar_url: string | null }> = [], profileComments: unknown[] = [], profileLikes: ApiPost[] = [], profileActivity: { items: unknown[]; next_cursor: string | null } = { items: [], next_cursor: null }, nextProfileActivity: { items: unknown[]; next_cursor: string | null } = { items: [], next_cursor: null }, fishkaOptions: FishkaOptions = {}) {
+function installApi(detailResult: DetailResult = "ok", currentUser: Record<string, unknown> | null = null, posts: ApiPost[] = [post], online: Array<{ id: number; name: string; avatar_url: string | null }> = [], profileComments: unknown[] = [], profileLikes: ApiPost[] = [], profileActivity: { items: unknown[]; next_cursor: string | null } = { items: [], next_cursor: null }, nextProfileActivity: { items: unknown[]; next_cursor: string | null } = { items: [], next_cursor: null }, fishkaOptions: FishkaOptions = {}, qaOptions: QAOptions = {}) {
   let likesCount = post.likes_count;
   let currentProfileLikes = profileLikes;
   const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
@@ -75,6 +76,8 @@ function installApi(detailResult: DetailResult = "ok", currentUser: Record<strin
     if (path === "/api/v1/posts/17" && init?.method === "PATCH") return jsonResponse(200, { ...post, ...JSON.parse(String(init.body)) });
     if (path === "/api/v1/posts/17" && init?.method === "DELETE") return new Response(null, { status: 204 });
     if (path === "/api/v1/posts/17/comments") return jsonResponse(200, []);
+    if (path === "/api/v1/qa/my") return jsonResponse(200, []);
+    if (path === "/api/v1/qa/irishka" && init?.method === "POST") return qaOptions.irishkaResponse ?? jsonResponse(200, { answer: "Ответ Иришки" });
     if (path === "/api/v1/countries") return jsonResponse(200, [{ id: 1, name: "ОАЭ", topics_count: 0 }]);
     if (path === "/api/v1/countries/1/topics") return jsonResponse(200, { items: [], next_cursor: null });
     if (path === "/api/v1/online") return jsonResponse(200, online);
@@ -290,6 +293,28 @@ describe("App pathname routing", () => {
     expect(filters).not.toBeNull();
     expect(within(filters as HTMLElement).getByRole("heading", { level: 2, name: "Статьи" })).toBeTruthy();
     expect(within(filters as HTMLElement).queryAllByRole("button")).toEqual([]);
+  });
+
+  it("asks Irishka in the QA modal and renders the answer after loading", async () => {
+    let resolveIrishka: (response: Response) => void = () => undefined;
+    const irishkaResponse = new Promise<Response>((resolve) => { resolveIrishka = resolve; });
+    const fetchMock = installApi("ok", null, [post], [], [], [], { items: [], next_cursor: null }, { items: [], next_cursor: null }, {}, { irishkaResponse });
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Вопрос-ответ/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Иришка ИИ" }));
+    fireEvent.change(screen.getByPlaceholderText("Спросить Иришку…"), { target: { value: "Что посмотреть в Шардже?" } });
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Спросить" }));
+
+    expect(screen.getByText("Иришка думает…")).toBeTruthy();
+    resolveIrishka(jsonResponse(200, { answer: "Начните с пляжей и музеев Шарджи." }));
+    expect(await screen.findByText("Начните с пляжей и музеев Шарджи.")).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([input, init]) => {
+      if (new URL(String(input)).pathname !== "/api/v1/qa/irishka" || (init as RequestInit).method !== "POST") return false;
+      return JSON.parse(String((init as RequestInit).body)).text === "Что посмотреть в Шардже?";
+    })).toBe(true);
   });
 
   it("opens the authenticated reader's public profile from the header and edits through the existing modal", async () => {
