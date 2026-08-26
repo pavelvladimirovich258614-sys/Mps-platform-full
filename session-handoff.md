@@ -2,7 +2,14 @@
 
 ## Current verified state — 2026-08-26
 
-F15–F36 are complete and production-deployed. F37 is `in_progress`; Session A is production-deployed at `4f86725`. F36 is `passing` and production-deployed at `c380667`: Packages 1–3 are deployed at `61ff1a5`, `6128c74` and `0bc8c3e`; all local, origin and VPS `/opt/mps-platform` heads were synchronized at that rollout. Package 1 had a fresh PostgreSQL backup and Alembic `20260826_0013`; Packages 2–3 restarted the backend and passed smoke/live synthetic checks; Package 4 was frontend-only and left the backend active without restart.
+F15–F36 are complete and production-deployed. F37 is `in_progress`: Session A is production-deployed at `4f86725`; Session B is locally verified but intentionally uncommitted, unpushed and undeployed. F36 is `passing` and production-deployed at `c380667`: Packages 1–3 are deployed at `61ff1a5`, `6128c74` and `0bc8c3e`; all local, origin and VPS `/opt/mps-platform` heads were synchronized at that rollout. Package 1 had a fresh PostgreSQL backup and Alembic `20260826_0013`; Packages 2–3 restarted the backend and passed smoke/live synthetic checks; Package 4 was frontend-only and left the backend active without restart.
+
+## F37 Session B — local completion, deployment not approved
+
+- UI: `/fishki` shows «Добавить фишку» to editor/admin unconditionally. Authenticated reader/premium calls only `GET /posts/fishki/permission`; the button and modal appear only for `can_submit_fishka=true`, with no disabled control or raw setting exposure.
+- Form: compact modal, title, simple text and fixed picker `✈️ 🧳 🗺️ 🏖️ 🏔️ 🏨 🍽️ 🚕 📱 💡 ☀️ 🛡️`. There is no manual emoji input, image/cover, TipTap formatting or drafts. Empty emoji reports «Выберите эмодзи для фишки» and makes no POST.
+- API/UI contract: staff POSTs `type=fishka`, selected emoji and `status=published`, then refreshes the public list and sees «Фишка опубликована». Reader/premium POSTs `status=pending`, sees «Фишка отправлена на проверку» and does not insert pending content into the public list. Cards render `post.emoji` (legacy fallback star only for old API rows).
+- Evidence: RED targeted `App.routing.test.tsx` — 3 expected failures for absent form/permission flow; GREEN — 27 passed. Full frontend — 19 files / 121 passed; `npm run build` — success, 116 modules, standard chunk-size warning only. Backend, migration and production were untouched.
 
 ## F37 Session A — production deployed
 

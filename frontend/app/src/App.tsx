@@ -15,7 +15,7 @@ import { PublicProfile } from "./components/PublicProfile";
 import { QA } from "./components/QA";
 import { Reviews } from "./components/Reviews";
 import { Subscribe } from "./components/Subscribe";
-import { getDraft, getLikedPosts, type ApiPost, useAuthorPosts, useAuth, useDrafts, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, useProfileActivity, useProfileComments, useProfileFollowers, useProfileFollowing, usePublicProfile, usePublicSettings, useUserFollow } from "./hooks";
+import { getDraft, getLikedPosts, type ApiPost, type FishkaDraft, useAuthorPosts, useAuth, useDrafts, useFishkaPermission, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, useProfileActivity, useProfileComments, useProfileFollowers, useProfileFollowing, usePublicProfile, usePublicSettings, useUserFollow } from "./hooks";
 import { pathForRoute, type PathRoute, routeFromPath } from "./router";
 
 function routeForPage(page: Page): PathRoute {
@@ -49,6 +49,7 @@ export function App() {
   const canManagePosts = auth.user?.role === "editor" || auth.user?.role === "admin";
   const posts = usePosts();
   const drafts = useDrafts(route.page === "drafts" && canManagePosts);
+  const fishkaPermission = useFishkaPermission(route.page === "fishki" && Boolean(auth.user) && !canManagePosts);
   const postCreator = usePostCreator();
   const postEditor = usePostEditor();
   const postLike = usePostLike();
@@ -144,6 +145,15 @@ export function App() {
     }
     await posts.reload();
   };
+  const createFishka = async (draft: FishkaDraft) => {
+    await postCreator.create(draft);
+    if (draft.status === "published") {
+      await posts.reload();
+      setToast("Фишка опубликована");
+    } else {
+      setToast("Фишка отправлена на проверку");
+    }
+  };
   const updatePost = async (post: EditablePost, draft: Parameters<typeof postEditor.update>[1]): Promise<EditablePost> => {
     const updated = await postEditor.update(post.id, draft);
     const editable = { id: updated.id, title: updated.title, type: "article" as const, body: updated.body, status: draft.status, cover_url: updated.cover_url };
@@ -183,7 +193,7 @@ export function App() {
   const page: Page = route.page === "countries" && topicOpen ? "topic" : route.page;
   let content = null;
   if (page === "feed") content = <Feed posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} canCreate={canManagePosts} onCreatePost={createPost} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
-  if (page === "fishki") content = <Feed mode="fishki" posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
+  if (page === "fishki") content = <Feed mode="fishki" posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} canCreateFishka={canManagePosts || fishkaPermission.value?.can_submit_fishka === true} fishkaPublishesImmediately={canManagePosts} onCreateFishka={createFishka} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
   if (page === "countries" || page === "topic") {
     content = (
       <Forum

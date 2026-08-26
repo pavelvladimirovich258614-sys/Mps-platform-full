@@ -8,6 +8,7 @@ export type { Comment } from "../api/comments";
 export type User = { id: number; email: string | null; name: string; avatar_url: string | null; bio: string | null; role: string; is_anonymous: boolean };
 export type ApiPost = { id: number; type: "article" | "fishka" | "video_review"; title: string; slug: string; body: string; emoji?: string | null; cover_url?: string | null; liked_at?: string | null; views: number; likes_count: number; shot_at: string | null; author: { id: number; name: string; avatar_url: string | null } };
 export type PostDraft = { title: string; type: "article"; body: string; status: "draft" | "published"; cover_url?: string | null };
+export type FishkaDraft = { title: string; type: "fishka"; body: string; emoji: string; status: "pending" | "published" };
 export type DraftSummary = { id: number; title: string; updated_at: string };
 export type DraftPost = ApiPost & { status: "draft"; updated_at: string };
 export type Review = { id: number; author_name: string; rating: number; body: string; photo_url: string | null; status: string };
@@ -54,7 +55,8 @@ export function useAuth() {
 }
 
 export const usePosts = () => useResource(() => api<ApiPost[]>("/posts"), []);
-export const usePostCreator = () => ({ create: (post: PostDraft) => apiJson<ApiPost>("/posts", "POST", post) });
+export const usePostCreator = () => ({ create: (post: PostDraft | FishkaDraft) => apiJson<ApiPost>("/posts", "POST", post) });
+export const useFishkaPermission = (enabled: boolean) => useResource(() => enabled ? api<{ can_submit_fishka: boolean }>("/posts/fishki/permission") : Promise.resolve({ can_submit_fishka: false }), [enabled]);
 export const usePostEditor = () => ({ update: (postId: number, post: PostDraft) => apiJson<ApiPost>(`/posts/${postId}`, "PATCH", post), remove: (postId: number) => apiJson<void>(`/posts/${postId}`, "DELETE") });
 export const useDrafts = (enabled: boolean) => useResource(() => enabled ? api<DraftSummary[]>("/posts/drafts") : Promise.resolve([]), [enabled]);
 export const getDraft = (postId: number) => api<DraftPost>(`/posts/drafts/${postId}`);

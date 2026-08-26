@@ -1,5 +1,12 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 77 F37 Session B local completion — 2026-08-26
+
+- [x] Scope is frontend-only: fishka form/modal, effective-permission hook, API POST union, emoji card rendering, frontend tests and trackers. Backend, Alembic, admin settings UI, content import, email and production configuration are untouched.
+- [x] RED `npm test -- --run src/App.routing.test.tsx` outside the Windows sandbox — 3 expected failures: editor lacked the form, reader permission was not requested, and the reader hidden-state contract was absent. GREEN same target — 27 passed.
+- [x] Full frontend `npm test -- --run` — 19 files / 121 passed. `npm run build` — success, 116 modules; only the standard Vite chunk-size warning. The first sandbox test attempt stopped at esbuild `spawn EPERM`; the verified runs were repeated outside the sandbox.
+- [x] F37 remains `in_progress`; Session B is locally complete but intentionally uncommitted, unpushed and undeployed pending separate approval. Session C (admin settings UI) and Session D (160-item import) remain unstarted.
+
 ## Session 76 F37 Session A local completion — 2026-08-26
 
 - [x] Scope is limited to F37 backend foundations and the minimal frontend type cleanup: Post emoji/status model, Alembic `20260826_0014`, submission/moderation/settings APIs, API DTOs, tests and tracker files. The public form, admin settings UI, content import, CSS, email and production configuration are untouched.

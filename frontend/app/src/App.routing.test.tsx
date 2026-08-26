@@ -25,6 +25,7 @@ const fishka = {
   title: "Как не переплатить за трансфер",
   slug: "transfer-tip",
   body: "Проверенная короткая фишка.",
+  emoji: "💡",
 };
 
 const publicProfile = {
@@ -45,8 +46,9 @@ const jsonResponse = (status: number, body: unknown) => new Response(JSON.string
 });
 
 type DetailResult = "ok" | "missing" | "network";
+type FishkaOptions = { canSubmit?: boolean };
 
-function installApi(detailResult: DetailResult = "ok", currentUser: Record<string, unknown> | null = null, posts: ApiPost[] = [post], online: Array<{ id: number; name: string; avatar_url: string | null }> = [], profileComments: unknown[] = [], profileLikes: ApiPost[] = [], profileActivity: { items: unknown[]; next_cursor: string | null } = { items: [], next_cursor: null }, nextProfileActivity: { items: unknown[]; next_cursor: string | null } = { items: [], next_cursor: null }) {
+function installApi(detailResult: DetailResult = "ok", currentUser: Record<string, unknown> | null = null, posts: ApiPost[] = [post], online: Array<{ id: number; name: string; avatar_url: string | null }> = [], profileComments: unknown[] = [], profileLikes: ApiPost[] = [], profileActivity: { items: unknown[]; next_cursor: string | null } = { items: [], next_cursor: null }, nextProfileActivity: { items: unknown[]; next_cursor: string | null } = { items: [], next_cursor: null }, fishkaOptions: FishkaOptions = {}) {
   let likesCount = post.likes_count;
   let currentProfileLikes = profileLikes;
   const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
@@ -62,6 +64,8 @@ function installApi(detailResult: DetailResult = "ok", currentUser: Record<strin
       if (detailResult === "network") throw new TypeError("Failed to fetch");
       return jsonResponse(200, post);
     }
+    if (path === "/api/v1/posts/fishki/permission") return jsonResponse(200, { can_submit_fishka: fishkaOptions.canSubmit ?? false });
+    if (path === "/api/v1/posts" && init?.method === "POST") return jsonResponse(201, { ...fishka, ...JSON.parse(String(init.body)), status: JSON.parse(String(init.body)).status });
     if (path === "/api/v1/posts") return jsonResponse(200, posts);
     if (path === "/api/v1/posts/17/like") {
       likesCount = likesCount === post.likes_count ? likesCount + 1 : likesCount - 1;
@@ -211,7 +215,65 @@ describe("App pathname routing", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Фишки" })).toBeTruthy();
     expect(screen.getByRole("heading", { level: 2, name: fishka.title })).toBeTruthy();
+    expect(screen.getByText("💡")).toBeTruthy();
     expect(screen.queryByRole("heading", { level: 2, name: post.title })).toBeNull();
+  });
+
+  it("always shows the fishka form to an editor and publishes selected emoji immediately", async () => {
+    window.history.replaceState({}, "", "/fishki");
+    setAccessToken("editor-access-token");
+    const fetchMock = installApi("ok", { id: 5, email: null, name: "Редактор", avatar_url: null, bio: null, role: "editor", is_anonymous: false });
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Добавить фишку" }));
+    fireEvent.change(screen.getByLabelText("Заголовок фишки"), { target: { value: "Бронируйте заранее" } });
+    fireEvent.change(screen.getByLabelText("Текст фишки"), { target: { value: "Так будет больше вариантов." } });
+    expect(screen.getByRole("button", { name: "Опубликовать" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Опубликовать" }));
+    expect(await screen.findByText("Выберите эмодзи для фишки")).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([input, init]) => new URL(String(input)).pathname === "/api/v1/posts" && (init as RequestInit).method === "POST")).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Выбрать emoji 💡" }));
+    fireEvent.click(screen.getByRole("button", { name: "Опубликовать" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([input, init]) => {
+      if (new URL(String(input)).pathname !== "/api/v1/posts" || (init as RequestInit).method !== "POST") return false;
+      const body = JSON.parse(String((init as RequestInit).body));
+      return body.type === "fishka" && body.emoji === "💡" && body.status === "published";
+    })).toBe(true));
+    expect(await screen.findByText("Фишка опубликована")).toBeTruthy();
+  });
+
+  it("shows the fishka form to a reader only when the effective permission allows it and sends pending", async () => {
+    window.history.replaceState({}, "", "/fishki");
+    setAccessToken("reader-access-token");
+    const fetchMock = installApi("ok", { id: 7, email: null, name: "Мария", avatar_url: null, bio: null, role: "reader", is_anonymous: false }, [fishka], [], [], [], { items: [], next_cursor: null }, { items: [], next_cursor: null }, { canSubmit: true });
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Добавить фишку" }));
+    fireEvent.change(screen.getByLabelText("Заголовок фишки"), { target: { value: "Проверьте паспорт" } });
+    fireEvent.change(screen.getByLabelText("Текст фишки"), { target: { value: "До вылета." } });
+    fireEvent.click(screen.getByRole("button", { name: "Выбрать emoji 🧳" }));
+    expect(screen.getByRole("button", { name: "Отправить на модерацию" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Отправить на модерацию" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([input, init]) => {
+      if (new URL(String(input)).pathname !== "/api/v1/posts" || (init as RequestInit).method !== "POST") return false;
+      return JSON.parse(String((init as RequestInit).body)).status === "pending";
+    })).toBe(true));
+    expect(await screen.findByText("Фишка отправлена на проверку")).toBeTruthy();
+  });
+
+  it("hides the fishka form from a reader when the effective permission is disabled", async () => {
+    window.history.replaceState({}, "", "/fishki");
+    setAccessToken("reader-access-token");
+    const fetchMock = installApi("ok", { id: 7, email: null, name: "Мария", avatar_url: null, bio: null, role: "reader", is_anonymous: false });
+
+    render(<App />);
+
+    await screen.findByRole("heading", { level: 1, name: "Фишки" });
+    await waitFor(() => expect(fetchMock.mock.calls.some(([input]) => new URL(String(input)).pathname === "/api/v1/posts/fishki/permission")).toBe(true));
+    expect(screen.queryByRole("button", { name: "Добавить фишку" })).toBeNull();
   });
 
   it("navigates to Fishki from the sidebar and leaves one inactive article heading", async () => {
