@@ -5,7 +5,7 @@
 - [x] Scope is frontend-only: fishka form/modal, effective-permission hook, API POST union, emoji card rendering, frontend tests and trackers. Backend, Alembic, admin settings UI, content import, email and production configuration are untouched.
 - [x] RED `npm test -- --run src/App.routing.test.tsx` outside the Windows sandbox — 3 expected failures: editor lacked the form, reader permission was not requested, and the reader hidden-state contract was absent. GREEN same target — 27 passed.
 - [x] Full frontend `npm test -- --run` — 19 files / 121 passed. `npm run build` — success, 116 modules; only the standard Vite chunk-size warning. The first sandbox test attempt stopped at esbuild `spawn EPERM`; the verified runs were repeated outside the sandbox.
-- [x] F37 remains `in_progress`; Session B is locally complete but intentionally uncommitted, unpushed and undeployed pending separate approval. Session C (admin settings UI) and Session D (160-item import) remain unstarted.
+- [x] F37 remains `in_progress`; Session B production rollout is complete at `df36dc2`: VPS fast-forwarded, frontend rollback `/root/backups/mps-frontend-f37-b-20260826T025153Z` was retained, build created `index-BpaSMHEn.js` without localhost API, backend remained active without restart, and `deploy/smoke.sh` passed. The served bundle returned HTTP 200. Configured-admin live API proved permission=true, immediate published emoji fishka creation and public-list visibility, then cleaned up exactly the synthetic row (204). A literal browser modal click is unverified because no authenticated browser session was available. Session C (admin settings UI) and Session D (160-item import) remain unstarted.
 
 ## Session 76 F37 Session A local completion — 2026-08-26
 
