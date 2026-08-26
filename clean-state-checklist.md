@@ -1,5 +1,15 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 89 F38 Package 3–F44 production closeout — 2026-08-26
+
+- [x] Scope is tracker-only: `feature_list.json`, `claude-progress.md`, `session-handoff.md` and this checklist. No application source, dependency, database row, production configuration, service or deployment state changed.
+- [x] F38–F44 are recorded as `passing` and production-deployed at their actual revisions: `21e55ac`, `e688773`, `4f868ef`, `1782b5a`, `3d6ac1c`, `2ffb60d`, `0e49bbe`. F37 correctly remains `in_progress` because Sessions C/D were not started.
+- [x] Current-state evidence records production revision `0e49bbe`, Alembic `20260826_0015 (head)`, active/healthy backend, production VITE markers without localhost and passing smoke from the approved F44 rollout.
+- [x] The handoff explicitly preserves the external Unisender/HostKey email blocker, paused F37 C/D, deferred Иришка duplicate-run/admin UI work, low-priority forum N+1 follow-up and five npm advisories as separate future scopes.
+- [x] F38 is closed for delivered Packages 1–3; the two unstarted Иришка enhancements are explicitly deferred and do not masquerade as completed implementation.
+- [x] Final `./init.sh` stopped only at the known external Hermes/desktop global pip-check before MPS tests; no environment repair was attempted.
+- [x] Before the authorised local commit: validated `feature_list.json`, proved F38–F44 all passing, ran `git diff --check`, inspected the exact four-file staged allowlist and created the local commit. Push remains unapproved; final worktree cleanliness was checked after the commit.
+
 ## Session 88 F44 local completion — 2026-08-26
 
 - [x] Scope is limited to the Q&A one-shot deep-link, bell/acknowledgement/answer presentation, owner soft archive, migration `20260826_0015`, regression tests and trackers. No push, production database, configuration, service or deployment state changed.
