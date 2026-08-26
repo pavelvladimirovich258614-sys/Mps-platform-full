@@ -35,6 +35,7 @@ describe("Forum pagination", () => {
     const fetchMock = installForumApi();
     render(<Forum page="countries" initialCountryId={1} onNavigate={vi.fn()} onCountryNavigate={vi.fn()} onError={vi.fn()} />);
 
+    expect(await screen.findByRole("heading", { name: "Страны — Форум" })).toBeTruthy();
     expect(await screen.findByRole("heading", { name: /Темы:\s*ОАЭ/ })).toBeTruthy();
     expect(await screen.findByText("Третья тема")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Показать ещё" }));
@@ -50,6 +51,7 @@ describe("Forum pagination", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /Вторая тема/ }));
     rerender(<Forum page="topic" initialCountryId={1} onNavigate={vi.fn()} onCountryNavigate={vi.fn()} onError={vi.fn()} />);
+    expect(await screen.findByRole("button", { name: "← Форум стран" })).toBeTruthy();
     expect(await screen.findByText("Третье сообщение")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Показать ещё" }));
 

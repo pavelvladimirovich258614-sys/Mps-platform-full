@@ -9,6 +9,26 @@ const callbacks = {
 };
 
 describe("Layout presence", () => {
+  it("uses the forum wording in navigation and footer", () => {
+    render(
+      <Layout
+        {...callbacks}
+        page="countries"
+        theme="dark"
+        notificationsOpen={false}
+        unreadCount={0}
+        userName="Павел"
+        online={[]}
+        publicSettings={null}
+      >
+        <main>Форум</main>
+      </Layout>,
+    );
+
+    expect(screen.getByRole("button", { name: "Форум стран" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Страны" })).toBeNull();
+  });
+
   it("uses each online user's avatar and anchors the green indicator to its avatar", () => {
     const view = render(
       <Layout

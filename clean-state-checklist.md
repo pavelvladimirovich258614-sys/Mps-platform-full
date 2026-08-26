@@ -1,5 +1,12 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 75 F36 Package 4 local completion — 2026-08-26
+
+- [x] F36 is locally `passing` after all four packages. Scope is limited to four visible frontend wording substitutions; CSS, routes, API, backend, schema, email and production configuration are untouched.
+- [x] RED targeted `Forum.test.tsx` + `Layout.test.tsx` — 3 expected failures for the absent «Страны — Форум» heading, «← Форум стран» back-link and «Форум стран» navigation text. GREEN same target — 7 passed.
+- [x] Full frontend `npm test -- --run` — 19 files / 118 passed. `npm run build` — success, 115 modules; only the standard Vite chunk-size warning. `./init.sh` is not part of this frontend-only package verification and was not rerun.
+- [x] Package 4 is intentionally uncommitted, unpushed and not production-deployed. A separate approval is required before any rollout; Packages 1–3 production evidence remains unchanged.
+
 ## Session 74 F36 Package 3 local completion — 2026-08-26
 
 - [x] F36 remains the sole `in_progress` feature. Scope is limited to forum topic/message deletion, authorization, cascades and message metadata; naming, email transport and production configuration are untouched.
