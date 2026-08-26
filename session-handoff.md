@@ -2,13 +2,13 @@
 
 ## Current verified state — 2026-08-26
 
-F15–F35 are complete and production-deployed. F36 is locally `passing`: Packages 1–3 are production-deployed at `61ff1a5`, `6128c74` and `0bc8c3e` (`main`, `origin/main` and VPS `/opt/mps-platform` synchronized), while Package 4 is an uncommitted frontend-only wording update awaiting separate production approval. Package 1 had a fresh PostgreSQL backup and Alembic `20260826_0013`; Packages 2–3 restarted the backend and passed smoke/live synthetic checks.
+F15–F35 are complete and production-deployed. F36 is `passing` and production-deployed at `c380667`: Packages 1–3 are deployed at `61ff1a5`, `6128c74` and `0bc8c3e`; all local, origin and VPS `/opt/mps-platform` heads are synchronized. Package 1 had a fresh PostgreSQL backup and Alembic `20260826_0013`; Packages 2–3 restarted the backend and passed smoke/live synthetic checks; Package 4 was frontend-only and left the backend active without restart.
 
-## F36 Package 4 — local completion, deployment unapproved
+## F36 Package 4 — production deployed
 
 - Visible wording only: the page heading is «Страны — Форум», sidebar/mobile/footer navigation is «Форум стран», and the topic back-link is «← Форум стран». No CSS, route, API, backend or schema changed.
 - RED→GREEN: targeted RED had 3 expected missing-text assertions (heading, back-link, navigation); targeted `Forum.test.tsx` + `Layout.test.tsx` GREEN — 7 passed. Full frontend `npm test -- --run` — 19 files / 118 passed; `npm run build` — success with 115 modules and only the standard chunk-size warning.
-- F36 may be committed/pushed and Package 4 frontend-deployed only after separate approval. Do not imply that the current production wording has changed.
+- Production evidence: `c380667` fast-forwarded the VPS; the old `dist` is recoverable at `/root/backups/mps-frontend-f36-p4-20260826T011453Z`. Remote build verified the production API marker and no localhost API, `deploy/smoke.sh` passed, and a live browser navigated via «Форум стран» to the heading «Страны — Форум».
 
 ## F36 Package 1 — production deployed
 

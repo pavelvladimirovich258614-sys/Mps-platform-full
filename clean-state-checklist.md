@@ -5,7 +5,7 @@
 - [x] F36 is locally `passing` after all four packages. Scope is limited to four visible frontend wording substitutions; CSS, routes, API, backend, schema, email and production configuration are untouched.
 - [x] RED targeted `Forum.test.tsx` + `Layout.test.tsx` — 3 expected failures for the absent «Страны — Форум» heading, «← Форум стран» back-link and «Форум стран» navigation text. GREEN same target — 7 passed.
 - [x] Full frontend `npm test -- --run` — 19 files / 118 passed. `npm run build` — success, 115 modules; only the standard Vite chunk-size warning. `./init.sh` is not part of this frontend-only package verification and was not rerun.
-- [x] Package 4 is intentionally uncommitted, unpushed and not production-deployed. A separate approval is required before any rollout; Packages 1–3 production evidence remains unchanged.
+- [x] Package 4 production rollout is complete: `c380667` synchronized local/origin/VPS, current dist was backed up at `/root/backups/mps-frontend-f36-p4-20260826T011453Z`, backend remained active without restart, production build markers passed, and `deploy/smoke.sh` returned `[OK]`. Live browser navigation showed «Форум стран» and heading «Страны — Форум».
 
 ## Session 74 F36 Package 3 local completion — 2026-08-26
 
