@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { setAccessToken } from "./api/client";
 import { App } from "./App";
-import type { ApiPost } from "./hooks";
+import type { ApiPost, Notification, Question } from "./hooks";
 
 const post = {
   id: 17,
@@ -44,10 +44,15 @@ const jsonResponse = (status: number, body: unknown) => new Response(JSON.string
   status,
   headers: { "Content-Type": "application/json" },
 });
+const scrollIntoViewMock = vi.fn();
 
 type DetailResult = "ok" | "missing" | "network";
 type FishkaOptions = { canSubmit?: boolean };
-type QAOptions = { irishkaResponse?: Promise<Response> };
+type QAOptions = {
+  irishkaResponse?: Promise<Response>;
+  questions?: Question[];
+  notifications?: Notification[];
+};
 
 function installApi(detailResult: DetailResult = "ok", currentUser: Record<string, unknown> | null = null, posts: ApiPost[] = [post], online: Array<{ id: number; name: string; avatar_url: string | null }> = [], profileComments: unknown[] = [], profileLikes: ApiPost[] = [], profileActivity: { items: unknown[]; next_cursor: string | null } = { items: [], next_cursor: null }, nextProfileActivity: { items: unknown[]; next_cursor: string | null } = { items: [], next_cursor: null }, fishkaOptions: FishkaOptions = {}, qaOptions: QAOptions = {}) {
   let likesCount = post.likes_count;
@@ -76,12 +81,13 @@ function installApi(detailResult: DetailResult = "ok", currentUser: Record<strin
     if (path === "/api/v1/posts/17" && init?.method === "PATCH") return jsonResponse(200, { ...post, ...JSON.parse(String(init.body)) });
     if (path === "/api/v1/posts/17" && init?.method === "DELETE") return new Response(null, { status: 204 });
     if (path === "/api/v1/posts/17/comments") return jsonResponse(200, []);
-    if (path === "/api/v1/qa/my") return jsonResponse(200, []);
+    if (path === "/api/v1/qa/my") return jsonResponse(200, qaOptions.questions ?? []);
     if (path === "/api/v1/qa/irishka" && init?.method === "POST") return qaOptions.irishkaResponse ?? jsonResponse(200, { answer: "Ответ Иришки" });
     if (path === "/api/v1/countries") return jsonResponse(200, [{ id: 1, name: "ОАЭ", topics_count: 0 }]);
     if (path === "/api/v1/countries/1/topics") return jsonResponse(200, { items: [], next_cursor: null });
     if (path === "/api/v1/online") return jsonResponse(200, online);
-    if (path === "/api/v1/notifications") return jsonResponse(200, { items: [] });
+    if (path === "/api/v1/notifications") return jsonResponse(200, { items: qaOptions.notifications ?? [] });
+    if (path === "/api/v1/notifications/read" && init?.method === "PATCH") return jsonResponse(200, { updated: 1 });
     if (path === "/api/v1/auth/logout") return new Response(null, { status: 204 });
     if (path === "/api/v1/me" && currentUser) return jsonResponse(200, currentUser);
     if (path === "/api/v1/me" || path === "/api/v1/auth/refresh") {
@@ -100,11 +106,13 @@ describe("App pathname routing", () => {
     localStorage.setItem("mps-cookie-consent", "accepted");
     window.history.replaceState({}, "", "/");
     vi.stubGlobal("scrollTo", vi.fn());
+    Object.defineProperty(Element.prototype, "scrollIntoView", { configurable: true, value: scrollIntoViewMock });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    Reflect.deleteProperty(Element.prototype, "scrollIntoView");
   });
 
   it("loads and renders an article opened directly by pathname", async () => {
@@ -327,6 +335,48 @@ describe("App pathname routing", () => {
     expect(fetchMock.mock.calls.some(([input, init]) => {
       if (new URL(String(input)).pathname !== "/api/v1/qa/irishka" || (init as RequestInit).method !== "POST") return false;
       return JSON.parse(String((init as RequestInit).body)).text === "Что посмотреть в Шардже?";
+    })).toBe(true);
+  });
+
+  it("labels qa_answered notifications using the linked question target", async () => {
+    setAccessToken("reader-access-token");
+    const questions: Question[] = [
+      { id: 41, target: "manager", body: "Вопрос менеджеру", status: "answered", answer: "Ответ менеджера" },
+      { id: 42, target: "lawyer", body: "Вопрос юристу", status: "answered", answer: "Ответ юриста" },
+    ];
+    const notifications: Notification[] = [
+      { id: 91, type: "qa_answered", payload: { question_id: 41 }, is_read: false, created_at: "2026-08-26T10:00:00Z" },
+      { id: 92, type: "qa_answered", payload: { question_id: 42 }, is_read: false, created_at: "2026-08-26T10:01:00Z" },
+    ];
+    installApi("ok", { id: 7, email: null, name: "Мария", avatar_url: null, bio: null, role: "reader", is_anonymous: false }, [post], [], [], [], { items: [], next_cursor: null }, { items: [], next_cursor: null }, {}, { questions, notifications });
+
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Уведомления" }));
+
+    expect(await screen.findByRole("button", { name: /Менеджер ответил на ваш вопрос/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Юрист ответил на ваш вопрос/ })).toBeTruthy();
+  });
+
+  it("opens the linked QA thread, selects its tab and marks only that notification read", async () => {
+    setAccessToken("reader-access-token");
+    const question: Question = { id: 42, target: "lawyer", body: "Нужна консультация", status: "answered", answer: "Ответ юриста" };
+    const notification: Notification = { id: 92, type: "qa_answered", payload: { question_id: 42 }, is_read: false, created_at: "2026-08-26T10:01:00Z" };
+    const fetchMock = installApi("ok", { id: 7, email: null, name: "Мария", avatar_url: null, bio: null, role: "reader", is_anonymous: false }, [post], [], [], [], { items: [], next_cursor: null }, { items: [], next_cursor: null }, {}, { questions: [question], notifications: [notification] });
+
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Уведомления" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Юрист ответил на ваш вопрос/ }));
+
+    expect(await screen.findByRole("dialog", { name: "Вопрос-ответ" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Юрист" }).classList.contains("current")).toBe(true);
+    const linkedQuestion = await screen.findByTestId("qa-question-42");
+    expect(linkedQuestion.classList.contains("qa-message-focused")).toBe(true);
+    expect(within(linkedQuestion).getByText("Нужна консультация")).toBeTruthy();
+    expect(within(linkedQuestion).getByText("Ответ юриста")).toBeTruthy();
+    expect(scrollIntoViewMock).toHaveBeenCalled();
+    expect(fetchMock.mock.calls.some(([input, init]) => {
+      if (new URL(String(input)).pathname !== "/api/v1/notifications/read" || (init as RequestInit).method !== "PATCH") return false;
+      return JSON.parse(String((init as RequestInit).body)).ids?.[0] === 92;
     })).toBe(true);
   });
 

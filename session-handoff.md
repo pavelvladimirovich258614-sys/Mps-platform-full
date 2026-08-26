@@ -8,7 +8,14 @@
 - F40 is passing and production-deployed at `4f868ef`: its frontend bundle was rebuilt with production VITE values, `localhost` absent, and smoke passed; mps-backend stayed active without restart.
 - F41 is fully `passing`, deployed and production-activated at `1782b5a`. `POST /api/v1/internal/telegram-webhook` fail-closes on the Telegram secret header, accepts reply updates only from the configured manager chat or lawyer account, and reuses the Question/Notification transition. setWebhook is registered at the production HTTPS endpoint; live manager and lawyer replies are persisted end-to-end. Outbound relay errors have token-free logs and exceptions.
 - F42 is `passing` and production-deployed at `3d6ac1c`: the shared MiniMax transport strips a complete leading `<think>…</think>` block before direct Q&A or forum autoreply returns the answer. Backend restart health and smoke passed; frontend was unchanged.
-- F43 is `open`, not started: an already-open Q&A modal can retain a locally cached `open` Question after Telegram has answered it. Reopening remounts `useQA` and refetches; future work may add conditional polling or open/focus refetch.
+- F43 is `passing` locally and not deployed: qa_answered notifications display the linked Question's manager/lawyer source, open the correct Q&A tab and focus the exact thread. An open modal polls every 30 seconds only while an unanswered Question exists and stops after answer or unmount.
+
+## F43 evidence
+
+- RED `npm test -- --run src/App.routing.test.tsx src/hooks/useQA.test.tsx` — 3 expected failures / 30 passed: notification rows were not actionable and `useQA` did not perform the timed refetch.
+- GREEN same target — 33 passed. It covers manager/lawyer labels, exact-thread deep-link, selective read, loading of question/answer, one-time scroll and conditional polling cleanup.
+- Full frontend suite — 21 files / 129 tests passed. `npm run build` — success, 116 modules, standard Vite chunk-size warning only.
+- Final `./init.sh` stopped only at the known external Hermes/desktop global `pip check` before MPS tests. No backend, API, schema, migration, credential or production state changed.
 
 ## F41 complete evidence
 
@@ -34,4 +41,4 @@
 
 ## Next action and boundaries
 
-Commit only the tracker closeout files. F43 remains `open`; do not start its polling/refetch implementation without a separate plan and approval. Do not touch F37 C/D, F38 deferred work, Unisender/HostKey/email or MiniMax credentials.
+Commit the approved F43 frontend/tests/trackers locally, then wait for separate push/deploy approval. Do not touch F37 C/D, F38 deferred work, Unisender/HostKey/email or MiniMax credentials.

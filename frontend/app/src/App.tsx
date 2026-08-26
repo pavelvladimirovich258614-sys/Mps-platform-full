@@ -15,7 +15,7 @@ import { PublicProfile } from "./components/PublicProfile";
 import { QA } from "./components/QA";
 import { Reviews } from "./components/Reviews";
 import { Subscribe } from "./components/Subscribe";
-import { getDraft, getLikedPosts, type ApiPost, type FishkaDraft, useAuthorPosts, useAuth, useDrafts, useFishkaPermission, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, useProfileActivity, useProfileComments, useProfileFollowers, useProfileFollowing, usePublicProfile, usePublicSettings, useUserFollow } from "./hooks";
+import { getDraft, getLikedPosts, type ApiPost, type FishkaDraft, useAuthorPosts, useAuth, useDrafts, useFishkaPermission, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, useProfileActivity, useProfileComments, useProfileFollowers, useProfileFollowing, usePublicProfile, usePublicSettings, useQAQuestions, useUserFollow } from "./hooks";
 import { pathForRoute, type PathRoute, routeFromPath } from "./router";
 
 function routeForPage(page: Page): PathRoute {
@@ -35,6 +35,7 @@ export function App() {
     () => localStorage.getItem("mps-theme2") === "light" ? "light" : "dark",
   );
   const [overlay, setOverlay] = useState<"qa" | "profile" | null>(null);
+  const [qaQuestionId, setQaQuestionId] = useState<number | null>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [cookiesAccepted, setCookiesAccepted] = useState(
     () => localStorage.getItem("mps-cookie-consent") === "accepted",
@@ -54,6 +55,7 @@ export function App() {
   const postEditor = usePostEditor();
   const postLike = usePostLike();
   const notifications = useNotifications();
+  const notificationQuestions = useQAQuestions(notificationsOpen);
   const online = useOnline(auth.user?.id);
   const publicSettings = usePublicSettings();
   const article = usePost(route.page === "article" ? route.slug : undefined);
@@ -311,7 +313,7 @@ export function App() {
         publicSettings={publicSettings.value}
         onNavigate={openPage}
         onThemeToggle={() => setTheme(theme === "dark" ? "light" : "dark")}
-        onOpenQA={() => setOverlay("qa")}
+        onOpenQA={() => { setQaQuestionId(null); setOverlay("qa"); }}
         onOpenProfile={() => {
           if (auth.user) navigate({ page: "profile", userId: auth.user.id });
           else setOverlay("profile");
@@ -324,6 +326,15 @@ export function App() {
         {notificationsOpen && (
           <Notifications
             notifications={notifications.items}
+            questions={notificationQuestions.value ?? []}
+            onOpenQuestion={(notification, questionId) => {
+              setNotificationsOpen(false);
+              setQaQuestionId(questionId);
+              setOverlay("qa");
+              void notifications.read([notification.id]).catch((cause) => showError(
+                cause instanceof Error ? cause.message : "Не удалось обновить уведомление",
+              ));
+            }}
             onReadAll={() => {
               void notifications.read().catch((cause) => showError(
                 cause instanceof Error ? cause.message : "Не удалось обновить уведомления",
@@ -331,7 +342,7 @@ export function App() {
             }}
           />
         )}
-        {overlay === "qa" && <QA onClose={() => setOverlay(null)} onError={showError} onPrivacy={() => { setOverlay(null); openPage("privacy"); }} />}
+        {overlay === "qa" && <QA initialQuestionId={qaQuestionId} onClose={() => { setOverlay(null); setQaQuestionId(null); }} onError={showError} onPrivacy={() => { setOverlay(null); setQaQuestionId(null); openPage("privacy"); }} />}
         {overlay === "profile" && (
           <Profile
             user={auth.user}

@@ -1,5 +1,16 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 87 F43 local completion — 2026-08-26
+
+- [x] Scope is frontend Q&A notification deep-link, correct manager/lawyer label, conditional polling, regression tests and trackers. No backend, API, database, migration, credential or production state changed.
+- [x] RED target `npm test -- --run src/App.routing.test.tsx src/hooks/useQA.test.tsx` — 3 expected failures / 30 passed: qa_answered notifications were not interactive and `useQA` fetched only once.
+- [x] GREEN same target — 33 passed: exact Question target controls label/tab, the linked thread is shown and scrolled into view, only the clicked notification is marked read, and 30-second polling stops after answer/unmount.
+- [x] Full frontend suite — 21 test files / 129 tests passed.
+- [x] `npm run build` — success, 116 modules; standard Vite chunk-size warning only.
+- [x] Final `./init.sh` outside sandbox stopped only at the known external Hermes/desktop global pip-check conflicts before MPS tests; no environment repair was attempted.
+- [x] F43 is marked `passing` locally with push/deploy explicitly deferred until separate approval.
+- [x] Before the authorised local commit: validate feature_list.json, run `git diff --check`, inspect the exact staged name-status and confirm a clean worktree after commit.
+
 ## Session 86 F41 production activation closeout / F43 open note — 2026-08-26
 
 - [x] Scope is tracker-only: `feature_list.json`, `claude-progress.md`, `session-handoff.md` and this checklist. No application source, production environment, database row, webhook registration or service state changed.
