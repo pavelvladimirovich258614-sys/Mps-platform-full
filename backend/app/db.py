@@ -1,5 +1,6 @@
 from collections.abc import AsyncIterator
 
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -15,6 +16,10 @@ class Database:
 
     def __init__(self, settings: Settings) -> None:
         self.engine: AsyncEngine = create_async_engine(settings.database_url, pool_pre_ping=True)
+        if settings.database_url.startswith("sqlite"):
+            @event.listens_for(self.engine.sync_engine, "connect")
+            def enable_sqlite_foreign_keys(dbapi_connection, _connection_record) -> None:
+                dbapi_connection.execute("PRAGMA foreign_keys=ON")
         self.session_factory = async_sessionmaker(self.engine, expire_on_commit=False)
 
     async def session(self) -> AsyncIterator[AsyncSession]:

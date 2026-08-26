@@ -1,5 +1,13 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 74 F36 Package 3 local completion — 2026-08-26
+
+- [x] F36 remains the sole `in_progress` feature. Scope is limited to forum topic/message deletion, authorization, cascades and message metadata; naming, email transport and production configuration are untouched.
+- [x] RED backend `tests/test_forum.py -k deletion` — 3 expected failures because both DELETE routes returned 404. GREEN same target — 3 passed; full forum suite — 11 passed / 3 PostgreSQL-only skipped.
+- [x] RED frontend `Forum.test.tsx` — 2 expected failures for absent delete controls. GREEN same target — 5 passed: author/admin visibility for topics and messages, no DELETE before confirmation, DELETE after confirmation and immediate removal from UI.
+- [x] Full backend pytest completed successfully. Full frontend `npm test -- --run` — 19 files / 117 passed; `npm run build` — success, 115 modules, standard chunk-size warning only. Final `./init.sh` stopped only at the agreed external global Hermes/desktop `pip check` conflicts before MPS tests; no external-environment repair was attempted.
+- [x] Package 2 rollout is recorded correctly: `6128c74` synchronized local/origin/VPS; backend restart, smoke and live counter/rate-limit check passed. Package 3 production deployment remains explicitly unapproved.
+
 ## Session 73 F36 Package 2 local completion — 2026-08-26
 
 - [x] F36 remains the sole `in_progress` feature. Scope is limited to forum write atomicity and per-user rate limiting; deletion, naming, email transport, frontend behavior and production configuration are untouched.
@@ -8,7 +16,7 @@
 - [x] Full backend pytest completed successfully against the same temporary PostgreSQL. Frontend regression `npm run test:quiet` — 19 files / 114 passed; `npm run build` — success, 115 modules, only the standard chunk-size warning.
 - [x] Final `./init.sh` outside sandbox stopped only at agreed external global Hermes/desktop `pip check` conflicts before MPS tests; no external-environment repair was attempted.
 - [x] Package 1 rollout is recorded correctly: `61ff1a5` synchronized local/origin/VPS, fresh readable PostgreSQL backup, Alembic `20260826_0013`, backend health, frontend publish and `deploy/smoke.sh` all passed.
-- [x] Package 2 production deployment is intentionally unperformed and needs separate approval. Current SlowAPI storage is process-local; production remains one backend worker, while any multi-worker future needs Redis-backed limiter storage.
+- [x] Package 2 was subsequently deployed at `6128c74`: backend restart, smoke and live synthetic counter/rate-limit check passed. Current SlowAPI storage is process-local; production remains one backend worker, while any multi-worker future needs Redis-backed limiter storage.
 
 ## Session 72 F36 Package 1 local completion — 2026-08-26
 

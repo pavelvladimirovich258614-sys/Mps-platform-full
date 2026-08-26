@@ -2,7 +2,7 @@
 
 ## Current verified state — 2026-08-26
 
-F15–F35 are complete and production-deployed. F36 Package 1 is production-deployed at `61ff1a5` (`main`, `origin/main` and VPS `/opt/mps-platform` synchronized): fresh PostgreSQL backup, Alembic `20260826_0013`, active `mps-backend`, rebuilt frontend and `deploy/smoke.sh` all passed. F36 Package 2 is local-only and F36 remains `in_progress` until Packages 3–4.
+F15–F35 are complete and production-deployed. F36 Packages 1–2 are production-deployed at `61ff1a5` and `6128c74` (`main`, `origin/main` and VPS `/opt/mps-platform` synchronized): Package 1 had a fresh PostgreSQL backup and Alembic `20260826_0013`; Package 2 restarted the backend and passed smoke/live synthetic checks. Package 3 is locally complete and F36 remains `in_progress` until Package 4.
 
 ## F36 Package 1 — production deployed
 
@@ -11,13 +11,21 @@ F15–F35 are complete and production-deployed. F36 Package 1 is production-depl
 - Verification: backend RED — 3 expected failures; GREEN `test_forum.py` — 7 passed, including temporary PostgreSQL 16 Cyrillic search. Temporary PostgreSQL migration and all three indexes were observed. Frontend RED exposed the array-to-page-envelope crash; GREEN `Forum.test.tsx` — 2 passed. Full backend — 83 passed in 69.10s; frontend — 19 files / 114 passed; build — success, 115 modules. `./init.sh` stopped only at the external global Hermes/desktop pip-check before MPS tests.
 - Production evidence: forum API observed a country with one topic and one message; both page responses had `next_cursor=null`, and the current production bundle was served after build. Do not alter the known Unisender/HostKey boundary without a separate decision.
 
-## F36 Package 2 — local completion, deployment unapproved
+## F36 Package 3 — local completion, deployment unapproved
+
+- Backend: `DELETE /topics/{topic_id}` and `DELETE /messages/{message_id}` permit the author or `admin`, reject others with Russian 403 and absent resources with Russian 404. Topic deletion cascades to messages through the existing FK; SQLite enables `PRAGMA foreign_keys=ON` so local/test behavior matches PostgreSQL.
+- Message deletion: after the message flushes, one SQL `UPDATE` decrements `messages_count` without going below zero and recalculates `last_message_at` from `MAX(messages.created_at)`, falling back to `topic.created_at` when the topic becomes empty. This update and the DELETE commit together.
+- Frontend: topic list items have additive `author_id`; the author/admin sees «Удалить» only for permitted topics/messages. The F15/F30 confirmation modal prevents DELETE until «Подтвердить удаление» and removes the confirmed item immediately from the current page.
+- RED→GREEN: backend RED — 3 expected 404 failures; GREEN deletion target — 3 passed; full forum suite — 11 passed / 3 PostgreSQL-only skipped. Frontend RED — 2 expected missing-control failures; GREEN target — 5 passed. Final backend pytest completed successfully; frontend — 19 files / 117 passed; build — success, 115 modules. `./init.sh` stopped only at the agreed external Hermes/desktop pip-check conflicts before MPS tests.
+- Deployment is not approved. No migration is needed, but before a rollout obtain explicit approval, create a fresh PostgreSQL backup, pull `main`, restart the backend, rebuild/publish frontend, and run smoke.
+
+## F36 Package 2 — production deployed
 
 - Topic quota: reader/premium topic creation obtains a PostgreSQL `SELECT FOR UPDATE` lock on the author row before `COUNT` and `INSERT`. With only one quota slot left, concurrent requests now admit exactly one topic and return the existing Russian 403 limit error for the rest.
 - Message counters: API and Иришка issue atomic SQL `UPDATE ... messages_count = messages_count + 1`, so concurrent message writes cannot lose increments. No migration or frontend contract change was needed.
 - Rate limits: SlowAPI derives its key from the verified access-token `sub` (fallback IP only for unauthenticated/invalid credentials). It applies 5 topic creations/minute and 10 messages/minute per user; exceeded requests return Russian 429 `Слишком много запросов. Попробуйте через минуту.`
 - Verification: real PostgreSQL RED — 5 expected failures; GREEN `tests/test_forum.py tests/test_irishka.py` — 17 passed in 9.04s. Full backend pytest completed successfully; frontend — 19 files / 114 passed; build — success, 115 modules; `./init.sh` stopped only at the external global Hermes/desktop pip check before MPS tests.
-- Deployment is not approved. Before any rollout: obtain explicit approval, create a fresh PostgreSQL backup, pull `main`, apply no new migration (none exists in Package 2), restart backend, rebuild frontend only if a fresh release requires it, and run smoke. Process-local SlowAPI storage is adequate only while production stays single-worker; Redis-backed limits are a future scaling task.
+- Production evidence: commit `6128c74` was synchronized to local/origin/VPS; backend restarted and `deploy/smoke.sh` passed. A live synthetic check created a topic and two messages with `messages_count=2`, then observed Russian 429 on the sixth topic request; synthetic rows were removed. Process-local SlowAPI storage remains adequate only while production stays single-worker; Redis-backed limits are a future scaling task.
 
 ## F35 complete cycle
 

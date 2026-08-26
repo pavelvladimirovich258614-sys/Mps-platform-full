@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import case, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps import get_current_user, get_db
@@ -87,7 +87,7 @@ async def topics(
     )).all())
     page = rows[:limit]
     return {
-        "items": [{"id": topic.id, "title": topic.title, "messages_count": topic.messages_count} for topic in page],
+        "items": [{"id": topic.id, "title": topic.title, "author_id": topic.author_id, "messages_count": topic.messages_count} for topic in page],
         "next_cursor": encode_forum_cursor(page[-1].id) if len(rows) > limit else None,
     }
 
@@ -115,7 +115,7 @@ async def create_topic(
     session.add(topic)
     await session.commit()
     await session.refresh(topic)
-    return {"id": topic.id, "title": topic.title}
+    return {"id": topic.id, "title": topic.title, "author_id": topic.author_id, "messages_count": topic.messages_count}
 
 
 @router.get("/topics/{topic_id}/messages")
@@ -197,3 +197,51 @@ async def message(
     await session.commit()
     await session.refresh(forum_message)
     return {"id": forum_message.id, "body": forum_message.body}
+
+
+@router.delete("/topics/{topic_id}", status_code=204)
+async def delete_topic(
+    topic_id: int,
+    session: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Удаляет свою тему или любую тему для администратора; сообщения каскадируются БД."""
+    topic = await session.get(ForumTopic, topic_id)
+    if topic is None:
+        raise HTTPException(404, "Тема не найдена")
+    if topic.author_id != user.id and user.role != Role.ADMIN:
+        raise HTTPException(403, "Недостаточно прав")
+    await session.delete(topic)
+    await session.commit()
+
+
+@router.delete("/messages/{message_id}", status_code=204)
+async def delete_message(
+    message_id: int,
+    session: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Удаляет своё сообщение или любое сообщение для администратора и обновляет тему атомарно."""
+    forum_message = await session.get(ForumMessage, message_id)
+    if forum_message is None:
+        raise HTTPException(404, "Сообщение не найдено")
+    if forum_message.author_id != user.id and user.role != Role.ADMIN:
+        raise HTTPException(403, "Недостаточно прав")
+
+    topic_id = forum_message.topic_id
+    await session.delete(forum_message)
+    await session.flush()
+    newest_remaining_message_at = (
+        select(func.max(ForumMessage.created_at))
+        .where(ForumMessage.topic_id == topic_id)
+        .scalar_subquery()
+    )
+    await session.execute(
+        update(ForumTopic)
+        .where(ForumTopic.id == topic_id)
+        .values(
+            messages_count=case((ForumTopic.messages_count > 0, ForumTopic.messages_count - 1), else_=0),
+            last_message_at=func.coalesce(newest_remaining_message_at, ForumTopic.created_at),
+        )
+    )
+    await session.commit()

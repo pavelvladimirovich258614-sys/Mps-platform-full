@@ -189,6 +189,7 @@ export function App() {
       <Forum
         page={page}
         initialCountryId={route.page === "countries" ? route.countryId : undefined}
+        viewer={auth.user}
         onNavigate={openPage}
         onCountryNavigate={(countryId) => navigate({ page: "countries", countryId })}
         onError={showError}

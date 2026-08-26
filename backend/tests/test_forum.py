@@ -1,5 +1,6 @@
 import asyncio
 import os
+from datetime import datetime, timedelta
 
 import fakeredis.aioredis
 import httpx,pytest,pytest_asyncio
@@ -247,3 +248,66 @@ async def test_forum_message_rate_limit_returns_russian_429(client,test_app):
 
  assert limited.status_code==429
  assert "слишком много" in limited.json()["detail"].lower()
+
+
+async def test_forum_topic_deletion_allows_author_and_admin_and_cascades_messages(client, test_app):
+ c=await country(test_app);author=await user(test_app,"delete-topic-author@example.com",Role.EDITOR);other=await user(test_app,"delete-topic-other@example.com");admin=await user(test_app,"delete-topic-admin@example.com",Role.ADMIN)
+ first=(await client.post(f"/api/v1/countries/{c.id}/topics",headers=hdr(test_app,author),json={"title":"Тема автора"})).json()
+ message=await client.post(f"/api/v1/topics/{first['id']}/messages",headers=hdr(test_app,other),json={"body":"Каскадное сообщение"})
+ assert message.status_code==201
+
+ forbidden=await client.delete(f"/api/v1/topics/{first['id']}",headers=hdr(test_app,other))
+ assert forbidden.status_code==403
+ removed=await client.delete(f"/api/v1/topics/{first['id']}",headers=hdr(test_app,author))
+ assert removed.status_code==204
+ async with test_app.state.database.session_factory() as s:
+  assert await s.get(ForumTopic,first["id"]) is None
+  assert await s.scalar(select(ForumMessage).where(ForumMessage.topic_id==first["id"])) is None
+
+ second=(await client.post(f"/api/v1/countries/{c.id}/topics",headers=hdr(test_app,author),json={"title":"Тема для администратора"})).json()
+ admin_removed=await client.delete(f"/api/v1/topics/{second['id']}",headers=hdr(test_app,admin))
+ assert admin_removed.status_code==204
+
+
+async def test_forum_message_deletion_allows_author_and_admin_and_updates_count(client, test_app):
+ c=await country(test_app);topic_author=await user(test_app,"delete-message-topic@example.com",Role.EDITOR);message_author=await user(test_app,"delete-message-author@example.com");other=await user(test_app,"delete-message-other@example.com");admin=await user(test_app,"delete-message-admin@example.com",Role.ADMIN)
+ topic=(await client.post(f"/api/v1/countries/{c.id}/topics",headers=hdr(test_app,topic_author),json={"title":"Тема с сообщениями"})).json()
+ first=await client.post(f"/api/v1/topics/{topic['id']}/messages",headers=hdr(test_app,message_author),json={"body":"Первое"})
+ second=await client.post(f"/api/v1/topics/{topic['id']}/messages",headers=hdr(test_app,other),json={"body":"Второе"})
+ assert first.status_code==201 and second.status_code==201
+
+ forbidden=await client.delete(f"/api/v1/messages/{first.json()['id']}",headers=hdr(test_app,other))
+ assert forbidden.status_code==403
+ removed=await client.delete(f"/api/v1/messages/{first.json()['id']}",headers=hdr(test_app,message_author))
+ assert removed.status_code==204
+ async with test_app.state.database.session_factory() as s:
+  saved=await s.get(ForumTopic,topic["id"])
+  assert saved.messages_count==1
+  assert await s.get(ForumMessage,first.json()["id"]) is None
+
+ admin_removed=await client.delete(f"/api/v1/messages/{second.json()['id']}",headers=hdr(test_app,admin))
+ assert admin_removed.status_code==204
+ async with test_app.state.database.session_factory() as s:
+  saved=await s.get(ForumTopic,topic["id"])
+  assert saved.messages_count==0
+
+
+async def test_forum_message_deletion_recalculates_last_message_at(client, test_app):
+ c=await country(test_app);author=await user(test_app,"delete-latest-topic@example.com",Role.EDITOR);sender=await user(test_app,"delete-latest-author@example.com")
+ topic=(await client.post(f"/api/v1/countries/{c.id}/topics",headers=hdr(test_app,author),json={"title":"Порядок сообщений"})).json()
+ older_at=datetime(2026,1,1,10,0,0);newer_at=older_at+timedelta(minutes=5)
+ async with test_app.state.database.session_factory() as s:
+  s.add_all([
+   ForumMessage(topic_id=topic["id"],author_id=sender.id,body="Старое",created_at=older_at),
+   ForumMessage(topic_id=topic["id"],author_id=sender.id,body="Новое",created_at=newer_at),
+  ])
+  saved=await s.get(ForumTopic,topic["id"]);saved.messages_count=2;saved.last_message_at=newer_at
+  await s.commit()
+  newest=await s.scalar(select(ForumMessage).where(ForumMessage.topic_id==topic["id"],ForumMessage.created_at==newer_at))
+
+ removed=await client.delete(f"/api/v1/messages/{newest.id}",headers=hdr(test_app,sender))
+ assert removed.status_code==204
+ async with test_app.state.database.session_factory() as s:
+  saved=await s.get(ForumTopic,topic["id"])
+  assert saved.messages_count==1
+  assert saved.last_message_at==older_at

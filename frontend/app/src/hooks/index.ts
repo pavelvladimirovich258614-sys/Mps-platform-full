@@ -13,7 +13,7 @@ export type DraftPost = ApiPost & { status: "draft"; updated_at: string };
 export type Review = { id: number; author_name: string; rating: number; body: string; photo_url: string | null; status: string };
 export type Question = { id: number; target: "manager" | "lawyer"; body: string; status: string; answer: string | null };
 export type Country = { id: number; name: string; topics_count: number };
-export type Topic = { id: number; title: string; messages_count: number };
+export type Topic = { id: number; title: string; author_id: number; messages_count: number };
 export type ForumMessage = { id: number; body: string; author: { id: number; name: string; avatar_url: string | null }; is_ai: boolean };
 export type ForumPage<T> = { items: T[]; next_cursor: string | null };
 export type Notification = { id: number; type: string; payload: Record<string, unknown>; is_read: boolean; created_at: string };
@@ -190,12 +190,27 @@ function useForumPage<T>(path: string | null, deps: unknown[]) {
   return { ...resource, items: resource.value?.items ?? [], hasMore: Boolean(resource.value?.next_cursor), loadingMore, loadMore };
 }
 export function useForum(countryId?: number, topicId?: number) {
+  const countries = useResource(() => api<Country[]>("/countries"), []);
+  const topics = useForumPage<Topic>(countryId ? `/countries/${countryId}/topics` : null, [countryId]);
+  const messages = useForumPage<ForumMessage>(topicId ? `/topics/${topicId}/messages` : null, [topicId]);
+  const removeTopic = async (removedTopicId: number) => {
+    await apiJson<void>(`/topics/${removedTopicId}`, "DELETE");
+    topics.setValue((current) => current ? { ...current, items: current.items.filter((item) => item.id !== removedTopicId) } : current);
+    countries.setValue((current) => (current ?? []).map((item) => item.id === countryId ? { ...item, topics_count: Math.max(0, item.topics_count - 1) } : item));
+  };
+  const removeMessage = async (removedMessageId: number) => {
+    await apiJson<void>(`/messages/${removedMessageId}`, "DELETE");
+    messages.setValue((current) => current ? { ...current, items: current.items.filter((item) => item.id !== removedMessageId) } : current);
+    topics.setValue((current) => current ? { ...current, items: current.items.map((item) => item.id === topicId ? { ...item, messages_count: Math.max(0, item.messages_count - 1) } : item) } : current);
+  };
   return {
-    countries: useResource(() => api<Country[]>("/countries"), []),
-    topics: useForumPage<Topic>(countryId ? `/countries/${countryId}/topics` : null, [countryId]),
-    messages: useForumPage<ForumMessage>(topicId ? `/topics/${topicId}/messages` : null, [topicId]),
+    countries,
+    topics,
+    messages,
     createTopic: (title: string) => apiJson<Topic>(`/countries/${countryId}/topics`, "POST", { title }),
     createMessage: (body: string) => apiJson<ForumMessage>(`/topics/${topicId}/messages`, "POST", { body }),
+    removeTopic,
+    removeMessage,
   };
 }
 export const useNotifications = () => { const resource = useResource(() => api<{ items: Notification[] }>("/notifications"), []); const read = async (ids?: number[]) => { await apiJson<{ updated: number }>("/notifications/read", "PATCH", ids ? { ids } : {}); await resource.reload(); }; return { ...resource, items: resource.value?.items ?? [], read }; };
