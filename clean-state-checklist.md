@@ -1,5 +1,14 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 86 F41 production activation closeout / F43 open note — 2026-08-26
+
+- [x] Scope is tracker-only: `feature_list.json`, `claude-progress.md`, `session-handoff.md` and this checklist. No application source, production environment, database row, webhook registration or service state changed.
+- [x] Fresh production getWebhookInfo reports the registered HTTPS webhook, `allowed_updates=[message]`, `pending_update_count=0` and no last error; mps-backend is active and health is `{status:ok,version:0.1.0}`.
+- [x] Fresh production DB verification confirms #Q4 manager and #Q5/#Q6 lawyer are all `answered` with answer, responder, answered_at and outgoing Telegram message ID saved. Both relay directions are therefore end-to-end verified.
+- [x] F41 is fully `passing`, deployed and production-activated at `1782b5a`; its evidence no longer says activation is pending.
+- [x] The stale state of an already-open Q&A modal is recorded separately as F43 `open`, not `in_progress`; no implementation was started.
+- [x] Pre-commit checks: JSON and whitespace validated; the exact diff contains only the four allowed tracker files. Stage only these files and verify staged name-status before committing; confirm the clean worktree after commit in the session report.
+
 ## Session 85 F41 local code completion — 2026-08-26
 
 - [x] Scope is backend webhook transport, the dormant optional bridge adapter, outbound relay token redaction, backend tests and trackers. No migration, frontend source, production .env, webhook registration, token replacement, queued Telegram update or production database row changed.
