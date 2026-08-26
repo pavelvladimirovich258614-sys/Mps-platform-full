@@ -223,6 +223,19 @@ describe("App pathname routing", () => {
     expect(screen.queryByRole("heading", { level: 2, name: post.title })).toBeNull();
   });
 
+  it("requests fishki through the explicit type filter", async () => {
+    window.history.replaceState({}, "", "/fishki");
+    const fetchMock = installApi("ok", null, [post, fishka]);
+
+    render(<App />);
+
+    await screen.findByRole("heading", { level: 1, name: "Фишки" });
+    await waitFor(() => expect(fetchMock.mock.calls.some(([input]) => {
+      const url = new URL(String(input));
+      return url.pathname === "/api/v1/posts" && url.searchParams.get("type") === "fishka";
+    })).toBe(true));
+  });
+
   it("always shows the fishka form to an editor and publishes selected emoji immediately", async () => {
     window.history.replaceState({}, "", "/fishki");
     setAccessToken("editor-access-token");

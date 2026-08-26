@@ -725,6 +725,24 @@
       ],
       "evidence": "2026-08-26 diagnosis and Packages 1–2 are recorded above. Package 3 RED backend `D:\\Python312\\python.exe -m pytest tests\\test_qa.py -q --color=no --basetemp D:\\AI\\tmp\\mps-f38-p3-backend-red` — 3 expected 404 failures for absent `/qa/irishka`; GREEN `tests\\test_qa.py tests\\test_irishka.py` — 21 passed in 9.83s. Frontend RED `npx vitest run src/App.routing.test.tsx --reporter=verbose` — 1 expected failure: absent «Иришка ИИ» button; GREEN — 28 passed. Final full backend was green in four complete Windows-safe shards: 38 passed/3 skipped, 28 passed, 11 passed, 27 passed — total 104 passed/3 skipped. Full frontend `npm test -- --run` — 19 files / 122 passed. `npm run build` — success, 116 modules; standard chunk-size warning only. Copied data file: 248 records, 247315 bytes, SHA-256 `FD8D446F520BE20837138CE4565A1E0D33907966FF0444AAC230AF0859A61C0C`. Final ./init.sh stopped only at the known external global Hermes/desktop pip-check before MPS pytest.",
       "notes": "Packages 1 and 2 are production-deployed at 9d18156 and a97327c. Package 3 is locally verified and remains uncommitted/deployment-unapproved. It adds POST /qa/irishka for authenticated users, 10/minute verified-user rate limiting and no persistence to Question or ForumMessage. The local JSON search ranks at most five tag/text matches, including a narrow Russian word-form prefix match so «Шарджу» finds «Шарджа»; irrelevant queries return a manager referral without MiniMax. MiniMax transport is shared with the unchanged background scheduler and retains 30-second timeout plus transient-only retries. Remaining risks: keyword retrieval is MVP-quality, SlowAPI remains process-local, and F37 Sessions C/D are untouched."
+    },
+    {
+      "id": "F39",
+      "priority": 39,
+      "area": "frontend-navigation",
+      "title": "Лента без фишек",
+      "user_visible_behavior": "Основная «Лента» показывает только опубликованные статьи и видеообзоры; опубликованные фишки отображаются только в отдельном разделе «Фишки».",
+      "status": "passing",
+      "verification": [
+        "RED/GREEN backend tests/test_posts.py: GET /posts исключает fishka по умолчанию, сохраняет article/video_review и GET /posts?type=fishka возвращает фишки",
+        "RED/GREEN frontend routing test: «Лента» не рендерит фишку, а /fishki запрашивает и рендерит только фишки",
+        "cd backend && python -m pytest tests -q",
+        "cd frontend/app && npm test -- --run && npm run build",
+        "./init.sh outside sandbox; внешний Hermes pip check отслеживается отдельно",
+        "clean-state-checklist.md before commit"
+      ],
+      "evidence": "2026-08-26: RED backend `D:\\Python312\\python.exe -m pytest tests\\test_posts.py -k public_feed_excludes_fishki -q --color=no --basetemp D:\\AI\\tmp\\mps-f39-red-backend` — 1 expected failure: default GET /posts returned fishka ID 3. RED frontend `npm test -- --run src/components/Feed.test.tsx src/App.routing.test.tsx` — 2 expected failures: Feed rendered fishka and /fishki omitted type=fishka. GREEN target — backend 1 passed; frontend 2 files / 35 passed. Full backend was completed in four explicit groups: 38 passed/3 skipped, 28 passed, 12 passed, 27 passed — total 105 passed/3 skipped. Full frontend `npm test -- --run` — 19 files / 124 passed. `npm run build` — success, 116 modules, standard chunk-size warning only. Final ./init.sh stopped only at the known external Hermes/desktop global pip-check before MPS pytest.",
+      "notes": "Completed 2026-08-26. GET /posts without type and author_id now returns only article/video_review; explicit type=fishka still returns fishki, while author_id queries retain every published post type for public profiles. /fishki requests type=fishka explicitly. Feed independently excludes fishka in mode=feed as a second defensive boundary. No migration, CSS or production state changed. F38 remains separately in_progress; its remaining duplicate-run and admin-settings work is outside F39."
     }
   ]
 }

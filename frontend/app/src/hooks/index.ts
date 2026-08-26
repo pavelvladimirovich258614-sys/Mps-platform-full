@@ -54,7 +54,7 @@ export function useAuth() {
   return { user, loading, error, requestCode, verifyCode, loginTelegram, update, uploadAvatar, logout, reload: loadMe };
 }
 
-export const usePosts = () => useResource(() => api<ApiPost[]>("/posts"), []);
+export const usePosts = (type?: ApiPost["type"]) => useResource(() => api<ApiPost[]>(type ? `/posts?type=${encodeURIComponent(type)}` : "/posts"), [type]);
 export const usePostCreator = () => ({ create: (post: PostDraft | FishkaDraft) => apiJson<ApiPost>("/posts", "POST", post) });
 export const useFishkaPermission = (enabled: boolean) => useResource(() => enabled ? api<{ can_submit_fishka: boolean }>("/posts/fishki/permission") : Promise.resolve({ can_submit_fishka: false }), [enabled]);
 export const usePostEditor = () => ({ update: (postId: number, post: PostDraft) => apiJson<ApiPost>(`/posts/${postId}`, "PATCH", post), remove: (postId: number) => apiJson<void>(`/posts/${postId}`, "DELETE") });

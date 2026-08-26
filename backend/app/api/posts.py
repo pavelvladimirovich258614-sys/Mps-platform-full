@@ -44,6 +44,7 @@ async def fishka_submissions_enabled(session: AsyncSession) -> bool:
 async def list_posts(type:PostType|None=None,country:int|None=None,author_id:int|None=None,page:int=1,session:AsyncSession=Depends(get_db)):
     q=select(Post, User).join(User, User.id == Post.author_id).where(Post.status==PostStatus.PUBLISHED)
     if type:q=q.where(Post.type==type)
+    elif author_id is None:q=q.where(Post.type.in_((PostType.ARTICLE, PostType.VIDEO_REVIEW)))
     if country:q=q.where(Post.country_id==country)
     if author_id:q=q.where(Post.author_id==author_id)
     rows=(await session.execute(q.offset((max(page,1)-1)*20).limit(20))).all(); return [dto(post, author) for post, author in rows]

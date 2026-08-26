@@ -14,6 +14,8 @@ const post = {
   shot_at: null,
   author: { id: 7, name: "Мария", avatar_url: null },
 };
+const fishka = { ...post, id: 18, type: "fishka" as const, title: "Фишка вне ленты", slug: "fishka-outside-feed", emoji: "💡" };
+const video = { ...post, id: 19, type: "video_review" as const, title: "Видео для ленты", slug: "video-in-feed", shot_at: "2026-08-26" };
 
 const editorProps = {
   posts: [],
@@ -26,6 +28,14 @@ const editorProps = {
 };
 
 describe("Feed composer modal", () => {
+  it("keeps fishki out of the main feed while retaining articles and video reviews", () => {
+    render(<Feed posts={[post, fishka, video]} loading={false} onToggleLike={vi.fn()} onOpenArticle={vi.fn()} onOpenProfile={vi.fn()} />);
+
+    expect(screen.getByRole("heading", { level: 2, name: post.title })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 2, name: video.title })).toBeTruthy();
+    expect(screen.queryByRole("heading", { level: 2, name: fishka.title })).toBeNull();
+  });
+
   it("renders an explicit cover image instead of the article fallback", () => {
     const { container } = render(<Feed {...editorProps} posts={[{ ...post, cover_url: "/media/bali-cover.webp" }]} onToggleLike={vi.fn()} />);
 

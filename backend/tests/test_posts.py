@@ -69,6 +69,25 @@ async def test_posts_verification(client,test_app):
  assert (await client.delete(f"/api/v1/posts/{post['id']}",headers=reader)).status_code==403
  assert (await client.delete(f"/api/v1/posts/{post['id']}",headers=editor)).status_code==204
 
+async def test_public_feed_excludes_fishki_but_keeps_type_and_author_filters(client, test_app):
+ editor = await token(client, test_app, True)
+ article = await client.post("/api/v1/posts", json={"type":"article", "title":"Статья для ленты", "body":"Текст", "status":"published"}, headers=editor)
+ video = await client.post("/api/v1/posts", json={"type":"video_review", "title":"Видео для ленты", "body":"Текст", "shot_at":"2026-08-26", "status":"published"}, headers=editor)
+ fishka = await client.post("/api/v1/posts", json={"type":"fishka", "title":"Фишка вне ленты", "body":"Текст", "emoji":"💡", "status":"published"}, headers=editor)
+ assert article.status_code == video.status_code == fishka.status_code == 201
+
+ public_feed = await client.get("/api/v1/posts")
+ assert public_feed.status_code == 200
+ assert {item["id"] for item in public_feed.json()} == {article.json()["id"], video.json()["id"]}
+
+ fishki = await client.get("/api/v1/posts?type=fishka")
+ assert fishki.status_code == 200
+ assert [item["id"] for item in fishki.json()] == [fishka.json()["id"]]
+
+ author_posts = await client.get(f"/api/v1/posts?author_id={article.json()['author']['id']}")
+ assert author_posts.status_code == 200
+ assert {item["id"] for item in author_posts.json()} == {article.json()["id"], video.json()["id"], fishka.json()["id"]}
+
 async def test_cover_url_persists_through_patch_and_post_get_endpoints(client, test_app):
  editor = await token(client, test_app, True)
  published = await client.post("/api/v1/posts", json={"type":"article", "title":"С обложкой", "body":"Текст", "status":"published"}, headers=editor)

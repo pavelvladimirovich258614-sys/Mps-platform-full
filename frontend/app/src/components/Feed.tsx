@@ -23,7 +23,7 @@ export function Feed({ mode = "feed", posts, loading, canCreate = false, onCreat
   const [fishkaComposerOpen, setFishkaComposerOpen] = useState(false);
   const isFishki = mode === "fishki";
   const canOpenComposer = canCreate && !isFishki && Boolean(onCreatePost);
-  const visiblePosts = isFishki ? posts.filter((post) => post.type === "fishka") : posts;
+  const visiblePosts = isFishki ? posts.filter((post) => post.type === "fishka") : posts.filter((post) => post.type !== "fishka");
 
   useEffect(() => {
     if (!composerOpen && !fishkaComposerOpen) return;

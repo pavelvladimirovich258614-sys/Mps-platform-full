@@ -31,7 +31,7 @@ async def test_f09b_api_acceptance_flow_with_email_auth(client, test_app):
         await session.refresh(editor)
         await session.refresh(country)
         post = Post(
-            type=PostType.FISHKA,
+                type=PostType.ARTICLE,
             title="Проверенная фишка",
             slug="proverennaya-fishka",
             cover_url="/cover.jpg",

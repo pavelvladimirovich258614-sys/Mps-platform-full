@@ -9,11 +9,21 @@
 - Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15, I-16, I-18 и I-20 закрыты 2026-08-20. I-21 отложен до pre-launch юридической проверки. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
 - Auth/UI state: production build uses `https://mir.pod-solncem.ru/api/v1` and `Reg_Under_the_sun_bot`; F27 hides email form/copy, leaving Telegram Login Widget as the sole visible guest path. Re-enable only by setting `EMAIL_LOGIN_ENABLED` after Unisender/HostKey repair. F28 adds owner-only logout through the own public-profile ••• menu; visitors never receive it. F29 production picker accepts current JPEG/PNG/WebP/HEIC/HEIF/AVIF set and permits repeated selection of the same file. Role storage remains compatible with legacy `ADMIN` and current lower-case values.
 - Email state: UnisenderGo transport использует официальный default `goapi.unisender.ru` (с возможностью override на go1/go2) и `X-API-KEY`; payload `message/recipients/body/subject/from_email` проверен mock-тестами. Production delivery сейчас заблокирована внешним TCP timeout до сети Unisender `31.184.200.*:443`: goapi и go1 недоступны, при этом ya.ru/google.com доступны, а local UFW/iptables outgoing не блокируют. Email-код и digest не работают до восстановления маршрута или смены транспорта/provider.
-- Next best action: await explicit confirmation to commit F38 Package 3, then separate approval for push and production deployment; do not start another Irishka package, F37 Session C or alter Unisender transport without a separate decision.
+- Next best action: await explicit confirmation to commit and separately deploy F39. F38 remains in_progress after its deployed Packages 1–3; do not start its duplicate-run/admin-settings work, F37 Session C/D or alter Unisender transport without a separate decision.
 
-- F38 update: Package 2 is production-deployed at `a97327c` (superseding the historical Package 2 wording above). Package 3 is locally verified, uncommitted and deployment-unapproved: it provides direct non-persistent «Иришка ИИ» Q&A with the supplied local knowledge base, shared MiniMax timeout/retry transport, and a 10/minute verified-user limit.
+- F38 update: Packages 1 (`9d18156`), 2 (`a97327c`) and 3 (`21e55ac`) are production-deployed. Package 3 provides direct non-persistent «Иришка ИИ» Q&A with the supplied local knowledge base, shared MiniMax timeout/retry transport, and a 10/minute verified-user limit. F38 remains in_progress only for separately deferred duplicate-run protection and admin settings UI.
+- F39 update: locally verified and marked `passing`: the default public feed now excludes fishka server-side while preserving article/video_review; `/fishki` uses the explicit fishka type filter and the UI has a defensive second filter. Production deployment is not approved.
 
 ## Session Record
+
+### Session 81 — 2026-08-26 (Codex, F39 main feed excludes fishki)
+- Goal: keep fishki out of the main feed while preserving the dedicated `/fishki` route and public-profile author lists.
+- Completed: default `GET /posts` now selects published `article` and `video_review` only when neither `type` nor `author_id` is supplied. Explicit `type=fishka` is unchanged; author-filtered profile lists retain all published types. `/fishki` requests the explicit filter, while Feed also refuses to render fishka in normal mode.
+- RED→GREEN: backend RED — 1 expected failure because the default feed contained fishka ID 3; frontend RED — 2 expected failures for the visible fishka and absent query parameter. GREEN target — backend 1 passed; frontend 2 files / 35 passed. Full backend — 105 passed / 3 skipped across four complete groups; full frontend — 19 files / 124 passed; build — success, 116 modules (standard chunk-size warning only).
+- Evidence recorded: F39 in `feature_list.json`; `./init.sh` stopped only at the external Hermes/desktop global pip-check before MPS pytest. No repair of that environment was attempted.
+- Commits: none. Production: explicitly unapproved.
+- Known risks: the intentional default endpoint semantic change affects unfiltered public-feed consumers only; author-filtered consumers are regression-covered and retain fishki.
+- Next best action: await explicit local commit approval, then separate push/production approval for F39.
 
 ### Session 80 — 2026-08-26 (Codex, F38 Package 3 interactive Иришка chat and knowledge base)
 - Goal: add a direct, non-persistent Q&A chat with Иришка, independent from the forum scheduler, grounded in the supplied 248-record local knowledge JSON.

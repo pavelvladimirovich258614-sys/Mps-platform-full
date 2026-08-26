@@ -1,5 +1,13 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 81 F39 local verification — 2026-08-26
+
+- [x] Scope is limited to default public post-list filtering, the `/fishki` fetch parameter, a defensive Feed filter, regression tests and trackers. No migration, CSS, credentials or production state changed.
+- [x] RED backend — default `GET /posts` returned fishka ID 3; RED frontend — normal Feed rendered fishka and `/fishki` did not request `type=fishka`.
+- [x] GREEN target — backend 1 passed; frontend 2 files / 35 passed. Full backend groups — 38 passed/3 skipped, 28 passed, 12 passed, 27 passed: 105 passed/3 skipped. Full frontend — 19 files / 124 passed. `npm run build` — success, 116 modules, standard Vite chunk-size warning only.
+- [x] Final `./init.sh` outside sandbox stopped only at the known external Hermes/desktop global `pip check` before MPS pytest; no environment repair was attempted.
+- [x] F39 is locally marked `passing` with evidence. Commit, push and production deployment remain unapproved; run `git diff --check`, JSON validation and final status immediately before any commit.
+
 ## Session 80 F38 Package 3 local verification — 2026-08-26
 
 - [x] Scope is limited to the direct interactive Иришка Q&A endpoint, supplied local JSON knowledge base, shared MiniMax transport, existing QA modal, tests and trackers. No migration, scheduler business logic, Question/ForumMessage persistence, credentials or production state changed.
@@ -7,7 +15,7 @@
 - [x] RED backend `tests/test_qa.py` — 3 expected missing-endpoint 404 failures; GREEN `tests/test_qa.py tests/test_irishka.py` — 21 passed. RED frontend `App.routing.test.tsx` — one expected absent «Иришка ИИ» control; GREEN — 28 passed.
 - [x] Final full backend regression was executed in complete short shards because the Windows foreground runner silently truncates a single >30s process: 38 passed/3 skipped, 28 passed, 11 passed, 27 passed — total 104 passed/3 skipped. Full frontend `npm test -- --run` — 19 files/122 passed; `npm run build` — success, 116 modules with the standard chunk-size warning only.
 - [x] Final `./init.sh` outside sandbox stopped only at the known external Hermes/desktop global `pip check` conflicts before MPS pytest; no environment repair was attempted.
-- [x] F38 remains `in_progress`; Packages 1 (`9d18156`) and 2 (`a97327c`) are production-deployed. Package 3 is not committed, pushed or deployed. `git diff --check` and final status are required immediately before any commit.
+- [x] F38 remains `in_progress`; Packages 1 (`9d18156`), 2 (`a97327c`) and 3 (`21e55ac`) are production-deployed. `git diff --check` and final status are required immediately before any future commit.
 
 ## Session 79 F38 Package 2 local completion — 2026-08-26
 

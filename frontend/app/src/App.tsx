@@ -47,7 +47,7 @@ export function App() {
 
   const auth = useAuth();
   const canManagePosts = auth.user?.role === "editor" || auth.user?.role === "admin";
-  const posts = usePosts();
+  const posts = usePosts(route.page === "fishki" ? "fishka" : undefined);
   const drafts = useDrafts(route.page === "drafts" && canManagePosts);
   const fishkaPermission = useFishkaPermission(route.page === "fishki" && Boolean(auth.user) && !canManagePosts);
   const postCreator = usePostCreator();
