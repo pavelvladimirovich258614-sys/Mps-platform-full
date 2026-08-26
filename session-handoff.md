@@ -2,7 +2,15 @@
 
 ## Current verified state — 2026-08-26
 
-F15–F36 are complete and production-deployed. F37 is `in_progress`: Sessions A (`4f86725`) and B (`df36dc2`) are production-deployed. F36 is `passing` and production-deployed at `c380667`: Packages 1–3 are deployed at `61ff1a5`, `6128c74` and `0bc8c3e`; all local, origin and VPS `/opt/mps-platform` heads were synchronized at that rollout. Package 1 had a fresh PostgreSQL backup and Alembic `20260826_0013`; Packages 2–3 restarted the backend and passed smoke/live synthetic checks; Package 4 was frontend-only and left the backend active without restart.
+F15–F36 are complete and production-deployed. F37 is `in_progress`: Sessions A (`4f86725`) and B (`df36dc2`) are production-deployed. F38 is `in_progress`: Package 1 is locally complete and awaits a separately approved backend deployment. F36 is `passing` and production-deployed at `c380667`: Packages 1–3 are deployed at `61ff1a5`, `6128c74` and `0bc8c3e`; all local, origin and VPS `/opt/mps-platform` heads were synchronized at that rollout. Package 1 had a fresh PostgreSQL backup and Alembic `20260826_0013`; Packages 2–3 restarted the backend and passed smoke/live synthetic checks; Package 4 was frontend-only and left the backend active without restart.
+
+## F38 Package 1 — local completion, deployment unapproved
+
+- Scope: only `services/irishka.py`, `tests/test_irishka.py` and trackers. No migration, frontend, MiniMax transport, forum route, production configuration or deployment changed.
+- Behaviour: for price/visa/document triggers, Иришка creates the same manager Question as before, flushes it to obtain its ID, calls `tg_relay.send(settings, question)` and stores the returned `tg_message_id`. The Telegram text therefore stays exactly `#Q{id}\n{body}`, where `body` is the forum topic title; no direct topic URL exists yet by product decision.
+- Failure handling: only the relay call is protected with logged `try/except`; a Telegram transport failure leaves the Question and the `is_ai=true` forum response committed, letting the next scheduler work continue.
+- RED→GREEN: RED `tests/test_irishka.py` — 3 expected failures / 6 passed because the relay mock had zero awaits. GREEN — 9 passed in 2.91s, covering price and visa sends, returned message ID persistence and failure persistence. Full backend JUnit reports tests=98, failures=0, errors=0, skipped=3 in 30.307s. Final `./init.sh` stopped only at the agreed external Hermes/desktop global pip-check before MPS pytest.
+- Deployment: explicitly unapproved. Next operation only after user confirmation: commit/push then update backend on VPS, restart `mps-backend`, smoke and a live synthetic Telegram-relay-safe check. No frontend rebuild is necessary.
 
 ## F37 Session B — production deployed
 

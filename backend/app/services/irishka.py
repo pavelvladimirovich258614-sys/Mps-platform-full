@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+import logging
 
 import httpx
 from sqlalchemy import select, update
@@ -7,6 +8,10 @@ from app.models.forum import ForumMessage, ForumTopic
 from app.models.question import Question, QuestionTarget
 from app.models.setting import Setting
 from app.models.user import User
+from app.services import tg_relay
+
+
+logger = logging.getLogger(__name__)
 
 
 PROMPT = (
@@ -47,13 +52,17 @@ async def run(session_factory, settings) -> int:
             lower_title = topic.title.casefold()
             if any(trigger in lower_title for trigger in TRIGGERS):
                 text = "Уточню у менеджера и вернусь с ответом."
-                session.add(
-                    Question(
-                        user_id=topic.author_id,
-                        target=QuestionTarget.MANAGER,
-                        body=topic.title,
-                    )
+                question = Question(
+                    user_id=topic.author_id,
+                    target=QuestionTarget.MANAGER,
+                    body=topic.title,
                 )
+                session.add(question)
+                await session.flush()
+                try:
+                    question.tg_message_id = await tg_relay.send(settings, question)
+                except Exception:
+                    logger.exception("Не удалось отправить менеджеру вопрос Иришки id=%s", question.id)
             else:
                 async with httpx.AsyncClient() as client:
                     response = await client.post(

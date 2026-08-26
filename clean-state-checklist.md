@@ -1,5 +1,14 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 78 F38 Package 1 local completion — 2026-08-26
+
+- [x] Scope is limited to the Иришка manager-question Telegram relay, its backend tests and trackers. Frontend, Alembic, MiniMax transport, direct forum topic routes, production configuration and deployment are untouched.
+- [x] RED `D:\Python312\python.exe -m pytest tests/test_irishka.py -q --color=no --basetemp D:\AI\tmp\mps-f38-p1-red` — 3 expected failures / 6 passed: price, visa and relay-failure cases observed `tg_relay.send` awaited 0 times.
+- [x] GREEN same suite — 9 passed in 2.91s. It proves one relay call with the existing `settings, question` contract, persisted `tg_message_id` on success and persisted Question plus AI reply when Telegram raises.
+- [x] Full backend verification is recorded from JUnit: 98 tests, 0 failures, 0 errors, 3 expected PostgreSQL-only skips, 30.307s. `git diff --check` must be clean before commit.
+- [x] Final `./init.sh` outside sandbox stopped only at the known external Hermes/desktop global `pip check` conflicts before MPS pytest; no environment repair was attempted.
+- [x] F38 remains `in_progress` and Package 1 production deployment is explicitly unapproved. F37 Sessions C/D remain unstarted.
+
 ## Session 77 F37 Session B local completion — 2026-08-26
 
 - [x] Scope is frontend-only: fishka form/modal, effective-permission hook, API POST union, emoji card rendering, frontend tests and trackers. Backend, Alembic, admin settings UI, content import, email and production configuration are untouched.
