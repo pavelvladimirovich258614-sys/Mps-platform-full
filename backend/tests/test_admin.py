@@ -139,3 +139,61 @@ async def test_public_settings_expose_only_configured_legal_contact_values(clien
         "comments_moderation_enabled": True,
     }
     assert "cta_bot_url" not in public.json()
+
+
+async def test_only_admin_can_manage_fishka_submission_setting_and_reader_sees_effective_permission(client, test_app):
+    admin = await make_user(test_app, "fishka-admin@example.test", Role.ADMIN)
+    reader = await make_user(test_app, "fishka-reader@example.test")
+
+    assert (await client.get("/api/v1/admin/settings", headers=headers(test_app, reader))).status_code == 403
+    initial = await client.get("/api/v1/admin/settings", headers=headers(test_app, admin))
+    assert initial.status_code == 200
+    assert initial.json()["fishka_submissions_enabled"] is False
+
+    changed = await client.patch(
+        "/api/v1/admin/settings",
+        headers=headers(test_app, admin),
+        json={"fishka_submissions_enabled": True},
+    )
+    assert changed.status_code == 200
+    assert changed.json() == {"fishka_submissions_enabled": "true"}
+    assert (await client.get("/api/v1/posts/fishki/permission", headers=headers(test_app, reader))).json() == {"can_submit_fishka": True}
+
+    disabled = await client.patch(
+        "/api/v1/admin/settings",
+        headers=headers(test_app, admin),
+        json={"fishka_submissions_enabled": False},
+    )
+    assert disabled.status_code == 200
+    assert (await client.get("/api/v1/posts/fishki/permission", headers=headers(test_app, reader))).json() == {"can_submit_fishka": False}
+    assert (await client.get("/api/v1/posts/fishki/permission", headers=headers(test_app, admin))).json() == {"can_submit_fishka": True}
+
+
+async def test_admin_moderation_queue_includes_pending_fishka(client, test_app):
+    admin = await make_user(test_app, "queue-admin@example.test", Role.ADMIN)
+    author = await make_user(test_app, "queue-author@example.test")
+    async with test_app.state.database.session_factory() as session:
+        session.add(Post(
+            type=PostType.FISHKA,
+            title="Проверить документы",
+            emoji="🛂",
+            slug="check-documents",
+            body="Проверьте срок действия.",
+            author_id=author.id,
+            status=PostStatus.PENDING,
+        ))
+        await session.commit()
+
+    queue = await client.get("/api/v1/admin/moderation/queue", headers=headers(test_app, admin))
+    assert queue.status_code == 200
+    fishka = next(item for item in queue.json()["items"] if item["kind"] == "fishka")
+    assert fishka == {
+        "kind": "fishka",
+        "id": fishka["id"],
+        "user_id": author.id,
+        "author_name": None,
+        "title": "Проверить документы",
+        "body": "Проверьте срок действия.",
+        "emoji": "🛂",
+        "created_at": fishka["created_at"],
+    }

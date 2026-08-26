@@ -7,7 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.deps import get_current_user, get_db, require_role
 from app.models.post import Post, PostStatus, PostType, post_likes
 from app.models.activity import ActivityEventType
+from app.models.setting import Setting
 from app.models.user import Role, User
+from app.schemas.moderation import ModerateRequest, ModerationAction
 from app.schemas.post import PostPatch, PostWrite
 from app.services.activity import record_activity, remove_activity
 
@@ -27,9 +29,16 @@ async def unique_slug(session,title):
     base=slugify(title); slug=base
     while await session.scalar(select(Post.id).where(Post.slug==slug)): slug=f"{base}-{secrets.token_hex(3)}"
     return slug
-def dto(p, author: User): return {"id":p.id,"type":p.type.value,"title":p.title,"slug":p.slug,"body":p.body,"cover_url":p.cover_url,"views":p.views,"likes_count":p.likes_count,"shot_at":p.shot_at.isoformat() if p.shot_at else None,"author":{"id":author.id,"name":author.name,"avatar_url":author.avatar_url}}
+def dto(p, author: User): return {"id":p.id,"type":p.type.value,"title":p.title,"slug":p.slug,"body":p.body,"emoji":p.emoji,"status":p.status.value,"published_at":p.published_at.isoformat() if p.published_at else None,"cover_url":p.cover_url,"views":p.views,"likes_count":p.likes_count,"shot_at":p.shot_at.isoformat() if p.shot_at else None,"author":{"id":author.id,"name":author.name,"avatar_url":author.avatar_url}}
 def draft_summary_dto(p: Post): return {"id":p.id,"title":p.title,"updated_at":p.updated_at.isoformat()}
 def draft_dto(p: Post, author: User): return {**dto(p, author), "status":p.status.value, "updated_at":p.updated_at.isoformat()}
+
+def can_manage_posts(user: User) -> bool:
+    return user.role in (Role.EDITOR, Role.ADMIN)
+
+async def fishka_submissions_enabled(session: AsyncSession) -> bool:
+    value = await session.scalar(select(Setting.value).where(Setting.key == "fishka_submissions_enabled"))
+    return value is not None and value.strip().lower() == "true"
 
 @router.get("")
 async def list_posts(type:PostType|None=None,country:int|None=None,author_id:int|None=None,page:int=1,session:AsyncSession=Depends(get_db)):
@@ -48,6 +57,9 @@ async def get_draft(post_id:int,session:AsyncSession=Depends(get_db),user:User=D
     if not post: raise HTTPException(404,"Черновик не найден")
     author = await session.get(User, post.author_id)
     return draft_dto(post, author)
+@router.get("/fishki/permission")
+async def fishka_permission(session: AsyncSession=Depends(get_db),user:User=Depends(get_current_user)):
+    return {"can_submit_fishka": can_manage_posts(user) or await fishka_submissions_enabled(session)}
 @router.get("/{slug}")
 async def get_post(slug:str,session:AsyncSession=Depends(get_db)):
     row=await session.execute(select(Post, User).join(User, User.id == Post.author_id).where(Post.slug==slug,Post.status==PostStatus.PUBLISHED))
@@ -55,15 +67,39 @@ async def get_post(slug:str,session:AsyncSession=Depends(get_db)):
     if not post: raise HTTPException(404,"Публикация не найдена")
     post.views+=1; await session.commit(); await session.refresh(post); return dto(post, author)
 @router.post("",status_code=201)
-async def create(payload:PostWrite,session:AsyncSession=Depends(get_db),user:User=Depends(require_role(Role.EDITOR))):
+async def create(payload:PostWrite,session:AsyncSession=Depends(get_db),user:User=Depends(get_current_user)):
+    is_staff = can_manage_posts(user)
+    if not is_staff:
+        if payload.type != PostType.FISHKA:
+            raise HTTPException(403, "Обычным пользователям доступна только отправка фишек")
+        if not await fishka_submissions_enabled(session):
+            raise HTTPException(403, "Добавление фишек временно отключено администратором")
     values = payload.model_dump()
     values["body"] = clean_post_body(payload.body)
+    if not is_staff:
+        values["status"] = PostStatus.PENDING
     post=Post(**values,slug=await unique_slug(session,payload.title),author_id=user.id,published_at=datetime.now(UTC) if payload.status==PostStatus.PUBLISHED else None)
+    if post.status != PostStatus.PUBLISHED:
+        post.published_at = None
     session.add(post)
     await session.flush()
     if post.status == PostStatus.PUBLISHED:
         record_activity(session, user_id=post.author_id, event_type=ActivityEventType.POST_PUBLISHED, reference_id=post.id)
     await session.commit();await session.refresh(post);return dto(post,user)
+@router.patch("/{post_id}/moderate")
+async def moderate(post_id:int,payload:ModerateRequest,session:AsyncSession=Depends(get_db),editor:User=Depends(require_role(Role.EDITOR))):
+    post = await session.get(Post, post_id)
+    if post is None or post.type != PostType.FISHKA or post.status != PostStatus.PENDING:
+        raise HTTPException(404, "Фишка на модерации не найдена")
+    if payload.action == ModerationAction.APPROVE:
+        post.status = PostStatus.PUBLISHED
+        post.published_at = datetime.now(UTC)
+        record_activity(session, user_id=post.author_id, event_type=ActivityEventType.POST_PUBLISHED, reference_id=post.id)
+    else:
+        post.status = PostStatus.REJECTED
+    await session.commit(); await session.refresh(post)
+    author = await session.get(User, post.author_id)
+    return dto(post, author)
 @router.post("/{post_id}/like")
 async def like(post_id:int,session:AsyncSession=Depends(get_db),user:User=Depends(get_current_user)):
     exists=await session.scalar(select(post_likes.c.post_id).where(post_likes.c.post_id==post_id,post_likes.c.user_id==user.id)); post=await session.get(Post,post_id)

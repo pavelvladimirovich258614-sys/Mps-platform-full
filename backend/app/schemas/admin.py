@@ -11,6 +11,7 @@ class SettingsUpdate(BaseModel):
     irishka_enabled: bool | None = None
     irishka_delay_min: int | None = Field(default=None, ge=1, le=10080)
     comments_moderation_enabled: bool | None = None
+    fishka_submissions_enabled: bool | None = None
     legal_name: str | None = Field(default=None, max_length=255)
     legal_inn: str | None = Field(default=None, max_length=32)
     legal_ogrn: str | None = Field(default=None, max_length=32)

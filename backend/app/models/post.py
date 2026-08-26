@@ -7,7 +7,7 @@ from app.db import Base
 
 
 class PostType(str, Enum): ARTICLE="article"; FISHKA="fishka"; VIDEO_REVIEW="video_review"
-class PostStatus(str, Enum): DRAFT="draft"; PUBLISHED="published"
+class PostStatus(str, Enum): DRAFT="draft"; PENDING="pending"; PUBLISHED="published"; REJECTED="rejected"
 
 post_likes = Table("post_likes", Base.metadata, Column("post_id", ForeignKey("posts.id", ondelete="CASCADE"), primary_key=True), Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), primary_key=True), Column("created_at", DateTime(timezone=True), server_default=func.now()))
 
@@ -24,6 +24,7 @@ class Post(Base):
     id: Mapped[int]=mapped_column(Integer, primary_key=True)
     type: Mapped[PostType]=mapped_column(SqlEnum(PostType, native_enum=False))
     title: Mapped[str]=mapped_column(String(255))
+    emoji: Mapped[str|None]=mapped_column(String(32))
     slug: Mapped[str]=mapped_column(String(300), unique=True)
     cover_url: Mapped[str|None]=mapped_column(String(2048))
     body: Mapped[str]=mapped_column(Text)

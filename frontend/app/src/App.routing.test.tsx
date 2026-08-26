@@ -21,7 +21,7 @@ const post = {
 const fishka = {
   ...post,
   id: 18,
-  type: "tip" as const,
+  type: "fishka" as const,
   title: "Как не переплатить за трансфер",
   slug: "transfer-tip",
   body: "Проверенная короткая фишка.",

@@ -1,5 +1,13 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 76 F37 Session A local completion — 2026-08-26
+
+- [x] Scope is limited to F37 backend foundations and the minimal frontend type cleanup: Post emoji/status model, Alembic `20260826_0014`, submission/moderation/settings APIs, API DTOs, tests and tracker files. The public form, admin settings UI, content import, CSS, email and production configuration are untouched.
+- [x] RED `D:\Python312\python.exe -m pytest tests/test_posts.py tests/test_admin.py -q --color=no --basetemp D:\AI\tmp\mps-f37-a-red` — 3 expected failures / 9 passed: reader fishka remained forbidden after enabling, reader fishka was not pending, and `GET /admin/settings` was absent. GREEN target after the minimal change — 13 passed in 4.96s.
+- [x] Isolated Alembic upgrade reached `20260826_0014`; direct verification observed `posts.emoji` and `fishka_submissions_enabled=false`. The final backend `D:\Python312\python.exe -m pytest tests -q -x --color=no --basetemp D:\AI\tmp\mps-f37-a-full-backend-6` — 92 passed, 3 skipped in 36.11s.
+- [x] Full frontend `npm test -- --run` — 19 files / 118 passed. `npm run build` — success, 115 modules; only the standard Vite chunk-size warning. `./init.sh` stopped only at the agreed external Hermes/desktop global pip-check conflicts before MPS tests; no external repair was attempted.
+- [x] F37 remains `in_progress`; Sessions B (user form), C (admin settings UI) and D (160-item import) are unstarted. Commit, push and production deployment are intentionally not performed and require separate approval.
+
 ## Session 75 F36 Package 4 local completion — 2026-08-26
 
 - [x] F36 is locally `passing` after all four packages. Scope is limited to four visible frontend wording substitutions; CSS, routes, API, backend, schema, email and production configuration are untouched.

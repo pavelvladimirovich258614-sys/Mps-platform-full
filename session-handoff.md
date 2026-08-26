@@ -2,7 +2,14 @@
 
 ## Current verified state — 2026-08-26
 
-F15–F35 are complete and production-deployed. F36 is `passing` and production-deployed at `c380667`: Packages 1–3 are deployed at `61ff1a5`, `6128c74` and `0bc8c3e`; all local, origin and VPS `/opt/mps-platform` heads are synchronized. Package 1 had a fresh PostgreSQL backup and Alembic `20260826_0013`; Packages 2–3 restarted the backend and passed smoke/live synthetic checks; Package 4 was frontend-only and left the backend active without restart.
+F15–F36 are complete and production-deployed. F37 is `in_progress`: Session A is locally verified, but intentionally uncommitted, unpushed and undeployed pending separate approval. F36 is `passing` and production-deployed at `c380667`: Packages 1–3 are deployed at `61ff1a5`, `6128c74` and `0bc8c3e`; all local, origin and VPS `/opt/mps-platform` heads were synchronized at that rollout. Package 1 had a fresh PostgreSQL backup and Alembic `20260826_0013`; Packages 2–3 restarted the backend and passed smoke/live synthetic checks; Package 4 was frontend-only and left the backend active without restart.
+
+## F37 Session A — local completion, deployment not approved
+
+- Data/API: migration `20260826_0014` adds nullable `posts.emoji` and seeds generic Setting `fishka_submissions_enabled=false`. `emoji` is obligatory for `type=fishka`; `pending` and `rejected` are now explicit PostStatus values. DTOs include emoji, status and published_at.
+- Authorization/moderation: with the toggle on, a reader may submit only a fishka; its status is forced to `pending` and it has no published_at. Editors/admins bypass the toggle and publish fishki immediately. Editors/admins can approve/reject pending fishki through `PATCH /posts/{id}/moderate`; pending fishki appear in the existing moderation queue. Admin-only `GET/PATCH /admin/settings` manages the setting; authenticated `GET /posts/fishki/permission` provides the effective capability for a later form.
+- Compatibility/scope: frontend Session A removes legacy `tip` from the ApiPost union/filter. No fishka creation UI, admin settings screen or content import exists yet; those are F37 Sessions B, C and D respectively. No production activity was authorized.
+- Evidence: RED `tests/test_posts.py tests/test_admin.py` — 3 expected failures / 9 passed; GREEN target — 13 passed. An isolated Alembic upgrade reached `20260826_0014` and observed emoji plus default-off setting. Full backend — 92 passed, 3 skipped in 36.11s; full frontend — 19 files / 118 passed; build succeeded (115 modules; only standard Vite warning). `./init.sh` stopped only at the known external Hermes/desktop global pip-check before MPS test execution.
 
 ## F36 Package 4 — production deployed
 

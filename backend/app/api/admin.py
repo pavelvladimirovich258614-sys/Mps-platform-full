@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps import get_db, require_role
 from app.models.comment import Comment
-from app.models.post import Post
+from app.models.post import Post, PostStatus, PostType
 from app.models.question import Question, QuestionStatus
 from app.models.review import ModerationStatus, Review
 from app.models.setting import Setting
@@ -55,6 +55,9 @@ async def moderation_queue(
     comments = (await session.scalars(
         select(Comment).where(Comment.status == ModerationStatus.PENDING)
     )).all()
+    fishki = (await session.scalars(
+        select(Post).where(Post.type == PostType.FISHKA, Post.status == PostStatus.PENDING)
+    )).all()
     items = [
         {
             "kind": "review",
@@ -75,6 +78,18 @@ async def moderation_queue(
             "created_at": comment.created_at,
         }
         for comment in comments
+    ] + [
+        {
+            "kind": "fishka",
+            "id": fishka.id,
+            "user_id": fishka.author_id,
+            "author_name": None,
+            "title": fishka.title,
+            "body": fishka.body,
+            "emoji": fishka.emoji,
+            "created_at": fishka.updated_at,
+        }
+        for fishka in fishki
     ]
     items.sort(key=lambda item: item["created_at"], reverse=True)
     return {"items": items}
@@ -123,6 +138,15 @@ async def update_user(
     user.is_banned = payload.is_banned
     await session.commit()
     return {"id": user.id, "is_banned": user.is_banned}
+
+
+@router.get("/settings")
+async def settings(
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_role(Role.ADMIN)),
+) -> dict[str, bool]:
+    value = await session.scalar(select(Setting.value).where(Setting.key == "fishka_submissions_enabled"))
+    return {"fishka_submissions_enabled": value is not None and value.strip().lower() == "true"}
 
 
 @router.patch("/settings")

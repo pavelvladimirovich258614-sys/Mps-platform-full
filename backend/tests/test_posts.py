@@ -3,6 +3,7 @@ import httpx,pytest
 from sqlalchemy import select
 from app.api.posts import slugify
 from app.models.post import Post
+from app.models.setting import Setting
 from app.models.user import Role,User
 
 def tg(user_id=99):
@@ -108,3 +109,63 @@ async def test_rich_text_body_allows_only_the_strict_image_carousel_markup(clien
 
 def test_slugify_cyrillic_edge_letters():
  assert slugify("Щука, южная Ялта и ёлка") == "shchuka-yuzhnaya-yalta-i-yolka"
+
+
+async def enable_fishka_submissions(test_app):
+ async with test_app.state.database.session_factory() as s:
+  setting = await s.get(Setting, "fishka_submissions_enabled")
+  if setting is None:
+   s.add(Setting(key="fishka_submissions_enabled", value="true"))
+  else:
+   setting.value = "true"
+  await s.commit()
+
+
+async def disable_fishka_submissions(test_app):
+ async with test_app.state.database.session_factory() as s:
+  setting = await s.get(Setting, "fishka_submissions_enabled")
+  setting.value = "false"; await s.commit()
+
+
+async def test_reader_can_submit_only_enabled_fishka_with_pending_status_and_emoji(client, test_app):
+ reader = await token(client, test_app, user_id=501)
+ payload = {"type":"fishka", "title":"Собирайте аптечку", "body":"Возьмите пластыри.", "emoji":"💡", "status":"published"}
+ assert (await client.post("/api/v1/posts", json=payload, headers=reader)).status_code == 403
+ await enable_fishka_submissions(test_app)
+
+ created = await client.post("/api/v1/posts", json=payload, headers=reader)
+ assert created.status_code == 201
+ assert created.json()["type"] == "fishka"
+ assert created.json()["emoji"] == "💡"
+ assert created.json()["status"] == "pending"
+ assert created.json()["published_at"] is None
+ assert (await client.get("/api/v1/posts?type=fishka")).json() == []
+ assert (await client.post("/api/v1/posts", json={**payload, "emoji":""}, headers=reader)).status_code == 422
+ assert (await client.post("/api/v1/posts", json={**payload, "type":"article"}, headers=reader)).status_code == 403
+ assert (await client.patch(f"/api/v1/posts/{created.json()['id']}", json={"status":"published"}, headers=reader)).status_code == 403
+
+
+async def test_staff_publishes_fishka_immediately_and_moderates_reader_submission(client, test_app):
+ reader = await token(client, test_app, user_id=502)
+ await enable_fishka_submissions(test_app)
+ pending = await client.post("/api/v1/posts", json={"type":"fishka", "title":"Проверить страховку", "body":"До оплаты.", "emoji":"🧳", "status":"published"}, headers=reader)
+ assert pending.status_code == 201
+
+ editor = await token(client, test_app, editor=True, user_id=503)
+ await disable_fishka_submissions(test_app)
+ published = await client.post("/api/v1/posts", json={"type":"fishka", "title":"Оплатить картой", "body":"Проверьте лимиты.", "emoji":"💳", "status":"published"}, headers=editor)
+ assert published.status_code == 201
+ assert published.json()["status"] == "published"
+ assert published.json()["emoji"] == "💳"
+
+ assert (await client.patch(f"/api/v1/posts/{pending.json()['id']}/moderate", json={"action":"approve"}, headers=reader)).status_code == 403
+ approved = await client.patch(f"/api/v1/posts/{pending.json()['id']}/moderate", json={"action":"approve"}, headers=editor)
+ assert approved.status_code == 200
+ assert approved.json()["status"] == "published"
+ await enable_fishka_submissions(test_app)
+ rejected = await client.post("/api/v1/posts", json={"type":"fishka", "title":"Отклонить", "body":"На модерации.", "emoji":"⛔"}, headers=reader)
+ assert rejected.status_code == 201
+ rejection = await client.patch(f"/api/v1/posts/{rejected.json()['id']}/moderate", json={"action":"reject"}, headers=editor)
+ assert rejection.status_code == 200
+ assert rejection.json()["status"] == "rejected"
+ assert {item["id"] for item in (await client.get("/api/v1/posts?type=fishka")).json()} == {pending.json()["id"], published.json()["id"]}

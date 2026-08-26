@@ -18,7 +18,7 @@ export function Feed({ mode = "feed", posts, loading, canCreate = false, onCreat
   const [composerOpen, setComposerOpen] = useState(false);
   const isFishki = mode === "fishki";
   const canOpenComposer = canCreate && !isFishki && Boolean(onCreatePost);
-  const visiblePosts = isFishki ? posts.filter((post) => post.type === "fishka" || post.type === "tip") : posts;
+  const visiblePosts = isFishki ? posts.filter((post) => post.type === "fishka") : posts;
 
   useEffect(() => {
     if (!composerOpen) return;
@@ -51,7 +51,7 @@ function ComposerModal({ onClose, onCreate }: { onClose: () => void; onCreate: (
 
 function PostCard({ post, onLike, onOpen, onOpenProfile }: { post: ApiPost; onLike: () => void; onOpen: () => void; onOpenProfile: () => void }) {
   const kind = post.type === "video_review" ? "video" : post.type;
-  if (kind === "fishka" || kind === "tip") return <article className="post-card tip-card"><div className="tip-mark">✦</div><div><p className="post-tag">Фишка</p><h2 onClick={onOpen}>{post.title}</h2><AuthorLink post={post} onOpenProfile={onOpenProfile} /><RichTextContent html={post.body} className="post-body-excerpt" /><PostActions likesCount={post.likes_count} onLike={onLike} onOpen={onOpen} /></div></article>;
+  if (kind === "fishka") return <article className="post-card tip-card"><div className="tip-mark">✦</div><div><p className="post-tag">Фишка</p><h2 onClick={onOpen}>{post.title}</h2><AuthorLink post={post} onOpenProfile={onOpenProfile} /><RichTextContent html={post.body} className="post-body-excerpt" /><PostActions likesCount={post.likes_count} onLike={onLike} onOpen={onOpen} /></div></article>;
   if (kind === "video") return <article className="post-card video-card"><div className="video-cover"><button aria-label="Смотреть видео">▶</button><span>Под солнцем</span>{post.shot_at && <b>Снято {new Date(post.shot_at).toLocaleDateString("ru-RU")}</b>}</div><h2 onClick={onOpen}>{post.title}</h2><AuthorLink post={post} onOpenProfile={onOpenProfile} /><RichTextContent html={post.body} className="post-body-excerpt" /><PostActions likesCount={post.likes_count} onLike={onLike} onOpen={onOpen} /></article>;
   const coverUrl = post.cover_url?.trim();
   return <article className="post-card article-card">{coverUrl && <img className="article-cover-image" src={coverUrl} alt={`Обложка: ${post.title}`} />}<p className="post-tag">Статья · {post.views} просмотров</p><h2 onClick={onOpen}>{post.title}</h2><AuthorLink post={post} onOpenProfile={onOpenProfile} /><RichTextContent html={post.body} className="post-body-excerpt" /><PostActions likesCount={post.likes_count} onLike={onLike} onOpen={onOpen} /></article>;
