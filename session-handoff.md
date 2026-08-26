@@ -2,7 +2,7 @@
 
 ## Current verified state — 2026-08-26
 
-F15–F36 are complete and production-deployed. F37 is `in_progress`: Sessions A (`4f86725`) and B (`df36dc2`) are production-deployed. F38 is `in_progress`: Package 1 is locally complete and awaits a separately approved backend deployment. F36 is `passing` and production-deployed at `c380667`: Packages 1–3 are deployed at `61ff1a5`, `6128c74` and `0bc8c3e`; all local, origin and VPS `/opt/mps-platform` heads were synchronized at that rollout. Package 1 had a fresh PostgreSQL backup and Alembic `20260826_0013`; Packages 2–3 restarted the backend and passed smoke/live synthetic checks; Package 4 was frontend-only and left the backend active without restart.
+F15–F36 are complete and production-deployed. F37 is `in_progress`: Sessions A (`4f86725`) and B (`df36dc2`) are production-deployed. F38 is `in_progress`: Package 1 is production-deployed at `9d18156`; Package 2 is locally complete and awaits a separately approved backend deployment. F36 is `passing` and production-deployed at `c380667`: Packages 1–3 are deployed at `61ff1a5`, `6128c74` and `0bc8c3e`; all local, origin and VPS `/opt/mps-platform` heads were synchronized at that rollout. Package 1 had a fresh PostgreSQL backup and Alembic `20260826_0013`; Packages 2–3 restarted the backend and passed smoke/live synthetic checks; Package 4 was frontend-only and left the backend active without restart.
 
 ## F38 Package 1 — local completion, deployment unapproved
 
@@ -10,7 +10,15 @@ F15–F36 are complete and production-deployed. F37 is `in_progress`: Sessions A
 - Behaviour: for price/visa/document triggers, Иришка creates the same manager Question as before, flushes it to obtain its ID, calls `tg_relay.send(settings, question)` and stores the returned `tg_message_id`. The Telegram text therefore stays exactly `#Q{id}\n{body}`, where `body` is the forum topic title; no direct topic URL exists yet by product decision.
 - Failure handling: only the relay call is protected with logged `try/except`; a Telegram transport failure leaves the Question and the `is_ai=true` forum response committed, letting the next scheduler work continue.
 - RED→GREEN: RED `tests/test_irishka.py` — 3 expected failures / 6 passed because the relay mock had zero awaits. GREEN — 9 passed in 2.91s, covering price and visa sends, returned message ID persistence and failure persistence. Full backend JUnit reports tests=98, failures=0, errors=0, skipped=3 in 30.307s. Final `./init.sh` stopped only at the agreed external Hermes/desktop global pip-check before MPS pytest.
-- Deployment: explicitly unapproved. Next operation only after user confirmation: commit/push then update backend on VPS, restart `mps-backend`, smoke and a live synthetic Telegram-relay-safe check. No frontend rebuild is necessary.
+- Production evidence: `9d18156` pushed from local to origin and fast-forwarded the VPS; `mps-backend` restarted to `active` and `deploy/smoke.sh` passed. No frontend rebuild or migration was needed.
+
+## F38 Package 2 — local completion, deployment unapproved
+
+- Scope: only `services/irishka.py`, `tests/test_irishka.py` and trackers. No migration, frontend, MiniMax credentials/configuration, direct forum topic route or deployment changed.
+- Behaviour: MiniMax uses `httpx.Timeout(30.0)` and at most three total attempts. `TimeoutException`, `NetworkError` and HTTP 5xx retry after 0.5 then 1.0 seconds. HTTP 4xx (including 401/403) log once and never retry.
+- Isolation: an exhausted MiniMax failure logs an error, publishes no AI message for that topic and uses `continue`, so the next eligible topic in the same scheduler run is still handled. Existing transaction commits successful later topics.
+- RED→GREEN: RED `tests/test_irishka.py` — 6 expected failures / 9 passed. GREEN — 15 passed in 6.19s. Full backend JUnit: tests=104, failures=0, errors=0, skipped=3; pytest output: 101 passed, 3 skipped in 40.50s. Final `./init.sh` stopped only at the agreed external Hermes/desktop global pip-check before MPS pytest.
+- Deployment: explicitly unapproved. Next operation only after user confirmation: commit/push then update backend on VPS, restart `mps-backend` and `deploy/smoke.sh`. No frontend rebuild or database migration is necessary.
 
 ## F37 Session B — production deployed
 

@@ -1,5 +1,6 @@
 from datetime import UTC,datetime,timedelta
 from unittest.mock import AsyncMock
+import logging
 import pytest,respx,httpx
 from sqlalchemy import event,select
 from app.models.forum import ForumTopic,ForumMessage
@@ -81,3 +82,59 @@ async def test_irishka_keeps_question_and_ai_message_when_telegram_fails(test_ap
   messages=(await s.scalars(select(ForumMessage))).all()
   assert question is not None and question.tg_message_id is None
   assert len(messages)==1 and messages[0].is_ai is True
+
+
+async def add_ai_topics(test_app, *titles):
+ async with test_app.state.database.session_factory() as s:
+  c=Country(name="MiniMax",flag_emoji="🏖",sort_order=6);u=User(email="minimax-user@example.com",name="u");a=User(email="irishka@system.local",name="Иришка · ИИ-помощник",role="editor");s.add_all([c,u,a,Setting(key="irishka_enabled",value="true"),Setting(key="irishka_delay_min",value="30")]);await s.flush()
+  topics=[ForumTopic(country_id=c.id,author_id=u.id,title=title,created_at=datetime.now(UTC)-timedelta(minutes=31)) for title in titles]
+  s.add_all(topics);await s.commit()
+  return [topic.id for topic in topics]
+
+
+@pytest.mark.parametrize("failure", [httpx.ReadTimeout("MiniMax timeout"), httpx.Response(500)])
+@respx.mock
+async def test_irishka_retries_transient_minimax_failures(test_app, failure, monkeypatch):
+ await add_ai_topics(test_app,"Нужен совет")
+ monkeypatch.setattr("asyncio.sleep",AsyncMock())
+ route=respx.post("https://api.minimax.io/v1/chat/completions").mock(side_effect=[failure,failure,httpx.Response(200,json={"choices":[{"message":{"content":"Ответ после retry"}}]})])
+ assert await run(test_app.state.database.session_factory,test_app.state.settings)==1
+ assert route.call_count==3
+
+
+async def test_irishka_uses_explicit_30_second_minimax_timeout(test_app, monkeypatch):
+ await add_ai_topics(test_app,"Нужен совет")
+ observed=[]
+ class Client:
+  def __init__(self, *, timeout): observed.append(timeout)
+  async def __aenter__(self): return self
+  async def __aexit__(self, *_): return False
+  async def post(self, *_args, **_kwargs): return httpx.Response(200,request=httpx.Request("POST","https://api.minimax.io/v1/chat/completions"),json={"choices":[{"message":{"content":"Ответ"}}]})
+ monkeypatch.setattr("app.services.irishka.httpx.AsyncClient",Client)
+ assert await run(test_app.state.database.session_factory,test_app.state.settings)==1
+ assert observed==[httpx.Timeout(30.0)]
+
+
+@pytest.mark.parametrize("status", [401,403])
+@respx.mock
+async def test_irishka_does_not_retry_minimax_auth_errors(test_app, status):
+ await add_ai_topics(test_app,"Нужен совет")
+ route=respx.post("https://api.minimax.io/v1/chat/completions").mock(return_value=httpx.Response(status))
+ assert await run(test_app.state.database.session_factory,test_app.state.settings)==0
+ assert route.call_count==1
+
+
+@respx.mock
+async def test_irishka_logs_and_skips_failed_topic_then_processes_next(test_app, caplog, monkeypatch):
+ failed_topic_id,healthy_topic_id=await add_ai_topics(test_app,"Первый совет","Второй совет")
+ monkeypatch.setattr("asyncio.sleep",AsyncMock())
+ route=respx.post("https://api.minimax.io/v1/chat/completions").mock(side_effect=[httpx.ConnectError("MiniMax unavailable"),httpx.ConnectError("MiniMax unavailable"),httpx.ConnectError("MiniMax unavailable"),httpx.Response(200,json={"choices":[{"message":{"content":"Ответ второй теме"}}]})])
+ caplog.set_level(logging.ERROR,logger="app.services.irishka")
+ assert await run(test_app.state.database.session_factory,test_app.state.settings)==1
+ assert route.call_count==4
+ assert "MiniMax" in caplog.text
+ async with test_app.state.database.session_factory() as s:
+  failed_messages=(await s.scalars(select(ForumMessage).where(ForumMessage.topic_id==failed_topic_id))).all()
+  healthy_messages=(await s.scalars(select(ForumMessage).where(ForumMessage.topic_id==healthy_topic_id))).all()
+  assert not failed_messages
+  assert len(healthy_messages)==1 and healthy_messages[0].body=="Ответ второй теме"

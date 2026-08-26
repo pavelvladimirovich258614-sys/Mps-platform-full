@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime, timedelta
 import logging
 
@@ -19,6 +20,44 @@ PROMPT = (
     "Не называй цены и не давай юридических гарантий."
 )
 TRIGGERS = ("цен", "стоим", "виз", "документ")
+MINIMAX_TIMEOUT_SECONDS = 30.0
+MINIMAX_MAX_ATTEMPTS = 3
+
+
+async def generate_minimax_answer(settings, title: str) -> str | None:
+    """Запрашивает ответ MiniMax с ограниченными retry для временных сбоев."""
+    async with httpx.AsyncClient(timeout=httpx.Timeout(MINIMAX_TIMEOUT_SECONDS)) as client:
+        for attempt in range(MINIMAX_MAX_ATTEMPTS):
+            try:
+                response = await client.post(
+                    f"{settings.minimax_base_url.rstrip('/')}/chat/completions",
+                    headers={"Authorization": f"Bearer {settings.minimax_api_key}"},
+                    json={
+                        "model": settings.minimax_model,
+                        "messages": [
+                            {"role": "system", "content": PROMPT},
+                            {"role": "user", "content": title},
+                        ],
+                        "max_completion_tokens": 500,
+                    },
+                )
+                response.raise_for_status()
+                return response.json()["choices"][0]["message"]["content"]
+            except httpx.HTTPStatusError as error:
+                if error.response.status_code < 500:
+                    logger.error("MiniMax отклонил запрос для темы %r: HTTP %s", title, error.response.status_code)
+                    return None
+                last_error = error
+            except (httpx.TimeoutException, httpx.NetworkError) as error:
+                last_error = error
+
+            if attempt + 1 < MINIMAX_MAX_ATTEMPTS:
+                delay = 0.5 * (2 ** attempt)
+                logger.warning("Временный сбой MiniMax для темы %r, повтор через %.1f с", title, delay)
+                await asyncio.sleep(delay)
+
+    logger.error("MiniMax не ответил для темы %r после %s попыток: %s", title, MINIMAX_MAX_ATTEMPTS, last_error)
+    return None
 
 
 async def run(session_factory, settings) -> int:
@@ -64,21 +103,9 @@ async def run(session_factory, settings) -> int:
                 except Exception:
                     logger.exception("Не удалось отправить менеджеру вопрос Иришки id=%s", question.id)
             else:
-                async with httpx.AsyncClient() as client:
-                    response = await client.post(
-                        f"{settings.minimax_base_url.rstrip('/')}/chat/completions",
-                        headers={"Authorization": f"Bearer {settings.minimax_api_key}"},
-                        json={
-                            "model": settings.minimax_model,
-                            "messages": [
-                                {"role": "system", "content": PROMPT},
-                                {"role": "user", "content": topic.title},
-                            ],
-                            "max_completion_tokens": 500,
-                        },
-                    )
-                    response.raise_for_status()
-                    text = response.json()["choices"][0]["message"]["content"]
+                text = await generate_minimax_answer(settings, topic.title)
+                if text is None:
+                    continue
 
             session.add(
                 ForumMessage(topic_id=topic.id, author_id=assistant.id, body=text, is_ai=True)
