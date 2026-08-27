@@ -701,6 +701,6 @@ describe("App pathname routing", () => {
     window.history.pushState({}, "", "/about");
     window.dispatchEvent(new PopStateEvent("popstate"));
 
-    expect(await screen.findByRole("heading", { name: "Мы — «Под солнцем»" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Официальный партнёр крупнейших туроператоров России" })).toBeTruthy();
   });
 });

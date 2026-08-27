@@ -1,5 +1,18 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 95 F48d local completion — 2026-08-28
+
+- [x] Scope is limited to confirmed `/about` content, its directly related frontend regression assertions and trackers. Existing route, CSS/layout, perks, SunLogo and Telegram CTA are preserved; backend, schema, dependencies, secrets, production, push and deployment are unchanged.
+- [x] RED `npm test -- --run src/components/About.test.tsx --reporter=verbose` — 3 expected failures / 0 passed: ten confirmed content markers absent, former placeholder-style copy present and no contact link rendered without public settings.
+- [x] GREEN same target — 3 passed. Confirmed heading/body/contact content is rendered, old placeholder/lorem is absent and every rendered link has a usable target.
+- [x] The first full suite exposed only two stale expectations directly caused by the intentional content replacement. One compatible contact-node adjustment and one updated heading assertion were sufficient; the second full run passed 22 test files / 142 tests.
+- [x] `npm run build` passed: `tsc -b && vite build`, 117 modules transformed; only the existing chunk-size warning was emitted.
+- [x] Named isolated `agent-browser` verification opened local `/about`: all required text was readable; old placeholder/lorem was absent; three links were visible with nonempty HTTPS targets; no broken images were present. `.about-heading`, `.about-text` and `.about-contacts` had visible overflow, no line clamp, equal scroll/client heights and `clipped=false`.
+- [x] Final `./init.sh` outside sandbox exited 1 only at the explicitly excluded external Hermes/desktop global pip-check before MPS pytest; complete frontend verification passed separately and the shared environment was not repaired.
+- [x] `feature_list.json` records F48d as `passing` only after fresh evidence. Progress and handoff preserve production at `a5186bc` and explicitly mark F48d as local-only.
+- [x] The agreed verification-before-completion and TDD rules were applied textually. Their `.codex/skills/*.md` files remain physically absent from the checkout as a known process gap.
+- [x] Pre-commit validation: JSON parsed with 48/48 records `passing` and zero `in_progress`; `git diff --check` passed; the exact seven-file staged name-status allowlist was inspected before the local commit. Final status is checked immediately after commit to confirm `main` ahead of `origin/main` by one with no unstaged/untracked files. Push/deploy remain unapproved.
+
 ## Session 93 F45 local completion — 2026-08-28
 
 - [x] Scope is limited to background Иришка concurrency control, PostgreSQL regression coverage, migration `20260828_0017` and trackers. Scheduler cadence, interactive Q&A, frontend, dependencies, secrets, production database/service, push and deployment are unchanged.

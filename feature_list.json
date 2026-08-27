@@ -841,6 +841,22 @@
       ],
       "evidence": "2026-08-28 RED→GREEN on temporary PostgreSQL 16. RED `test_irishka_postgresql_concurrent_runners_create_one_ai_message` proved `([1, 1], 2 provider calls, 2 AI rows, messages_count=2)` instead of `([1, 0], 1, 1, 1)`. GREEN same test — 1 passed; full `tests/test_irishka.py` — 19 passed, including busy-lock suppression of MiniMax/Telegram, a human message arriving during MiniMax, and a concurrent manager trigger relayed once. Isolated PostgreSQL Alembic cycle passed `0016 → 0017 → 0016 → 0017`; `uq_forum_messages_one_ai_per_topic` was absent after downgrade and restored as `UNIQUE (topic_id) WHERE (is_ai IS TRUE)`. Two human rows plus one AI row were accepted, and a second AI row was rejected by the index. Full backend with `MPS_TEST_POSTGRES_URL` set — 126 passed in 52.04s with no PostgreSQL skips. Final `./init.sh` stopped only at the explicitly excluded external Hermes/desktop global pip-check before MPS pytest. Production rollout synchronized local/origin/VPS on `a5186bce67c107dd8912f39361fa15b7fb637351`; preflight found 0 topics, 0 messages and 0 duplicate AI topics. Verified PostgreSQL rollback `/var/backups/mps/mps-2026-08-27-123301.dump.gz` has SHA-256 `3ac9b6d2cfca55f97bb83d549c7d4896c99011ec3f0a293567e49e6054325043`. Alembic reached `20260828_0017 (head)`, the partial index DDL was observed, backend restarted active/healthy and `deploy/smoke.sh` passed. Frontend diff was empty and no frontend build/deploy occurred.",
       "notes": "Completed and production-deployed 2026-08-28 at `a5186bc`. Each eligible topic uses its own transaction and PostgreSQL transaction-scoped advisory lock before MiniMax/Telegram; the final write locks ForumTopic FOR UPDATE and rechecks messages before inserting and updating the counter. Migration `20260828_0017` supplies the DB backstop. The separate F38 admin UI for Иришка settings remains unstarted."
+    },
+    {
+      "id": "F48d",
+      "priority": 48,
+      "area": "content-about",
+      "title": "О нас: подтверждённый контент агентства",
+      "user_visible_behavior": "Раздел «О нас» показывает подтверждённую историю турагентства «Под солнцем», партнёрства, направления работы, спортивную экспертизу и актуальные контакты без placeholder-текста.",
+      "status": "passing",
+      "verification": [
+        "RED/GREEN About component test: нет старого placeholder/lorem, есть «Под солнцем», 2003, телефон и email",
+        "Полный frontend test suite и npm run build",
+        "Локальная browser-проверка /about: полный текст видим, layout не обрезает содержимое, ссылки не битые",
+        "./init.sh outside sandbox; внешний Hermes pip check фиксируется отдельно"
+      ],
+      "evidence": "2026-08-28 RED→GREEN: new `About.test.tsx` initially failed 3/3 against the former generic copy (all 10 confirmed markers absent, old placeholder phrases present, no contact link when public settings were unavailable), then passed 3/3 after the content-only implementation. First full suite exposed two stale content expectations (`PublicContacts` exact bare contact value and `App.routing` old heading); the minimal compatible DOM adjustment plus updated heading assertion yielded 22 files / 142 tests passed. `npm run build` passed (`tsc -b && vite build`, 117 modules). Isolated `agent-browser` session opened local `/about`: all confirmed text was rendered, placeholder copy was absent, all three links were visible with nonempty HTTPS targets, no broken images were found, and `.about-heading`, `.about-text`, `.about-contacts` reported `overflow: visible`, `line-clamp: none`, matching scroll/client heights and `clipped=false`. Final `./init.sh` stopped only at the explicitly excluded external Hermes/desktop global pip-check before MPS pytest.",
+      "notes": "Completed locally 2026-08-28; not pushed or deployed. Content-only change in `frontend/app/src/components/About.tsx` preserves the existing route, classes, perks grid, SunLogo and Telegram CTA. Confirmed fallback contacts are shown when public settings are unavailable, while configured public contacts still override them. No styles, backend, dependencies or web design changed."
     }
   ]
 }

@@ -2,14 +2,15 @@
 
 ## Current verified state — 2026-08-28
 
-- All 47 tracker records covering F01–F45 are `passing` with evidence; historical F09 is split into F09a1/F09a2/F09b.
-- Production application revision is `a5186bce67c107dd8912f39361fa15b7fb637351`; local/origin/VPS were synchronized on that application checkpoint before the tracker-only follow-up. Production PostgreSQL is at `20260828_0017 (head)`; `mps-backend` is active/healthy and `deploy/smoke.sh` passes. The documentation checkpoint needs no production deployment.
+- All 48 tracker records covering F01–F45 plus F48d are `passing` with evidence; historical F09 is split into F09a1/F09a2/F09b.
+- Production application revision remains `a5186bce67c107dd8912f39361fa15b7fb637351`; local/origin/VPS were synchronized on that application checkpoint before F48d. Production PostgreSQL is at `20260828_0017 (head)`; `mps-backend` was active/healthy and the last approved `deploy/smoke.sh` passed. F48d has not been pushed or deployed.
 - F37 Sessions A (`4f86725`), B (`df36dc2`), C (`b2b41fb`) and D (`9ab7b0e`) are complete and production-deployed.
 - Session C embeds the admin-only `fishka_submissions_enabled` toggle directly in `/fishki`; non-admin roles neither render the control nor request the admin settings API.
 - Session D adds nullable fishka categories, `GET /posts/fishki/categories`, the dynamic «Тема» filter and 11 new exact Unicode emoji choices. Its guarded importer parsed and idempotently imported 160 published fishki for `Павел` across 13 categories.
 - The approved data operation permanently deleted only the 15 exact imported records in `Реальные кейсы Сергея (главное)`. Production now contains 145 imported fishki, 146 fishki total and 12 dynamic categories; the API and live dropdown no longer expose the removed category.
 - F38 Packages 1–3 through F44 remain complete and production-deployed. Interactive «Иришка ИИ», outbound/inbound Telegram relay, reasoning cleanup, notification deep-links/polling and Q&A soft archive remain live.
 - F45 is complete and production-deployed. Background Иришка processing obtains a transaction-scoped PostgreSQL advisory lock per `topic_id` before MiniMax/Telegram, performs a final ForumTopic `FOR UPDATE` plus message recheck, commits each topic independently and is backed by partial unique index `UNIQUE (topic_id) WHERE is_ai IS TRUE`.
+- F48d is complete locally. Existing `/about` structure now contains the confirmed official-partner heading, agency history since 2003, travel/sports expertise and confirmed address/phone/email fallbacks; configured public settings still override the fallbacks. Route, CSS and visual design were not changed.
 
 ## Verification and rollback
 
@@ -19,6 +20,7 @@
 - F45 PostgreSQL RED was `([1, 1], 2 provider calls, 2 AI rows, messages_count=2)`; GREEN was `([1, 0], 1, 1, 1)`. Full `test_irishka.py` passed 19 tests; full backend passed 126 with PostgreSQL integration tests active.
 - F45 isolated Alembic cycle passed `0016 → 0017 → 0016 → 0017`. Multiple human rows were accepted and a second AI row for one topic was rejected by `uq_forum_messages_one_ai_per_topic`.
 - F45 production preflight found 0 topics, 0 messages and 0 duplicate AI topics. Backup `/var/backups/mps/mps-2026-08-27-123301.dump.gz`, SHA-256 `3ac9b6d2cfca55f97bb83d549c7d4896c99011ec3f0a293567e49e6054325043`, is non-empty and readable through `pg_restore --list`. Migration `0017`, backend restart/health and smoke passed. Frontend diff was empty and no frontend build/deploy was performed.
+- F48d RED failed 3/3 against the old About content; target GREEN passed 3/3. Full frontend passed 22 files / 142 tests and `npm run build` passed with 117 modules. Isolated `agent-browser` verification of local `/about` confirmed all requested markers, absence of placeholder/lorem, no section clipping or line clamp, three visible nonempty HTTPS links and no broken images.
 - Session-close `./init.sh` stops only at the known external Hermes/desktop global `pip check` before MPS pytest; the relevant complete MPS suites passed separately. The shared Python environment was not modified.
 
 ## Deferred / unresolved work
@@ -34,7 +36,7 @@
 
 1. F38 remaining admin UI for Иришка settings.
 2. Forum N+1 optimization.
-3. Drafts / reviews / subscription / about.
+3. Drafts / reviews / subscription.
 4. Web design last.
 
-Whole-site search, email transport, npm remediation and skill-file restoration remain separate scopes requiring their own plan and approval. This checkpoint changes only the three tracker files; the owner explicitly authorized its commit and push, with no production deployment.
+Immediate next step is separate owner approval for F48d push/deploy. Whole-site search, email transport, npm remediation and skill-file restoration remain separate scopes requiring their own plan and approval. This checkpoint changes the About component, directly related frontend regressions and trackers only; no push, deployment or production operation is authorized.
