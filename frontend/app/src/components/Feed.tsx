@@ -14,12 +14,15 @@ type FeedProps = {
   canCreateFishka?: boolean;
   fishkaPublishesImmediately?: boolean;
   fishkaAdminControls?: ReactNode;
+  fishkaCategories?: string[];
+  fishkaCategory?: string;
+  onFishkaCategoryChange?: (category: string) => void;
   onCreateFishka?: (post: FishkaDraft) => Promise<void>;
   onToggleLike: (post: ApiPost) => void;
   onOpenArticle: (post: ApiPost) => void;
   onOpenProfile: (userId: number) => void;
 };
-export function Feed({ mode = "feed", posts, loading, canCreate = false, onCreatePost, canCreateFishka = false, fishkaPublishesImmediately = false, fishkaAdminControls, onCreateFishka, onToggleLike, onOpenArticle, onOpenProfile }: FeedProps) {
+export function Feed({ mode = "feed", posts, loading, canCreate = false, onCreatePost, canCreateFishka = false, fishkaPublishesImmediately = false, fishkaAdminControls, fishkaCategories = [], fishkaCategory = "", onFishkaCategoryChange, onCreateFishka, onToggleLike, onOpenArticle, onOpenProfile }: FeedProps) {
   const [composerOpen, setComposerOpen] = useState(false);
   const [fishkaComposerOpen, setFishkaComposerOpen] = useState(false);
   const isFishki = mode === "fishki";
@@ -38,6 +41,7 @@ export function Feed({ mode = "feed", posts, loading, canCreate = false, onCreat
     {isFishki && fishkaAdminControls}
     {canOpenComposer && <button type="button" className="create-post-button" aria-label="Создать публикацию" onClick={() => setComposerOpen(true)}>✦ Создать публикацию</button>}
     {isFishki && canCreateFishka && onCreateFishka && <button type="button" className="create-post-button" aria-label="Добавить фишку" onClick={() => setFishkaComposerOpen(true)}>✦ Добавить фишку</button>}
+    {isFishki && onFishkaCategoryChange && <label className="fishka-category-filter"><span>Тема</span><select aria-label="Тема" value={fishkaCategory} onChange={(event) => onFishkaCategoryChange(event.target.value)}><option value="">Все темы</option>{fishkaCategories.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>}
     {composerOpen && onCreatePost && <ComposerModal onClose={() => setComposerOpen(false)} onCreate={onCreatePost} />}
     {fishkaComposerOpen && onCreateFishka && <FishkaComposerModal onClose={() => setFishkaComposerOpen(false)} publishesImmediately={fishkaPublishesImmediately} onCreate={onCreateFishka} />}
     {!isFishki && <div className="feed-filters"><h2>Статьи</h2></div>}

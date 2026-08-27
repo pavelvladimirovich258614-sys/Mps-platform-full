@@ -25,6 +25,7 @@ class Post(Base):
     type: Mapped[PostType]=mapped_column(SqlEnum(PostType, native_enum=False))
     title: Mapped[str]=mapped_column(String(255))
     emoji: Mapped[str|None]=mapped_column(String(32))
+    category: Mapped[str|None]=mapped_column(String(120), nullable=True)
     slug: Mapped[str]=mapped_column(String(300), unique=True)
     cover_url: Mapped[str|None]=mapped_column(String(2048))
     body: Mapped[str]=mapped_column(Text)

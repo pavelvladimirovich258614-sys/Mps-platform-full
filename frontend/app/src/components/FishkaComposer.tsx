@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import type { FishkaDraft } from "../hooks";
 
-export const FISHKA_EMOJIS = ["✈️", "🧳", "🗺️", "🏖️", "🏔️", "🏨", "🍽️", "🚕", "📱", "💡", "☀️", "🛡️"] as const;
+export const FISHKA_EMOJIS = ["✈️", "🧳", "🗺️", "🏖️", "🏔️", "🏨", "🍽️", "🚕", "📱", "💡", "☀️", "🛡️", "🚖", "🛂", "💰", "🎒", "🌐", "👶", "📅", "🍽", "🔒", "🗺", "🎯"] as const;
 
 type FishkaComposerProps = {
   publishesImmediately: boolean;

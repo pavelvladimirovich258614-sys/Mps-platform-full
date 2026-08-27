@@ -6,7 +6,7 @@ import type { Comment, ReactionResult } from "../api/comments";
 export type { Comment } from "../api/comments";
 
 export type User = { id: number; email: string | null; name: string; avatar_url: string | null; bio: string | null; role: string; is_anonymous: boolean };
-export type ApiPost = { id: number; type: "article" | "fishka" | "video_review"; title: string; slug: string; body: string; emoji?: string | null; cover_url?: string | null; liked_at?: string | null; views: number; likes_count: number; shot_at: string | null; author: { id: number; name: string; avatar_url: string | null } };
+export type ApiPost = { id: number; type: "article" | "fishka" | "video_review"; title: string; slug: string; body: string; emoji?: string | null; category?: string | null; cover_url?: string | null; liked_at?: string | null; views: number; likes_count: number; shot_at: string | null; author: { id: number; name: string; avatar_url: string | null } };
 export type PostDraft = { title: string; type: "article"; body: string; status: "draft" | "published"; cover_url?: string | null };
 export type FishkaDraft = { title: string; type: "fishka"; body: string; emoji: string; status: "pending" | "published" };
 export type DraftSummary = { id: number; title: string; updated_at: string };
@@ -54,8 +54,15 @@ export function useAuth() {
   return { user, loading, error, requestCode, verifyCode, loginTelegram, update, uploadAvatar, logout, reload: loadMe };
 }
 
-export const usePosts = (type?: ApiPost["type"]) => useResource(() => api<ApiPost[]>(type ? `/posts?type=${encodeURIComponent(type)}` : "/posts"), [type]);
+export const usePosts = (type?: ApiPost["type"], category?: string) => useResource(() => {
+  const query = new URLSearchParams();
+  if (type) query.set("type", type);
+  if (category) query.set("category", category);
+  const suffix = query.size ? `?${query.toString()}` : "";
+  return api<ApiPost[]>(`/posts${suffix}`);
+}, [type, category]);
 export const usePostCreator = () => ({ create: (post: PostDraft | FishkaDraft) => apiJson<ApiPost>("/posts", "POST", post) });
+export const useFishkaCategories = (enabled: boolean) => useResource(() => enabled ? api<string[]>("/posts/fishki/categories") : Promise.resolve([]), [enabled]);
 export const useFishkaPermission = (enabled: boolean) => useResource(() => enabled ? api<{ can_submit_fishka: boolean }>("/posts/fishki/permission") : Promise.resolve({ can_submit_fishka: false }), [enabled]);
 export type FishkaAdminSettings = { fishka_submissions_enabled: boolean };
 export const useFishkaAdminSettings = (enabled: boolean) => {

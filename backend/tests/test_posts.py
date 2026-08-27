@@ -88,6 +88,24 @@ async def test_public_feed_excludes_fishki_but_keeps_type_and_author_filters(cli
  assert author_posts.status_code == 200
  assert {item["id"] for item in author_posts.json()} == {article.json()["id"], video.json()["id"], fishka.json()["id"]}
 
+
+async def test_fishki_expose_categories_and_support_exact_category_filter(client, test_app):
+ editor = await token(client, test_app, True)
+ transfer = await client.post("/api/v1/posts", json={"type":"fishka", "title":"Трансфер", "body":"Текст", "emoji":"🚖", "category":"Трансфер и дорога в аэропорт", "status":"published"}, headers=editor)
+ hotel = await client.post("/api/v1/posts", json={"type":"fishka", "title":"Заселение", "body":"Текст", "emoji":"🏨", "category":"Отель и заселение", "status":"published"}, headers=editor)
+ legacy = await client.post("/api/v1/posts", json={"type":"fishka", "title":"Старая фишка", "body":"Текст", "emoji":"💡", "status":"published"}, headers=editor)
+ assert transfer.status_code == hotel.status_code == legacy.status_code == 201
+ assert transfer.json()["category"] == "Трансфер и дорога в аэропорт"
+ assert legacy.json()["category"] is None
+
+ filtered = await client.get("/api/v1/posts", params={"type":"fishka", "category":"Отель и заселение"})
+ assert filtered.status_code == 200
+ assert [item["id"] for item in filtered.json()] == [hotel.json()["id"]]
+
+ categories = await client.get("/api/v1/posts/fishki/categories")
+ assert categories.status_code == 200
+ assert categories.json() == ["Трансфер и дорога в аэропорт", "Отель и заселение"]
+
 async def test_cover_url_persists_through_patch_and_post_get_endpoints(client, test_app):
  editor = await token(client, test_app, True)
  published = await client.post("/api/v1/posts", json={"type":"article", "title":"С обложкой", "body":"Текст", "status":"published"}, headers=editor)

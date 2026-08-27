@@ -16,7 +16,7 @@ import { PublicProfile } from "./components/PublicProfile";
 import { QA } from "./components/QA";
 import { Reviews } from "./components/Reviews";
 import { Subscribe } from "./components/Subscribe";
-import { getDraft, getLikedPosts, type ApiPost, type FishkaDraft, useAuthorPosts, useAuth, useDrafts, useFishkaAdminSettings, useFishkaPermission, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, useProfileActivity, useProfileComments, useProfileFollowers, useProfileFollowing, usePublicProfile, usePublicSettings, useQAQuestions, useUserFollow } from "./hooks";
+import { getDraft, getLikedPosts, type ApiPost, type FishkaDraft, useAuthorPosts, useAuth, useDrafts, useFishkaAdminSettings, useFishkaCategories, useFishkaPermission, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, useProfileActivity, useProfileComments, useProfileFollowers, useProfileFollowing, usePublicProfile, usePublicSettings, useQAQuestions, useUserFollow } from "./hooks";
 import { pathForRoute, type PathRoute, routeFromPath } from "./router";
 
 function routeForPage(page: Page): PathRoute {
@@ -46,12 +46,15 @@ export function App() {
   const [likesByPostId, setLikesByPostId] = useState<Record<number, number>>({});
   const [likedPostsByUserId, setLikedPostsByUserId] = useState<Record<number, ApiPost[]>>({});
   const [editingPost, setEditingPost] = useState<EditablePost | null>(null);
+  const [fishkaCategory, setFishkaCategory] = useState("");
 
   const auth = useAuth();
   const canManagePosts = auth.user?.role === "editor" || auth.user?.role === "admin";
   const isAdmin = auth.user?.role === "admin";
-  const posts = usePosts(route.page === "fishki" ? "fishka" : undefined);
+  const fishkiPage = route.page === "fishki";
+  const posts = usePosts(fishkiPage ? "fishka" : undefined, fishkiPage ? fishkaCategory || undefined : undefined);
   const drafts = useDrafts(route.page === "drafts" && canManagePosts);
+  const fishkaCategories = useFishkaCategories(fishkiPage);
   const fishkaPermission = useFishkaPermission(route.page === "fishki" && Boolean(auth.user) && !canManagePosts);
   const fishkaAdminSettings = useFishkaAdminSettings(route.page === "fishki" && isAdmin);
   const postCreator = usePostCreator();
@@ -198,7 +201,7 @@ export function App() {
   const page: Page = route.page === "countries" && topicOpen ? "topic" : route.page;
   let content = null;
   if (page === "feed") content = <Feed posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} canCreate={canManagePosts} onCreatePost={createPost} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
-  if (page === "fishki") content = <Feed mode="fishki" posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} canCreateFishka={canManagePosts || fishkaPermission.value?.can_submit_fishka === true} fishkaPublishesImmediately={canManagePosts} fishkaAdminControls={<FishkaAdminSettings settings={isAdmin ? fishkaAdminSettings.value : null} loading={isAdmin && fishkaAdminSettings.loading} onUpdate={fishkaAdminSettings.update} />} onCreateFishka={createFishka} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
+  if (page === "fishki") content = <Feed mode="fishki" posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} canCreateFishka={canManagePosts || fishkaPermission.value?.can_submit_fishka === true} fishkaPublishesImmediately={canManagePosts} fishkaAdminControls={<FishkaAdminSettings settings={isAdmin ? fishkaAdminSettings.value : null} loading={isAdmin && fishkaAdminSettings.loading} onUpdate={fishkaAdminSettings.update} />} fishkaCategories={fishkaCategories.value ?? []} fishkaCategory={fishkaCategory} onFishkaCategoryChange={setFishkaCategory} onCreateFishka={createFishka} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
   if (page === "countries" || page === "topic") {
     content = (
       <Forum

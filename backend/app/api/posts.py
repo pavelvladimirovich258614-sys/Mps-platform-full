@@ -2,7 +2,7 @@ import re, secrets
 from datetime import UTC, datetime
 import nh3
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.deps import get_current_user, get_db, require_role
 from app.models.post import Post, PostStatus, PostType, post_likes
@@ -29,7 +29,7 @@ async def unique_slug(session,title):
     base=slugify(title); slug=base
     while await session.scalar(select(Post.id).where(Post.slug==slug)): slug=f"{base}-{secrets.token_hex(3)}"
     return slug
-def dto(p, author: User): return {"id":p.id,"type":p.type.value,"title":p.title,"slug":p.slug,"body":p.body,"emoji":p.emoji,"status":p.status.value,"published_at":p.published_at.isoformat() if p.published_at else None,"cover_url":p.cover_url,"views":p.views,"likes_count":p.likes_count,"shot_at":p.shot_at.isoformat() if p.shot_at else None,"author":{"id":author.id,"name":author.name,"avatar_url":author.avatar_url}}
+def dto(p, author: User): return {"id":p.id,"type":p.type.value,"title":p.title,"slug":p.slug,"body":p.body,"emoji":p.emoji,"category":p.category,"status":p.status.value,"published_at":p.published_at.isoformat() if p.published_at else None,"cover_url":p.cover_url,"views":p.views,"likes_count":p.likes_count,"shot_at":p.shot_at.isoformat() if p.shot_at else None,"author":{"id":author.id,"name":author.name,"avatar_url":author.avatar_url}}
 def draft_summary_dto(p: Post): return {"id":p.id,"title":p.title,"updated_at":p.updated_at.isoformat()}
 def draft_dto(p: Post, author: User): return {**dto(p, author), "status":p.status.value, "updated_at":p.updated_at.isoformat()}
 
@@ -41,12 +41,13 @@ async def fishka_submissions_enabled(session: AsyncSession) -> bool:
     return value is not None and value.strip().lower() == "true"
 
 @router.get("")
-async def list_posts(type:PostType|None=None,country:int|None=None,author_id:int|None=None,page:int=1,session:AsyncSession=Depends(get_db)):
+async def list_posts(type:PostType|None=None,country:int|None=None,author_id:int|None=None,category:str|None=None,page:int=1,session:AsyncSession=Depends(get_db)):
     q=select(Post, User).join(User, User.id == Post.author_id).where(Post.status==PostStatus.PUBLISHED)
     if type:q=q.where(Post.type==type)
     elif author_id is None:q=q.where(Post.type.in_((PostType.ARTICLE, PostType.VIDEO_REVIEW)))
     if country:q=q.where(Post.country_id==country)
     if author_id:q=q.where(Post.author_id==author_id)
+    if category:q=q.where(Post.category==category)
     rows=(await session.execute(q.offset((max(page,1)-1)*20).limit(20))).all(); return [dto(post, author) for post, author in rows]
 @router.get("/drafts")
 async def list_drafts(session:AsyncSession=Depends(get_db),user:User=Depends(require_role(Role.EDITOR))):
@@ -61,6 +62,19 @@ async def get_draft(post_id:int,session:AsyncSession=Depends(get_db),user:User=D
 @router.get("/fishki/permission")
 async def fishka_permission(session: AsyncSession=Depends(get_db),user:User=Depends(get_current_user)):
     return {"can_submit_fishka": can_manage_posts(user) or await fishka_submissions_enabled(session)}
+@router.get("/fishki/categories")
+async def fishka_categories(session: AsyncSession=Depends(get_db)):
+    categories = await session.scalars(
+        select(Post.category)
+        .where(
+            Post.type == PostType.FISHKA,
+            Post.status == PostStatus.PUBLISHED,
+            Post.category.is_not(None),
+        )
+        .group_by(Post.category)
+        .order_by(func.min(Post.id))
+    )
+    return list(categories)
 @router.get("/{slug}")
 async def get_post(slug:str,session:AsyncSession=Depends(get_db)):
     row=await session.execute(select(Post, User).join(User, User.id == Post.author_id).where(Post.slug==slug,Post.status==PostStatus.PUBLISHED))

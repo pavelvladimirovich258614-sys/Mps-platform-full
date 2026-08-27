@@ -1,5 +1,18 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 91 F37 Session D local completion — 2026-08-27
+
+- [x] Scope is limited to nullable fishka category storage/API, the supplied versioned 160-item source and importer, `/fishki` category filtering, the approved emoji expansion, regressions and trackers. No production database/import, push, deployment, service, secret or unrelated dependency changed.
+- [x] Package D1 RED stopped at the expected missing `app.management.import_fishki`; target GREEN — 13 passed. Parser coverage proves 160 contiguous items, 13 blocks, actual working category names and preservation of numbered body text.
+- [x] Isolated Alembic cycle passed: `20260826_0015 → 20260827_0016 → 20260826_0015 → 20260827_0016`; `posts.category VARCHAR(120)` is nullable at `0016` and absent after downgrade. The temporary SQLite database was removed.
+- [x] Isolated management CLI passed: dry-run planned 160 and persisted 0; first apply inserted 160; second apply inserted 0 and matched 160 unchanged; final counts were 160 fishki, 13 categories and 0 activity events. The temporary SQLite database was removed.
+- [x] Package D2 RED — 2 expected failures / 34 passed because the filter and extended picker were absent. GREEN target — 36 passed. Exact duplicates `🏨` and `📱` occur once; visually similar but ordinally different Unicode variants remain available.
+- [x] Full backend — 119 passed / 3 skipped. Full frontend — 21 test files / 139 tests passed. `npm run build` — success, 117 modules; only the standard Vite chunk-size warning.
+- [x] Final `./init.sh` outside sandbox exited 1 only at the known external Hermes/desktop global pip-check before MPS pytest; complete MPS suites were run separately and passed. The shared environment was not repaired.
+- [x] `feature_list.json` records F37 Session D as `passing`, corrects Session C to production-deployed at `b2b41fb`, and preserves production import as a separately approved step. Progress and handoff record production Alembic still at `20260826_0015` until deployment.
+- [x] The agreed verification-before-completion and TDD rules were applied textually. Their `.codex/skills/*.md` files remain physically absent from the checkout as a known process gap.
+- [x] Pre-commit validation includes JSON parsing, `git diff --check`, exact staged name-status inspection and a local commit only. Push/deploy remain unapproved; final worktree status is checked after the commit.
+
 ## Session 90 F37 Session C local completion — 2026-08-27
 
 - [x] Scope is limited to the admin-only `/fishki` setting panel, typed frontend hook, routing regressions, styles and trackers. Backend/API/schema/dependencies/secrets/production are unchanged; no push or deploy is authorised.

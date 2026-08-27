@@ -26,6 +26,16 @@ const fishka = {
   slug: "transfer-tip",
   body: "Проверенная короткая фишка.",
   emoji: "💡",
+  category: "Трансфер и дорога в аэропорт",
+};
+
+const hotelFishka = {
+  ...fishka,
+  id: 19,
+  title: "Как получить раннее заселение",
+  slug: "hotel-tip",
+  emoji: "🏨",
+  category: "Отель и заселение",
 };
 
 const publicProfile = {
@@ -47,7 +57,7 @@ const jsonResponse = (status: number, body: unknown) => new Response(JSON.string
 const scrollIntoViewMock = vi.fn();
 
 type DetailResult = "ok" | "missing" | "network";
-type FishkaOptions = { canSubmit?: boolean; adminEnabled?: boolean; adminUpdateStatus?: number };
+type FishkaOptions = { canSubmit?: boolean; adminEnabled?: boolean; adminUpdateStatus?: number; categories?: string[] };
 type QAOptions = {
   irishkaResponse?: Promise<Response>;
   questions?: Question[];
@@ -70,6 +80,7 @@ function installApi(detailResult: DetailResult = "ok", currentUser: Record<strin
       if (detailResult === "network") throw new TypeError("Failed to fetch");
       return jsonResponse(200, post);
     }
+    if (path === "/api/v1/posts/fishki/categories") return jsonResponse(200, fishkaOptions.categories ?? []);
     if (path === "/api/v1/posts/fishki/permission") return jsonResponse(200, { can_submit_fishka: fishkaOptions.canSubmit ?? false });
     if (path === "/api/v1/admin/settings" && init?.method === "PATCH") {
       if (fishkaOptions.adminUpdateStatus) return jsonResponse(fishkaOptions.adminUpdateStatus, { detail: "Настройка недоступна" });
@@ -77,7 +88,10 @@ function installApi(detailResult: DetailResult = "ok", currentUser: Record<strin
     }
     if (path === "/api/v1/admin/settings") return jsonResponse(200, { fishka_submissions_enabled: fishkaOptions.adminEnabled ?? false });
     if (path === "/api/v1/posts" && init?.method === "POST") return jsonResponse(201, { ...fishka, ...JSON.parse(String(init.body)), status: JSON.parse(String(init.body)).status });
-    if (path === "/api/v1/posts") return jsonResponse(200, posts);
+    if (path === "/api/v1/posts") {
+      const category = url.searchParams.get("category");
+      return jsonResponse(200, category ? posts.filter((item) => item.category === category) : posts);
+    }
     if (path === "/api/v1/posts/17/like") {
       likesCount = likesCount === post.likes_count ? likesCount + 1 : likesCount - 1;
       currentProfileLikes = currentProfileLikes.some((item) => item.id === post.id) ? [] : [{ ...post, liked_at: "2026-08-25T09:30:00Z" }];
@@ -247,6 +261,44 @@ describe("App pathname routing", () => {
       const url = new URL(String(input));
       return url.pathname === "/api/v1/posts" && url.searchParams.get("type") === "fishka";
     })).toBe(true));
+  });
+
+  it("loads fishka categories and refetches the list for the selected category", async () => {
+    window.history.replaceState({}, "", "/fishki");
+    const categories = ["Трансфер и дорога в аэропорт", "Отель и заселение"];
+    const fetchMock = installApi("ok", null, [fishka, hotelFishka], [], [], [], { items: [], next_cursor: null }, { items: [], next_cursor: null }, { categories });
+
+    render(<App />);
+
+    const filter = await screen.findByRole("combobox", { name: "Тема" });
+    expect(within(filter).getByRole("option", { name: "Все темы" })).toBeTruthy();
+    expect(within(filter).getByRole("option", { name: "Отель и заселение" })).toBeTruthy();
+    fireEvent.change(filter, { target: { value: "Отель и заселение" } });
+
+    await waitFor(() => expect(fetchMock.mock.calls.some(([input]) => {
+      const url = new URL(String(input));
+      return url.pathname === "/api/v1/posts"
+        && url.searchParams.get("type") === "fishka"
+        && url.searchParams.get("category") === "Отель и заселение";
+    })).toBe(true));
+    expect(await screen.findByRole("heading", { level: 2, name: hotelFishka.title })).toBeTruthy();
+    expect(screen.queryByRole("heading", { level: 2, name: fishka.title })).toBeNull();
+  });
+
+  it("offers all block emoji without removing visually similar Unicode variants", async () => {
+    window.history.replaceState({}, "", "/fishki");
+    setAccessToken("editor-access-token");
+    installApi("ok", { id: 5, email: null, name: "Редактор", avatar_url: null, bio: null, role: "editor", is_anonymous: false });
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Добавить фишку" }));
+    const choices = screen.getAllByRole("button", { name: /Выбрать emoji/ }).map((button) => button.textContent);
+    expect(choices).toHaveLength(23);
+    expect(choices).toEqual(expect.arrayContaining(["🚖", "🛂", "💰", "🎒", "🌐", "👶", "📅", "🍽", "🔒", "🗺", "🎯"]));
+    expect(choices).toEqual(expect.arrayContaining(["🍽️", "🍽", "🗺️", "🗺", "🚕", "🚖"]));
+    expect(choices.filter((emoji) => emoji === "🏨")).toHaveLength(1);
+    expect(choices.filter((emoji) => emoji === "📱")).toHaveLength(1);
   });
 
   it("always shows the fishka form to an editor and publishes selected emoji immediately", async () => {
