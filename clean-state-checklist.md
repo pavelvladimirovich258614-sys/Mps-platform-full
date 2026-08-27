@@ -1,5 +1,16 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 96 F48d production closeout — 2026-08-28
+
+- [x] Scope is tracker-only: `feature_list.json`, `claude-progress.md`, `session-handoff.md` and this checklist. No application source, dependency, database, production configuration, service or deployment state changes in this closeout.
+- [x] Fresh preflight confirms all 48 current feature records are `passing`, zero are `in_progress`, and F48d is `passing`. F46/F47 remain open backlog labels rather than active feature records; F48 a/b/c was not audited.
+- [x] Local `HEAD`, `origin/main` and VPS were rechecked at `01c505d332b6a9bce8ee4aa000c1ae785a01e5be`; the live F48d bundle is referenced by production HTML.
+- [x] F48d production evidence is preserved: rollback `/root/backups/mps-frontend-f48d-20260827T173146Z.tar.gz`, SHA-256 `947cbb4d6f304beaca7748a054afac3c98b7b1d0eabb908c90dcc3c68c4aa17e`; served bundle HTTP 200 with production VITE values/F48d marker and no localhost fallback; `deploy/smoke.sh` passed.
+- [x] Backend non-interference is explicit: F48d had zero backend diff files, no restart occurred, and the same PID 805788 remains active with health `ok`.
+- [x] The prior coordination attachment was context only. No F46/F47 diagnostic or implementation task was started, and the agreed order is F46 → F47 → confirm F48 a/b/c → web design last.
+- [x] The prompt-supplied verification-before-completion and TDD rules were applied textually. Their `.codex/skills/*.md` files remain physically absent as a known gap; no artificial RED run was created for documentation-only changes.
+- [x] Pre-commit gate: JSON validated with 48/48 passing and zero `in_progress`; `git diff --check` passed; the exact four-file staged allowlist was inspected. Create local commit `docs: финальное состояние F48d`, then immediately confirm clean status with `main` one commit ahead of `origin/main`. Push remains unapproved.
+
 ## Session 95 F48d local completion — 2026-08-28
 
 - [x] Scope is limited to confirmed `/about` content, its directly related frontend regression assertions and trackers. Existing route, CSS/layout, perks, SunLogo and Telegram CTA are preserved; backend, schema, dependencies, secrets, production, push and deployment are unchanged.

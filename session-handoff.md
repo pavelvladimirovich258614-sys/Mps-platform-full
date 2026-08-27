@@ -2,41 +2,38 @@
 
 ## Current verified state — 2026-08-28
 
-- All 48 tracker records covering F01–F45 plus F48d are `passing` with evidence; historical F09 is split into F09a1/F09a2/F09b.
-- Production application revision remains `a5186bce67c107dd8912f39361fa15b7fb637351`; local/origin/VPS were synchronized on that application checkpoint before F48d. Production PostgreSQL is at `20260828_0017 (head)`; `mps-backend` was active/healthy and the last approved `deploy/smoke.sh` passed. F48d has not been pushed or deployed.
-- F37 Sessions A (`4f86725`), B (`df36dc2`), C (`b2b41fb`) and D (`9ab7b0e`) are complete and production-deployed.
-- Session C embeds the admin-only `fishka_submissions_enabled` toggle directly in `/fishki`; non-admin roles neither render the control nor request the admin settings API.
-- Session D adds nullable fishka categories, `GET /posts/fishki/categories`, the dynamic «Тема» filter and 11 new exact Unicode emoji choices. Its guarded importer parsed and idempotently imported 160 published fishki for `Павел` across 13 categories.
-- The approved data operation permanently deleted only the 15 exact imported records in `Реальные кейсы Сергея (главное)`. Production now contains 145 imported fishki, 146 fishki total and 12 dynamic categories; the API and live dropdown no longer expose the removed category.
-- F38 Packages 1–3 through F44 remain complete and production-deployed. Interactive «Иришка ИИ», outbound/inbound Telegram relay, reasoning cleanup, notification deep-links/polling and Q&A soft archive remain live.
-- F45 is complete and production-deployed. Background Иришка processing obtains a transaction-scoped PostgreSQL advisory lock per `topic_id` before MiniMax/Telegram, performs a final ForumTopic `FOR UPDATE` plus message recheck, commits each topic independently and is backed by partial unique index `UNIQUE (topic_id) WHERE is_ai IS TRUE`.
-- F48d is complete locally. Existing `/about` structure now contains the confirmed official-partner heading, agency history since 2003, travel/sports expertise and confirmed address/phone/email fallbacks; configured public settings still override the fallbacks. Route, CSS and visual design were not changed.
+- All 48 current tracker records covering F01–F45 plus F48d are `passing` with evidence; historical F09 is split into F09a1/F09a2/F09b. There are no `in_progress` records.
+- Local `main`, `origin/main` and production VPS are synchronized on `01c505d332b6a9bce8ee4aa000c1ae785a01e5be` before this tracker-only closeout.
+- F37 Sessions A (`4f86725`), B (`df36dc2`), C (`b2b41fb`) and D (`9ab7b0e`) are complete and production-deployed. Production contains 145 imported fishki plus one pre-existing fishka and 12 dynamic categories after the approved 15-row cleanup.
+- F38 Packages 1–3 through F45 are complete and production-deployed. F45 protects background Иришка replies with a PostgreSQL advisory lock, final `FOR UPDATE` recheck and partial unique index `UNIQUE (topic_id) WHERE is_ai IS TRUE`.
+- F48d завершена и задеплоена в production. Существующий `frontend/app/src/components/About.tsx` теперь содержит подтверждённые факты об ООО «Под солнцем»: компания основана и работает с 2003 года, сотрудничает с Coral Travel/Anex Tour/TUI, организует туристические поездки и спортивные сборы/турниры; указаны контакты. Существующие структура, CSS-классы, карточки преимуществ, SunLogo, Telegram CTA, маршрут и визуальный дизайн сохранены.
 
-## Verification and rollback
+## F48d verification and rollback
 
-- F37 Session C: RED 1 expected failure / 32 passed; GREEN target 34 passed; full frontend 137 passed; relevant backend regression 14 passed; build and production smoke passed.
-- F37 Session D: D1 GREEN 13 passed; D2 GREEN 36 passed; isolated migration and importer dry-run/apply/idempotency checks passed; full backend 119 passed/3 skipped, frontend 139 passed and build succeeded. Production dry-run planned 160 without conflicts, apply inserted 160 and repeated dry-run matched 160 unchanged.
-- Fishki data cleanup rollback: `/var/backups/mps/mps-2026-08-27-113206.dump.gz`, SHA-256 `9fff4b720377939eaf55216d32e9fa146a5ae00a690205993e039ec80a7650f1`. Exact deletion removed 15 and left 145 imported/146 total fishki plus 12 categories.
-- F45 PostgreSQL RED was `([1, 1], 2 provider calls, 2 AI rows, messages_count=2)`; GREEN was `([1, 0], 1, 1, 1)`. Full `test_irishka.py` passed 19 tests; full backend passed 126 with PostgreSQL integration tests active.
-- F45 isolated Alembic cycle passed `0016 → 0017 → 0016 → 0017`. Multiple human rows were accepted and a second AI row for one topic was rejected by `uq_forum_messages_one_ai_per_topic`.
-- F45 production preflight found 0 topics, 0 messages and 0 duplicate AI topics. Backup `/var/backups/mps/mps-2026-08-27-123301.dump.gz`, SHA-256 `3ac9b6d2cfca55f97bb83d549c7d4896c99011ec3f0a293567e49e6054325043`, is non-empty and readable through `pg_restore --list`. Migration `0017`, backend restart/health and smoke passed. Frontend diff was empty and no frontend build/deploy was performed.
-- F48d RED failed 3/3 against the old About content; target GREEN passed 3/3. Full frontend passed 22 files / 142 tests and `npm run build` passed with 117 modules. Isolated `agent-browser` verification of local `/about` confirmed all requested markers, absence of placeholder/lorem, no section clipping or line clamp, three visible nonempty HTTPS links and no broken images.
-- Session-close `./init.sh` stops only at the known external Hermes/desktop global `pip check` before MPS pytest; the relevant complete MPS suites passed separately. The shared Python environment was not modified.
+- RED failed 3/3 against the former generic content; target GREEN passed 3/3. Full frontend passed 22 files / 142 tests and `npm run build` passed with 117 modules.
+- Isolated `agent-browser` verification of local `/about` confirmed the complete content, absence of placeholder/lorem, no clipping/line clamp, three visible nonempty HTTPS links and no broken images.
+- Production rollback archive: `/root/backups/mps-frontend-f48d-20260827T173146Z.tar.gz`, SHA-256 `947cbb4d6f304beaca7748a054afac3c98b7b1d0eabb908c90dcc3c68c4aa17e`.
+- Served bundle `index-DnmHxz2e.js` returned HTTP 200, contains both production VITE values and the F48d marker, and contains no `http://localhost:8000/api/v1` fallback. `deploy/smoke.sh` passed.
+- Backend was not changed or restarted: diff across the F48d rollout contains zero backend files; `mps-backend` retained PID 805788 and is active/healthy. PostgreSQL remains at Alembic `20260828_0017 (head)`.
+- Final tracker-only preflight reconfirmed local/origin/VPS SHA `01c505d`, live F48d bundle and healthy backend. This handoff update itself changes no application or production state.
 
-## Deferred / unresolved work
+## Coordination boundary
 
-- Email remains blocked by external Unisender/HostKey networking. The visible login path remains Telegram-only; do not re-enable email UI until transport is deliberately restored and verified.
-- F38 remainder: admin UI for Иришка settings is discussed but not started. Duplicate-run protection is no longer part of the remainder because F45 closed it.
-- Forum N+1 queries remain a low-priority deferred optimization.
-- Whole-site search is a separate backlog task: discussed, not scoped or started.
-- `npm audit` continues to report five known dependency advisories across multiple sessions. Do not apply breaking dependency upgrades opportunistically.
-- `.codex/skills/verification-before-completion/SKILL.md` and `.codex/skills/tdd-fix-workflow/SKILL.md` have been physically absent from the checkout for several sessions. Their prompt-supplied rules are applied textually, but restoring the files is recommended for process reliability.
+- A prior attached coordination document prepared a diagnostic relay for F46 and F47, but Codex used it only as background context, not as the current task. No F46/F47 implementation or diagnostic session was started.
+- F46 and F47 remain `open`, not `in_progress`. They are backlog labels and are not added to the current 48/48 passing `feature_list.json` set.
+- F48 a/b/c was not audited. Only the separately scoped About package F48d was implemented and deployed.
 
-## Agreed backlog order and boundaries
+## Actual backlog
 
-1. F38 remaining admin UI for Иришка settings.
-2. Forum N+1 optimization.
-3. Drafts / reviews / subscription.
-4. Web design last.
+1. F46 — admin UI настроек Иришки; не начата.
+2. F47 — N+1 запросы форума; не начата.
+3. F48 a/b/c — аудит разделов «Черновики» / «Отзывы» / «Подписка»; не проводился. Уточнить у Павла, нужна ли ещё диагностика этих трёх разделов.
+4. Веб-дизайн — в последнюю очередь, пока не трогать.
 
-Immediate next step is separate owner approval for F48d push/deploy. Whole-site search, email transport, npm remediation and skill-file restoration remain separate scopes requiring their own plan and approval. This checkpoint changes the About component, directly related frontend regressions and trackers only; no push, deployment or production operation is authorized.
+## Known external/deferred items
+
+- Email remains blocked by external Unisender/HostKey networking. Telegram remains the only visible login path until transport is deliberately restored and verified.
+- `npm audit` continues to report five known dependency advisories across multiple sessions. Do not apply breaking upgrades opportunistically.
+- `.codex/skills/verification-before-completion/SKILL.md` and `.codex/skills/tdd-fix-workflow/SKILL.md` are physically absent from the checkout. Their prompt-supplied rules are applied textually, but the files should be restored for process reliability.
+
+The agreed product order is F46 → F47 → confirm and, if requested, F48 a/b/c → web design last. The next mutation requires its own plan and explicit approval. This closeout is a local tracker-only commit; push is not authorized yet.
