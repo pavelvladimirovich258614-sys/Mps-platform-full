@@ -5,6 +5,7 @@ import { ArticleComments } from "./components/ArticleComments";
 import { CookieBanner } from "./components/CookieBanner";
 import { Drafts } from "./components/Drafts";
 import { Feed } from "./components/Feed";
+import { FishkaAdminSettings } from "./components/FishkaAdminSettings";
 import { Forum } from "./components/Forum";
 import { Layout, type Page } from "./components/Layout";
 import { Legal, type LegalKind } from "./components/Legal";
@@ -15,7 +16,7 @@ import { PublicProfile } from "./components/PublicProfile";
 import { QA } from "./components/QA";
 import { Reviews } from "./components/Reviews";
 import { Subscribe } from "./components/Subscribe";
-import { getDraft, getLikedPosts, type ApiPost, type FishkaDraft, useAuthorPosts, useAuth, useDrafts, useFishkaPermission, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, useProfileActivity, useProfileComments, useProfileFollowers, useProfileFollowing, usePublicProfile, usePublicSettings, useQAQuestions, useUserFollow } from "./hooks";
+import { getDraft, getLikedPosts, type ApiPost, type FishkaDraft, useAuthorPosts, useAuth, useDrafts, useFishkaAdminSettings, useFishkaPermission, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, useProfileActivity, useProfileComments, useProfileFollowers, useProfileFollowing, usePublicProfile, usePublicSettings, useQAQuestions, useUserFollow } from "./hooks";
 import { pathForRoute, type PathRoute, routeFromPath } from "./router";
 
 function routeForPage(page: Page): PathRoute {
@@ -48,9 +49,11 @@ export function App() {
 
   const auth = useAuth();
   const canManagePosts = auth.user?.role === "editor" || auth.user?.role === "admin";
+  const isAdmin = auth.user?.role === "admin";
   const posts = usePosts(route.page === "fishki" ? "fishka" : undefined);
   const drafts = useDrafts(route.page === "drafts" && canManagePosts);
   const fishkaPermission = useFishkaPermission(route.page === "fishki" && Boolean(auth.user) && !canManagePosts);
+  const fishkaAdminSettings = useFishkaAdminSettings(route.page === "fishki" && isAdmin);
   const postCreator = usePostCreator();
   const postEditor = usePostEditor();
   const postLike = usePostLike();
@@ -195,7 +198,7 @@ export function App() {
   const page: Page = route.page === "countries" && topicOpen ? "topic" : route.page;
   let content = null;
   if (page === "feed") content = <Feed posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} canCreate={canManagePosts} onCreatePost={createPost} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
-  if (page === "fishki") content = <Feed mode="fishki" posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} canCreateFishka={canManagePosts || fishkaPermission.value?.can_submit_fishka === true} fishkaPublishesImmediately={canManagePosts} onCreateFishka={createFishka} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
+  if (page === "fishki") content = <Feed mode="fishki" posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} canCreateFishka={canManagePosts || fishkaPermission.value?.can_submit_fishka === true} fishkaPublishesImmediately={canManagePosts} fishkaAdminControls={<FishkaAdminSettings settings={isAdmin ? fishkaAdminSettings.value : null} loading={isAdmin && fishkaAdminSettings.loading} onUpdate={fishkaAdminSettings.update} />} onCreateFishka={createFishka} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
   if (page === "countries" || page === "topic") {
     content = (
       <Forum

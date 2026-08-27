@@ -57,6 +57,15 @@ export function useAuth() {
 export const usePosts = (type?: ApiPost["type"]) => useResource(() => api<ApiPost[]>(type ? `/posts?type=${encodeURIComponent(type)}` : "/posts"), [type]);
 export const usePostCreator = () => ({ create: (post: PostDraft | FishkaDraft) => apiJson<ApiPost>("/posts", "POST", post) });
 export const useFishkaPermission = (enabled: boolean) => useResource(() => enabled ? api<{ can_submit_fishka: boolean }>("/posts/fishki/permission") : Promise.resolve({ can_submit_fishka: false }), [enabled]);
+export type FishkaAdminSettings = { fishka_submissions_enabled: boolean };
+export const useFishkaAdminSettings = (enabled: boolean) => {
+  const resource = useResource(() => enabled ? api<FishkaAdminSettings>("/admin/settings") : Promise.resolve(null), [enabled]);
+  const update = async (fishka_submissions_enabled: boolean) => {
+    await apiJson<{ fishka_submissions_enabled: boolean | string }>("/admin/settings", "PATCH", { fishka_submissions_enabled });
+    resource.setValue({ fishka_submissions_enabled });
+  };
+  return { ...resource, update };
+};
 export const usePostEditor = () => ({ update: (postId: number, post: PostDraft) => apiJson<ApiPost>(`/posts/${postId}`, "PATCH", post), remove: (postId: number) => apiJson<void>(`/posts/${postId}`, "DELETE") });
 export const useDrafts = (enabled: boolean) => useResource(() => enabled ? api<DraftSummary[]>("/posts/drafts") : Promise.resolve([]), [enabled]);
 export const getDraft = (postId: number) => api<DraftPost>(`/posts/drafts/${postId}`);

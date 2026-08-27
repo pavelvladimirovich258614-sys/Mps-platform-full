@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import type { ApiPost, FishkaDraft, PostDraft } from "../hooks";
 import { FishkaComposer } from "./FishkaComposer";
@@ -13,12 +13,13 @@ type FeedProps = {
   onCreatePost?: (post: PostDraft) => Promise<EditablePost | undefined>;
   canCreateFishka?: boolean;
   fishkaPublishesImmediately?: boolean;
+  fishkaAdminControls?: ReactNode;
   onCreateFishka?: (post: FishkaDraft) => Promise<void>;
   onToggleLike: (post: ApiPost) => void;
   onOpenArticle: (post: ApiPost) => void;
   onOpenProfile: (userId: number) => void;
 };
-export function Feed({ mode = "feed", posts, loading, canCreate = false, onCreatePost, canCreateFishka = false, fishkaPublishesImmediately = false, onCreateFishka, onToggleLike, onOpenArticle, onOpenProfile }: FeedProps) {
+export function Feed({ mode = "feed", posts, loading, canCreate = false, onCreatePost, canCreateFishka = false, fishkaPublishesImmediately = false, fishkaAdminControls, onCreateFishka, onToggleLike, onOpenArticle, onOpenProfile }: FeedProps) {
   const [composerOpen, setComposerOpen] = useState(false);
   const [fishkaComposerOpen, setFishkaComposerOpen] = useState(false);
   const isFishki = mode === "fishki";
@@ -34,6 +35,7 @@ export function Feed({ mode = "feed", posts, loading, canCreate = false, onCreat
 
   return <main className="feed-page"><div className="feed-wrap">
     {isFishki ? <section className="journal-intro"><p>Туристическое агентство «Под солнцем»</p><h1>Фишки</h1><div className="ornament"><i />◆<i /></div><div className="intro-text">Секреты удачных поездок — от тех, кто уже там побывал</div></section> : <section className="journal-intro"><p>Туристическое агентство «Под солнцем»</p><h1>Журнал о путешествиях <b>без прикрас</b></h1><div className="ornament"><i />◆<i /></div><div className="intro-text">Реальные истории, честные отзывы и разборы направлений — живые впечатления от путешествий</div></section>}
+    {isFishki && fishkaAdminControls}
     {canOpenComposer && <button type="button" className="create-post-button" aria-label="Создать публикацию" onClick={() => setComposerOpen(true)}>✦ Создать публикацию</button>}
     {isFishki && canCreateFishka && onCreateFishka && <button type="button" className="create-post-button" aria-label="Добавить фишку" onClick={() => setFishkaComposerOpen(true)}>✦ Добавить фишку</button>}
     {composerOpen && onCreatePost && <ComposerModal onClose={() => setComposerOpen(false)} onCreate={onCreatePost} />}

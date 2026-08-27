@@ -1,5 +1,16 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 90 F37 Session C local completion — 2026-08-27
+
+- [x] Scope is limited to the admin-only `/fishki` setting panel, typed frontend hook, routing regressions, styles and trackers. Backend/API/schema/dependencies/secrets/production are unchanged; no push or deploy is authorised.
+- [x] RED target — 1 expected failure / 32 passed because the admin checkbox was absent. GREEN target — 34 passed including toggle persistence, editor isolation and failed-PATCH state preservation.
+- [x] Full frontend — 21 test files / 137 tests passed. Relevant backend regression `tests/test_admin.py tests/test_posts.py` — 14 passed in 7.23s.
+- [x] `npm run build` — success, 117 modules; standard Vite chunk-size warning only.
+- [x] Final `./init.sh` outside sandbox stopped only at the known external Hermes/desktop global pip-check before MPS pytest; complete relevant project checks were run separately. The shared environment was not repaired.
+- [x] `feature_list.json` records F37 Session C as `passing`; Session D remains separately deferred. Progress and handoff preserve the production boundary at `0e49bbe`.
+- [x] The agreed verification-before-completion and TDD rules were applied textually. Their `.codex/skills/*.md` files remain physically absent from the checkout as a known process gap.
+- [x] Pre-commit validation: JSON parsed, `git diff --check` passed and the exact ten-file staged name-status was inspected. The commit remains local; final worktree cleanliness is reported after it.
+
 ## Session 89 F38 Package 3–F44 production closeout — 2026-08-26
 
 - [x] Scope is tracker-only: `feature_list.json`, `claude-progress.md`, `session-handoff.md` and this checklist. No application source, dependency, database row, production configuration, service or deployment state changed.

@@ -47,7 +47,7 @@ const jsonResponse = (status: number, body: unknown) => new Response(JSON.string
 const scrollIntoViewMock = vi.fn();
 
 type DetailResult = "ok" | "missing" | "network";
-type FishkaOptions = { canSubmit?: boolean };
+type FishkaOptions = { canSubmit?: boolean; adminEnabled?: boolean; adminUpdateStatus?: number };
 type QAOptions = {
   irishkaResponse?: Promise<Response>;
   questions?: Question[];
@@ -71,6 +71,11 @@ function installApi(detailResult: DetailResult = "ok", currentUser: Record<strin
       return jsonResponse(200, post);
     }
     if (path === "/api/v1/posts/fishki/permission") return jsonResponse(200, { can_submit_fishka: fishkaOptions.canSubmit ?? false });
+    if (path === "/api/v1/admin/settings" && init?.method === "PATCH") {
+      if (fishkaOptions.adminUpdateStatus) return jsonResponse(fishkaOptions.adminUpdateStatus, { detail: "Настройка недоступна" });
+      return jsonResponse(200, { fishka_submissions_enabled: JSON.parse(String(init.body)).fishka_submissions_enabled });
+    }
+    if (path === "/api/v1/admin/settings") return jsonResponse(200, { fishka_submissions_enabled: fishkaOptions.adminEnabled ?? false });
     if (path === "/api/v1/posts" && init?.method === "POST") return jsonResponse(201, { ...fishka, ...JSON.parse(String(init.body)), status: JSON.parse(String(init.body)).status });
     if (path === "/api/v1/posts") return jsonResponse(200, posts);
     if (path === "/api/v1/posts/17/like") {
@@ -267,6 +272,50 @@ describe("App pathname routing", () => {
       return body.type === "fishka" && body.emoji === "💡" && body.status === "published";
     })).toBe(true));
     expect(await screen.findByText("Фишка опубликована")).toBeTruthy();
+  });
+
+  it("lets an admin toggle reader fishka submissions from the Fishki page", async () => {
+    window.history.replaceState({}, "", "/fishki");
+    setAccessToken("admin-access-token");
+    const fetchMock = installApi("ok", { id: 1, email: null, name: "Администратор", avatar_url: null, bio: null, role: "admin", is_anonymous: false }, [fishka], [], [], [], { items: [], next_cursor: null }, { items: [], next_cursor: null }, { adminEnabled: false });
+
+    render(<App />);
+
+    const toggle = await screen.findByRole("checkbox", { name: "Разрешить пользователям добавлять фишки" });
+    expect((toggle as HTMLInputElement).checked).toBe(false);
+    fireEvent.click(toggle);
+
+    await waitFor(() => expect(fetchMock.mock.calls.some(([input, init]) => {
+      if (new URL(String(input)).pathname !== "/api/v1/admin/settings" || (init as RequestInit).method !== "PATCH") return false;
+      return JSON.parse(String((init as RequestInit).body)).fishka_submissions_enabled === true;
+    })).toBe(true));
+    expect((screen.getByRole("checkbox", { name: "Разрешить пользователям добавлять фишки" }) as HTMLInputElement).checked).toBe(true);
+  });
+
+  it("never requests or shows fishka admin settings to an editor", async () => {
+    window.history.replaceState({}, "", "/fishki");
+    setAccessToken("editor-access-token");
+    const fetchMock = installApi("ok", { id: 5, email: null, name: "Редактор", avatar_url: null, bio: null, role: "editor", is_anonymous: false });
+
+    render(<App />);
+
+    await screen.findByRole("heading", { level: 1, name: "Фишки" });
+    expect(screen.queryByRole("checkbox", { name: "Разрешить пользователям добавлять фишки" })).toBeNull();
+    expect(fetchMock.mock.calls.some(([input]) => new URL(String(input)).pathname === "/api/v1/admin/settings")).toBe(false);
+  });
+
+  it("keeps the admin fishka setting unchanged when its update fails", async () => {
+    window.history.replaceState({}, "", "/fishki");
+    setAccessToken("admin-access-token");
+    installApi("ok", { id: 1, email: null, name: "Администратор", avatar_url: null, bio: null, role: "admin", is_anonymous: false }, [fishka], [], [], [], { items: [], next_cursor: null }, { items: [], next_cursor: null }, { adminEnabled: false, adminUpdateStatus: 503 });
+
+    render(<App />);
+
+    const toggle = await screen.findByRole("checkbox", { name: "Разрешить пользователям добавлять фишки" });
+    fireEvent.click(toggle);
+
+    expect((await screen.findByRole("alert")).textContent).toContain("Не удалось изменить настройку");
+    expect((screen.getByRole("checkbox", { name: "Разрешить пользователям добавлять фишки" }) as HTMLInputElement).checked).toBe(false);
   });
 
   it("shows the fishka form to a reader only when the effective permission allows it and sends pending", async () => {
