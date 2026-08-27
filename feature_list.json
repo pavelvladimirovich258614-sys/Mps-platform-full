@@ -825,6 +825,22 @@
       ],
       "evidence": "2026-08-26 Package A RED: `npm test -- --run src/App.routing.test.tsx src/components/QA.test.tsx src/components/Layout.test.tsx` produced 4 expected failures / 33 passed: deep-link re-selected its original tab, bell SVG and acknowledgement were absent, and answers lacked a distinct element. GREEN — 3 files / 37 passed. Package B RED backend — 2 expected failures / 14 deselected; RED frontend — 2 expected failures / 5 passed. GREEN backend — 2 passed / 14 deselected; GREEN frontend — 2 files / 7 passed. Full backend — 115 passed / 3 skipped; full frontend — 21 files / 134 passed; build — 116 modules. Alembic single head `20260826_0015`; final `./init.sh` stopped only at the known external Hermes/desktop global pip-check. Production rollout `0e49bbe`: verified PostgreSQL dump `/var/backups/mps/mps-2026-08-26-080806.dump.gz` SHA-256 `864cd0ff313665a1ed66f06d8234758577c6a5609fea5666531eb3831ddd6482`, backend and frontend rollbacks, migration `20260826_0015 (head)`, active/healthy backend, served bundle `index-Bg-pAkQQ.js` with production VITE values/no localhost, archive endpoint unauthenticated 401 and passing `deploy/smoke.sh`.",
       "notes": "Completed and production-deployed 2026-08-26 at `0e49bbe`. The deep-link is one-shot and tabs remain freely switchable; the header uses an accessible bell, manager/lawyer submissions show a local guidance message and agency answers use a separate dark-red bubble. `Question.archived_at` plus owner-only `PATCH /qa/my/archive` provides non-destructive cross-device history clearing. A late Telegram reply clears `archived_at`, preserving F41 and restoring the answered thread."
+    },
+    {
+      "id": "F45",
+      "priority": 45,
+      "area": "irishka-concurrency",
+      "title": "Иришка: исключить дубли фонового ответа при конкурентных runner",
+      "user_visible_behavior": "Даже при одновременном запуске нескольких backend runner Иришка отвечает в пустую тему форума не более одного раза; счётчик сообщений остаётся согласованным.",
+      "status": "passing",
+      "verification": [
+        "RED/GREEN PostgreSQL test: два синхронных asyncio runner меняются с [1, 1] / 2 AI messages на [1, 0] / 1 AI message / messages_count=1",
+        "PostgreSQL advisory lock исключает повторный MiniMax/Telegram вызов, а FOR UPDATE с повторной проверкой исключает устаревшую финальную запись",
+        "Isolated Alembic upgrade/downgrade/upgrade подтверждает partial UNIQUE (topic_id) WHERE is_ai = true",
+        "Полный backend pytest без skip PostgreSQL tests и ./init.sh; внешний Hermes pip check фиксируется отдельно"
+      ],
+      "evidence": "2026-08-28 RED→GREEN on temporary PostgreSQL 16. RED `test_irishka_postgresql_concurrent_runners_create_one_ai_message` proved `([1, 1], 2 provider calls, 2 AI rows, messages_count=2)` instead of `([1, 0], 1, 1, 1)`. GREEN same test — 1 passed; full `tests/test_irishka.py` — 19 passed, including busy-lock suppression of MiniMax/Telegram, a human message arriving during MiniMax, and a concurrent manager trigger relayed once. Isolated PostgreSQL Alembic cycle passed `0016 → 0017 → 0016 → 0017`; `uq_forum_messages_one_ai_per_topic` was absent after downgrade and restored as `UNIQUE (topic_id) WHERE (is_ai IS TRUE)`. Two human rows plus one AI row were accepted, and a second AI row was rejected by the index. Full backend with `MPS_TEST_POSTGRES_URL` set — 126 passed in 52.04s with no PostgreSQL skips. Final `./init.sh` stopped only at the explicitly excluded external Hermes/desktop global pip-check before MPS pytest.",
+      "notes": "Completed locally 2026-08-28. Each eligible topic now uses its own transaction and PostgreSQL transaction-scoped advisory lock before MiniMax/Telegram; the final write locks ForumTopic FOR UPDATE and rechecks messages before inserting and updating the counter. Migration `20260828_0017` adds the DB backstop. Production remains at revision `9ab7b0e` / Alembic `20260827_0016`; push and deployment are not authorized."
     }
   ]
 }

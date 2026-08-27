@@ -1,15 +1,100 @@
+import asyncio
+import os
 from datetime import UTC,datetime,timedelta
 from unittest.mock import AsyncMock
 import logging
-import pytest,respx,httpx
-from sqlalchemy import event,select
+import pytest,pytest_asyncio,respx,httpx
+from sqlalchemy import event,func,select,update
+from app.config import Settings
+from app.db import Base
+from app.main import create_app
 from app.models.forum import ForumTopic,ForumMessage
 from app.models.post import Country
 from app.models.setting import Setting
 from app.models.user import User
 from app.models.question import Question
 from app.services import tg_relay
-from app.services.irishka import run
+from app.services.irishka import ADVISORY_LOCK_NAMESPACE,run
+
+
+@pytest_asyncio.fixture
+async def postgresql_irishka_app(tmp_path):
+ database_url=os.getenv("MPS_TEST_POSTGRES_URL")
+ if not database_url:
+  pytest.skip("MPS_TEST_POSTGRES_URL is required for PostgreSQL Иришка concurrency verification")
+ settings=Settings(database_url=database_url,jwt_secret="test-secret-key-with-32-characters",auth_bot_token="test-auth-bot-token",relay_bot_token="test-relay-bot-token",bot_bridge_secret="bridge-secret",unisender_go_api_key="key",unisender_from_email="noreply@example.com",minimax_api_key="test-minimax-key",minimax_model="test-model",media_dir=str(tmp_path/"media"))
+ app=create_app(settings);engine=app.state.database.engine
+ async with engine.begin() as connection:
+  await connection.run_sync(Base.metadata.drop_all);await connection.run_sync(Base.metadata.create_all)
+ try:
+  yield app
+ finally:
+  async with engine.begin() as connection:await connection.run_sync(Base.metadata.drop_all)
+  await app.state.database.dispose()
+
+
+async def test_irishka_postgresql_concurrent_runners_create_one_ai_message(postgresql_irishka_app,monkeypatch):
+ app=postgresql_irishka_app
+ async with app.state.database.session_factory() as s:
+  c=Country(name="Concurrency",flag_emoji="🏖",sort_order=100);u=User(email="concurrent-user@example.com",name="u");a=User(email="irishka@system.local",name="Иришка · ИИ-помощник",role="editor");s.add_all([c,u,a,Setting(key="irishka_enabled",value="true"),Setting(key="irishka_delay_min",value="30")]);await s.flush();topic=ForumTopic(country_id=c.id,author_id=u.id,title="Нужен совет",created_at=datetime.now(UTC)-timedelta(minutes=31));s.add(topic);await s.commit();topic_id=topic.id
+ provider_started=asyncio.Event();release_provider=asyncio.Event();provider_calls=0
+ async def delayed_answer(_settings,_title):
+  nonlocal provider_calls
+  provider_calls+=1;provider_started.set();await release_provider.wait();return "Единственный ответ"
+ monkeypatch.setattr("app.services.irishka.generate_minimax_answer",delayed_answer)
+ first=asyncio.create_task(run(app.state.database.session_factory,app.state.settings))
+ await asyncio.wait_for(provider_started.wait(),timeout=2)
+ second=asyncio.create_task(run(app.state.database.session_factory,app.state.settings))
+ await asyncio.sleep(0.2)
+ release_provider.set()
+ results=await asyncio.gather(first,second)
+ async with app.state.database.session_factory() as s:
+  messages=(await s.scalars(select(ForumMessage).where(ForumMessage.topic_id==topic_id))).all();saved_topic=await s.get(ForumTopic,topic_id)
+ assert (results,provider_calls,len(messages),saved_topic.messages_count)==([1,0],1,1,1)
+ assert messages[0].is_ai is True
+
+
+async def test_irishka_postgresql_busy_locks_skip_minimax_and_telegram(postgresql_irishka_app,monkeypatch):
+ app=postgresql_irishka_app
+ async with app.state.database.session_factory() as s:
+  c=Country(name="Busy lock",flag_emoji="🏖",sort_order=101);u=User(email="busy-lock-user@example.com",name="u");a=User(email="irishka@system.local",name="Иришка · ИИ-помощник",role="editor");s.add_all([c,u,a,Setting(key="irishka_enabled",value="true"),Setting(key="irishka_delay_min",value="30")]);await s.flush();topics=[ForumTopic(country_id=c.id,author_id=u.id,title=title,created_at=datetime.now(UTC)-timedelta(minutes=31)) for title in ("Нужен совет","Какая цена")];s.add_all(topics);await s.commit();topic_ids=[topic.id for topic in topics]
+ minimax=AsyncMock(return_value="Ответ");telegram=AsyncMock(return_value=123)
+ monkeypatch.setattr("app.services.irishka.generate_minimax_answer",minimax);monkeypatch.setattr(tg_relay,"send",telegram)
+ async with app.state.database.session_factory() as blocker:
+  for topic_id in topic_ids:await blocker.scalar(select(func.pg_advisory_xact_lock(ADVISORY_LOCK_NAMESPACE,topic_id)))
+  assert await run(app.state.database.session_factory,app.state.settings)==0
+ minimax.assert_not_awaited();telegram.assert_not_awaited()
+
+
+async def test_irishka_postgresql_rechecks_messages_after_minimax(postgresql_irishka_app,monkeypatch):
+ app=postgresql_irishka_app
+ async with app.state.database.session_factory() as s:
+  c=Country(name="Final recheck",flag_emoji="🏖",sort_order=102);u=User(email="recheck-user@example.com",name="u");a=User(email="irishka@system.local",name="Иришка · ИИ-помощник",role="editor");s.add_all([c,u,a,Setting(key="irishka_enabled",value="true"),Setting(key="irishka_delay_min",value="30")]);await s.flush();topic=ForumTopic(country_id=c.id,author_id=u.id,title="Нужен совет",created_at=datetime.now(UTC)-timedelta(minutes=31));s.add(topic);await s.commit();topic_id=topic.id;user_id=u.id
+ provider_started=asyncio.Event();release_provider=asyncio.Event()
+ async def delayed_answer(_settings,_title):provider_started.set();await release_provider.wait();return "Устаревший ответ"
+ monkeypatch.setattr("app.services.irishka.generate_minimax_answer",delayed_answer)
+ runner=asyncio.create_task(run(app.state.database.session_factory,app.state.settings));await asyncio.wait_for(provider_started.wait(),timeout=2)
+ async with app.state.database.session_factory() as s:
+  s.add(ForumMessage(topic_id=topic_id,author_id=user_id,body="Человеческий ответ",is_ai=False));await s.execute(update(ForumTopic).where(ForumTopic.id==topic_id).values(messages_count=ForumTopic.messages_count+1,last_message_at=datetime.now(UTC)));await s.commit()
+ release_provider.set();assert await runner==0
+ async with app.state.database.session_factory() as s:
+  messages=(await s.scalars(select(ForumMessage).where(ForumMessage.topic_id==topic_id))).all();saved_topic=await s.get(ForumTopic,topic_id)
+ assert len(messages)==1 and messages[0].is_ai is False
+ assert saved_topic.messages_count==1
+
+
+async def test_irishka_postgresql_concurrent_manager_trigger_relays_once(postgresql_irishka_app,monkeypatch):
+ app=postgresql_irishka_app
+ async with app.state.database.session_factory() as s:
+  c=Country(name="Relay concurrency",flag_emoji="🏖",sort_order=103);u=User(email="relay-concurrent-user@example.com",name="u");a=User(email="irishka@system.local",name="Иришка · ИИ-помощник",role="editor");s.add_all([c,u,a,Setting(key="irishka_enabled",value="true"),Setting(key="irishka_delay_min",value="30")]);await s.flush();topic=ForumTopic(country_id=c.id,author_id=u.id,title="Какая цена",created_at=datetime.now(UTC)-timedelta(minutes=31));s.add(topic);await s.commit();topic_id=topic.id
+ relay_started=asyncio.Event();release_relay=asyncio.Event()
+ async def delayed_relay(_settings,_question):relay_started.set();await release_relay.wait();return 456
+ telegram=AsyncMock(side_effect=delayed_relay);monkeypatch.setattr(tg_relay,"send",telegram)
+ first=asyncio.create_task(run(app.state.database.session_factory,app.state.settings));await asyncio.wait_for(relay_started.wait(),timeout=2)
+ second=asyncio.create_task(run(app.state.database.session_factory,app.state.settings));await asyncio.sleep(0.2);release_relay.set();results=await asyncio.gather(first,second)
+ async with app.state.database.session_factory() as s:
+  messages=(await s.scalars(select(ForumMessage).where(ForumMessage.topic_id==topic_id))).all();questions=(await s.scalars(select(Question))).all();saved_topic=await s.get(ForumTopic,topic_id)
+ assert (results,telegram.await_count,len(messages),len(questions),saved_topic.messages_count)==([1,0],1,1,1,1)
 @pytest.mark.parametrize("title,enabled,expect",[("Совет",True,1),("Какая цена",True,1),("Новая",True,0),("Выключено",False,0)])
 @respx.mock
 async def test_irishka(test_app,title,enabled,expect):

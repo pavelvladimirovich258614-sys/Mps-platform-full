@@ -1,5 +1,18 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 93 F45 local completion — 2026-08-28
+
+- [x] Scope is limited to background Иришка concurrency control, PostgreSQL regression coverage, migration `20260828_0017` and trackers. Scheduler cadence, interactive Q&A, frontend, dependencies, secrets, production database/service, push and deployment are unchanged.
+- [x] PostgreSQL RED reproduced the exact race as `([1, 1], 2 provider calls, 2 AI rows, messages_count=2)` against the expected `([1, 0], 1, 1, 1)`.
+- [x] GREEN uses a transaction-scoped PostgreSQL advisory lock before MiniMax/Telegram, ForumTopic `FOR UPDATE` plus a final message recheck, and a separate commit/rollback boundary for each topic. Full `test_irishka.py` passed 19 tests.
+- [x] Migration `20260828_0017` adds partial unique index `uq_forum_messages_one_ai_per_topic` on `(topic_id) WHERE is_ai IS TRUE`; ORM metadata has the same PostgreSQL/SQLite semantics.
+- [x] Isolated PostgreSQL cycle passed `20260827_0016 → 20260828_0017 → 20260827_0016 → 20260828_0017`. Index count was 0 after downgrade and restored after re-upgrade; multiple human rows were accepted and a second AI row was rejected.
+- [x] Full backend ran with `MPS_TEST_POSTGRES_URL` present: 126 passed in 52.04s with no PostgreSQL skips.
+- [x] Final `./init.sh` outside sandbox exited 1 only at the known external Hermes/desktop global pip-check before MPS pytest; the complete MPS suite was run separately and passed. The shared environment was not repaired.
+- [x] `feature_list.json` records F45 as `passing` only after the complete evidence; progress and handoff preserve production at `9ab7b0e` / Alembic `20260827_0016` until a separately approved rollout.
+- [x] The agreed verification-before-completion and TDD rules were applied textually. Their `.codex/skills/*.md` files remain physically absent from the checkout as a known process gap.
+- [x] Pre-commit validation: JSON parsing, Alembic single-head `20260828_0017`, `git diff --check` and the exact eight-file staged name-status inspection passed. The commit is local only; push/deploy remain unapproved and final clean status is checked after commit.
+
 ## Session 91 F37 Session D local completion — 2026-08-27
 
 - [x] Scope is limited to nullable fishka category storage/API, the supplied versioned 160-item source and importer, `/fishki` category filtering, the approved emoji expansion, regressions and trackers. No production database/import, push, deployment, service, secret or unrelated dependency changed.
