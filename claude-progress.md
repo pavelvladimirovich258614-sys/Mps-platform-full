@@ -906,3 +906,12 @@
 - Verification run: `python -m pytest --basetemp .pytest-final-outside` — 38 passed in 12.23s; `./init.sh` вне sandbox — `No broken requirements found`, 38 passed in 11.90s, `[OK] Верификация прошла`; `feature_list.json` — 12 passing, 0 in_progress.
 - Known boundary: C-05 остаётся отдельной security-задачей по ранее утверждённому scope; реальные DNS/certbot/systemd/PostgreSQL backup проверяются при deploy по `DEPLOY.md`.
 - Next best action: VPS deploy по `DEPLOY.md` либо выбранная Павлом доработка пунктов «Важно»/«Желательно» и C-05 из `docs/AUDIT_REPORT.md`.
+
+### Session 61 — 2026-08-28 (Codex, F48b reviews)
+
+- Goal: завершить аудит отзывов: editor-модерацию, защиту от double-submit и честные error/empty states без новой admin-зоны.
+- Completed: существующая schema `reviews.status` (`pending`/`approved`/`rejected`) и PATCH moderation сохранены без миграции. Добавлен editor-gated `GET /reviews/pending`; reader получает 403, editor видит только pending, а публичный список остаётся approved-only. В существующий `/reviews` встроена очередь модерации для editor; submit и каждое approve/reject действие блокируются во время своего запроса. Public list и очередь получили раздельные loading/error/retry/empty состояния; ошибка отправки сохраняет введённые данные и даёт повтор.
+- RED→GREEN evidence: backend `tests/test_reviews.py` RED — 1/4 failed (`/reviews/pending` отсутствовал: 404 вместо 403); GREEN — 4/4 passed. Frontend `Reviews.test.tsx` RED — 4/4 failed (double-submit, list-error/retry, empty state, moderation queue); GREEN — 5/5 passed, включая retry после ошибки отправки с сохранённой формой.
+- Final verification: backend `python -m pytest tests -q` — 121 passed, 7 skipped (PostgreSQL-only); frontend `npm test` — 23 files, 152 passed; `npm run build` — 118 modules, success, только существующее chunk-size warning. `./init.sh` повторён через Git Bash: дошёл до глобального `pip check` и остановился на внешних Hermes/desktop dependency conflicts (включая отсутствующий `llvmlite` для `numba`); Win32 Error 5 не воспроизвёлся. Shared environment не менялся.
+- Evidence recorded: `feature_list.json` → F48b `passing`; `session-handoff.md` updated. Commit is local only; push/deploy await separate approval.
+- Next best action: commit F48b locally, then await explicit push/deploy approval; agreed backlog continues with F47 closeout or F48c.

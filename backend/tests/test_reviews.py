@@ -84,6 +84,30 @@ async def test_review_moderation_and_author_notification(client, test_app):
         assert notification.type == "review_approved"
 
 
+async def test_pending_reviews_queue_is_editor_only(client, test_app):
+    reader_headers = await headers_for(client, test_app, 601)
+    editor_headers = await headers_for(client, test_app, 602, editor=True)
+    first = await client.post(
+        "/api/v1/reviews",
+        headers=reader_headers,
+        json={"author_name": "Анна", "rating": 5, "body": "На проверке"},
+    )
+    second = await client.post(
+        "/api/v1/reviews",
+        headers=reader_headers,
+        json={"author_name": "Илья", "rating": 4, "body": "Тоже на проверке"},
+    )
+    assert first.status_code == second.status_code == 201
+
+    assert (await client.get("/api/v1/reviews/pending", headers=reader_headers)).status_code == 403
+    queued = await client.get("/api/v1/reviews/pending", headers=editor_headers)
+
+    assert queued.status_code == 200
+    assert [review["id"] for review in queued.json()] == [first.json()["id"], second.json()["id"]]
+    assert {review["status"] for review in queued.json()} == {"pending"}
+    assert (await client.get("/api/v1/reviews")).json() == []
+
+
 async def test_review_token_is_protected_single_use_and_expires(client, test_app):
     unauthorized = await client.post("/api/v1/internal/review-tokens", json={"tg_id": 777})
     assert unauthorized.status_code == 401

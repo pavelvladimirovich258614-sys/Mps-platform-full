@@ -48,6 +48,21 @@ async def list_reviews(status: ModerationStatus = ModerationStatus.APPROVED, ses
     return [review_dto(review) for review in reviews]
 
 
+@reviews_router.get("/pending")
+async def list_pending_reviews(
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(require_role(Role.EDITOR)),
+):
+    reviews = (
+        await session.scalars(
+            select(Review)
+            .where(Review.status == ModerationStatus.PENDING)
+            .order_by(Review.created_at, Review.id)
+        )
+    ).all()
+    return [review_dto(review) for review in reviews]
+
+
 @reviews_router.post("", status_code=201)
 async def create_review(
     payload: ReviewCreate,

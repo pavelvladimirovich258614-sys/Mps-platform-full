@@ -2,19 +2,18 @@
 
 ## Current verified checkpoint — 2026-08-28
 
-- F46 is `passing` and production-deployed at application SHA `78890c873d896b2b97a477ef4e5107ddb813412b`.
-- Current tracker count: 53 total records, 50 `passing`; exactly F47, F48b and F48c remain `in_progress`.
+- F48a is `passing` and production-deployed at application SHA `6e1b55705fa1ab5ebef492dc0c49476f23314035`.
+- Current tracker count: 53 total records, 51 `passing`; exactly F47 and F48c remain `in_progress`.
 - F01–F46, including F37 Sessions A–D, and F48d are completed and production-deployed.
 - Fresh closeout check: backend active/healthy with PID 838131; served `/assets/index-Zpi2gptt.js` contains production VITE values and the F46 marker, contains no localhost API fallback, and `deploy/smoke.sh` passes.
-- F48a is locally complete, not pushed or deployed: foreign editor DELETE draft now returns 404 while staff DELETE published remains compatible; drafts list errors render an alert/retry instead of false empty state; failed DELETE keeps its dialog/card and renders an in-dialog error. RED→GREEN was backend `204 → 404`, frontend 2 expected failures → 3 target passes; full backend was 120 passed/7 PostgreSQL skips, full frontend 22 files/147 passed and build passed with 118 modules.
-- Final `./init.sh` outside sandbox ran through dependency installation but stopped at the external global Python `pip check` (Hermes/desktop package conflicts) before project pytest. Do not alter that shared environment; the recorded MPS suites are current.
+- F48b is locally complete and awaits only a local commit (no push/deploy): added editor-gated `/reviews/pending`, while public reviews remain approved-only. The existing Reviews page now blocks repeat submit/moderation actions and renders separate retryable error/empty states plus an embedded editor moderation queue. RED→GREEN: backend 1 expected failure → 4 target passes; frontend 4 expected failures → 5 target passes. Final suites: backend 121 passed/7 PostgreSQL skips, frontend 23 files/152 passed, build 118 modules.
+- Final `./init.sh` outside sandbox again stopped at the external global Python `pip check` (Hermes/desktop package conflicts including missing `llvmlite` for `numba`) before project pytest. Win32 Error 5 did not recur. Do not alter that shared environment; the recorded MPS suites are current.
 
 ## Backlog in agreed order
 
 1. **F47 — forum performance.** Diagnosed and inspector-accepted. N+1 was not confirmed: countries, topics and messages each executed one SELECT in 50-row profiling. No runtime/production fix is needed. Optional test-only query-count guard is at implementer discretion; otherwise close with the recorded no-regression evidence.
-2. **F48b — Reviews.** Diagnosed, not implemented. Pavel decided moderation belongs to role `editor`, not admin-only. Future scope: double-submit protection, list error/empty states and editor moderation UI.
-3. **F48c — Subscription.** Diagnosed, not implemented. Pavel decided to honestly hide/disable the email subscription form while delivery is unavailable. Do not implement retention/outbox/retry or broader email infrastructure now. The independently relevant unescaped-HTML security defect still requires a RED-first fix.
-4. **Web design.** Deferred until the functional backlog above is closed.
+2. **F48c — Subscription.** Diagnosed, not implemented. Pavel decided to honestly hide/disable the email subscription form while delivery is unavailable. Do not implement retention/outbox/retry or broader email infrastructure now. The independently relevant unescaped-HTML security defect still requires a RED-first fix.
+3. **Web design.** Deferred until the functional backlog above is closed.
 
 ## Persistent blockers and boundaries
 
@@ -26,4 +25,4 @@
 
 ## Continuation order
 
-F47 optional guard/closeout → F48b → F48c → web design.
+F47 optional guard/closeout → F48c → web design.

@@ -295,7 +295,7 @@ export function App() {
       </main>
     );
   }
-  if (page === "reviews") content = <Reviews onError={showError} onPrivacy={() => openPage("privacy")} />;
+  if (page === "reviews") content = <Reviews canModerate={canManagePosts} onError={showError} onPrivacy={() => openPage("privacy")} />;
   if (page === "subscribe") content = <Subscribe onError={showError} onPrivacy={() => openPage("privacy")} />;
   if (page === "about") content = <About publicSettings={publicSettings.value} />;
   if (page === "drafts" && canManagePosts) content = <Drafts drafts={drafts.value ?? []} loading={drafts.loading} error={drafts.error} onRetry={() => void drafts.reload()} onOpen={(draft) => void openDraft(draft.id)} onDelete={deleteDraft} />;

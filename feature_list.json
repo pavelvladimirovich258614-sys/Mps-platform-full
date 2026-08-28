@@ -909,14 +909,14 @@
       "area": "content-audit-reviews",
       "title": "Аудит: Отзывы",
       "user_visible_behavior": "Отзывы можно надёжно отправлять, видеть корректные пустые/ошибочные состояния и модерировать по согласованной роли.",
-      "status": "in_progress",
+      "status": "passing",
       "verification": [
         "RED/GREEN frontend tests: single submit, retryable list error and explicit empty state",
         "RED/GREEN role-correct moderation UI/API tests для роли editor",
         "Полный релевантный backend/frontend suite"
       ],
-      "evidence": "2026-08-28 read-only diagnosis and inspector acceptance: Reviews is real pending/approved/moderated functionality, not a placeholder. Frontend has no submit-pending guard or load error/empty states and no consumer for moderation API. Text-only photo/guest-login boundaries were separately identified.",
-      "notes": "inspected: принято. Павел подтвердил: модерация отзывов принадлежит роли editor, не admin-only. Будущий scope: защита от double-submit, error/empty states и editor moderation UI; реализация не начата."
+      "evidence": "2026-08-28 RED→GREEN: backend `tests/test_reviews.py` failed 1/4 because `/reviews/pending` did not exist (404 instead of reader 403), then passed 4/4 after the editor-gated queue endpoint; it proves reader 403, editor pending-only queue and public approved-only isolation. Frontend RED `Reviews.test.tsx` failed 4/4 for double-submit, list error/retry, explicit empty state and moderation UI; GREEN passed 5/5 including preserved form/error retry. Full backend `python -m pytest tests -q` passed 121 with 7 PostgreSQL skips; full frontend `npm test` passed 23 files / 152 tests; `npm run build` passed with 118 modules and only the existing chunk-size warning. Final `./init.sh` stopped at external global Hermes/desktop pip-check conflicts before MPS pytest; no environment was changed.",
+      "notes": "Completed locally 2026-08-28; no migration, dependency, push or deployment. Existing review status schema was retained. `/reviews/pending` is role-gated to editor (admin remains included by the established role hierarchy); public reviews remain approved-only. The existing Reviews section now has a submission guard, separate retryable error/empty states and an embedded editor moderation queue."
     },
     {
       "id": "F48c",
