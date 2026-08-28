@@ -856,7 +856,82 @@
         "./init.sh outside sandbox; внешний Hermes pip check фиксируется отдельно"
       ],
       "evidence": "2026-08-28 RED→GREEN: new `About.test.tsx` initially failed 3/3 against the former generic copy (all 10 confirmed markers absent, old placeholder phrases present, no contact link when public settings were unavailable), then passed 3/3 after the content-only implementation. First full suite exposed two stale content expectations (`PublicContacts` exact bare contact value and `App.routing` old heading); the minimal compatible DOM adjustment plus updated heading assertion yielded 22 files / 142 tests passed. `npm run build` passed (`tsc -b && vite build`, 117 modules). Isolated `agent-browser` session opened local `/about`: all confirmed text was rendered, placeholder copy was absent, all three links were visible with nonempty HTTPS targets, no broken images were found, and `.about-heading`, `.about-text`, `.about-contacts` reported `overflow: visible`, `line-clamp: none`, matching scroll/client heights and `clipped=false`. Final `./init.sh` stopped only at the explicitly excluded external Hermes/desktop global pip-check before MPS pytest. Production rollout synchronized local/origin/VPS on `01c505d332b6a9bce8ee4aa000c1ae785a01e5be`. Verified frontend rollback `/root/backups/mps-frontend-f48d-20260827T173146Z.tar.gz` has SHA-256 `947cbb4d6f304beaca7748a054afac3c98b7b1d0eabb908c90dcc3c68c4aa17e`. Served `index-DnmHxz2e.js` returned HTTP 200, embedded both production VITE values and the F48d marker, contained no localhost API fallback, and `deploy/smoke.sh` passed. Backend diff was zero files; `mps-backend` kept PID 805788 without restart and remained active/healthy.",
-      "notes": "Completed and production-deployed 2026-08-28 at `01c505d`. Content-only change in `frontend/app/src/components/About.tsx` replaces conditional marketing copy with confirmed facts about ООО «Под солнцем»: компания основана и работает с 2003 года, сотрудничает с Coral Travel/Anex Tour/TUI, организует туристические поездки и спортивные сборы; указаны контакты. The existing route, classes, perks grid, SunLogo, Telegram CTA and configured public-setting overrides are preserved. No styles, backend, dependencies or web design changed. F46/F47 and F48 a/b/c were not started and are not tracker records in the current 48/48 passing set."
+      "notes": "Completed and production-deployed 2026-08-28 at `01c505d`. Content-only change in `frontend/app/src/components/About.tsx` replaces conditional marketing copy with confirmed facts about ООО «Под солнцем»: компания основана и работает с 2003 года, сотрудничает с Coral Travel/Anex Tour/TUI, организует туристические поездки и спортивные сборы; указаны контакты. The existing route, classes, perks grid, SunLogo, Telegram CTA and configured public-setting overrides are preserved. No styles, backend, dependencies or web design changed."
+    },
+    {
+      "id": "F46",
+      "priority": 46,
+      "area": "irishka-admin",
+      "title": "Иришка: admin UI настроек форумных автоответов",
+      "user_visible_behavior": "Администратор в разделе форума видит и безопасно изменяет включение форумных автоответов Иришки и задержку ответа, не затрагивая интерактивный Q&A или MiniMax-секреты.",
+      "status": "in_progress",
+      "verification": [
+        "RED backend/frontend tests для GET/PATCH admin-настроек Иришки, границ delay и отсутствия controls у non-admin",
+        "GREEN target tests, полный релевантный backend/frontend suite и build",
+        "Проверка роли admin и явной подписи, что настройка относится только к форумным автоответам"
+      ],
+      "evidence": "2026-08-28 read-only coordination diagnosis and inspector acceptance: DB rows irishka_enabled/irishka_delay_min have runtime fallbacks true/30 when absent; GET /admin/settings exposes only fishka today, while PATCH already validates/writes Irishka fields. Scheduler remains fixed at 5 minutes; MiniMax credentials/config and shared timeout/retry/token settings remain env/code-only. Direct Q&A ignores the forum flag.",
+      "notes": "inspected: принято after one factual correction: true/30 are runtime fallbacks, not proven persisted defaults. Future minimum: extend admin GET, typed hook, compact admin-only block on /countries with toggle and 1–10080 delay, explicit Q&A boundary, and focused tests. Estimate 6–8 files, no migration; low risk."
+    },
+    {
+      "id": "F47",
+      "priority": 47,
+      "area": "forum-perf",
+      "title": "Форум: диагностика N+1 запросов",
+      "user_visible_behavior": "Списки стран, тем и сообщений форума не выполняют N+1 SQL-запросы при росте числа строк.",
+      "status": "in_progress",
+      "verification": [
+        "Query-count regression coverage для countries, topics и messages на множестве строк",
+        "Целевой backend suite и проверка keyset pagination",
+        "Полный backend suite перед любым production-изменением"
+      ],
+      "evidence": "2026-08-28 read-only profiling and inspector acceptance: disposable 50-row datasets observed one SELECT for GET countries, topics and messages; countries aggregate counts, topics use scalar fields, messages explicitly JOIN users. No confirmed N+1 and no production eager-loading fix justified.",
+      "notes": "inspected: принято. Minimal recommended outcome is no runtime change; optional test-only guard asserts one total SELECT and 50 returned items. Inspector recorded separate non-F47 risks: unscoped cursors/malformed Base64 and query-cost/index questions."
+    },
+    {
+      "id": "F48a",
+      "priority": 48,
+      "area": "content-audit-drafts",
+      "title": "Аудит: Черновики",
+      "user_visible_behavior": "Автор видит понятные состояния черновиков и не может потерять чужой черновик через staff delete.",
+      "status": "in_progress",
+      "verification": [
+        "RED/GREEN: foreign editor DELETE draft returns 404 while published staff delete remains compatible",
+        "RED/GREEN frontend: load error has alert/retry; failed delete keeps dialog and card visible",
+        "Полный релевантный backend/frontend suite"
+      ],
+      "evidence": "2026-08-28 read-only diagnosis and inspector acceptance: DELETE /posts/{id} lacks draft-owner guard; draft-load errors are rendered as empty state; failed delete closes confirmation because App swallows rejection. Happy save/load/edit/delete flow and later Feed/styles boundary were source-checked.",
+      "notes": "inspected: принято after one clarification of future contracts. Minimum split: draft-only owner 404 guard plus regression; Drafts alert/retry; retain confirmation/card with in-dialog error on failure. No migration/dependency; small backend and small-to-medium frontend scope."
+    },
+    {
+      "id": "F48b",
+      "priority": 48,
+      "area": "content-audit-reviews",
+      "title": "Аудит: Отзывы",
+      "user_visible_behavior": "Отзывы можно надёжно отправлять, видеть корректные пустые/ошибочные состояния и модерировать по согласованной роли.",
+      "status": "in_progress",
+      "verification": [
+        "RED/GREEN frontend tests: single submit, retryable list error and explicit empty state",
+        "После продуктового решения: role-correct moderation UI/API tests",
+        "Полный релевантный backend/frontend suite"
+      ],
+      "evidence": "2026-08-28 read-only diagnosis and inspector acceptance: Reviews is real pending/approved/moderated functionality, not a placeholder. Frontend has no submit-pending guard or load error/empty states and no consumer for moderation API. Text-only photo/guest-login boundaries were separately identified.",
+      "notes": "inspected: принято. Small frontend hardening for submit/list states; moderation UI is a separate medium scope requiring a decision whether editor or admin owns its queue."
+    },
+    {
+      "id": "F48c",
+      "priority": 48,
+      "area": "content-audit-subscription",
+      "title": "Аудит: Подписка",
+      "user_visible_behavior": "Email-подписка честно сообщает доступность, безопасно подтверждается и даёт пользователю работоспособную отписку.",
+      "status": "in_progress",
+      "verification": [
+        "RED/GREEN tests для unsubscribe links, validation/canonicalization, repeated confirmed subscribe и digest delivery failures",
+        "После продуктового решения: UI временной недоступности либо approved outbox/retention contract",
+        "Отдельно согласованный live provider/digest smoke после восстановления сети"
+      ],
+      "evidence": "2026-08-28 read-only diagnosis and inspector acceptance: double opt-in/backend digest are real, but outgoing emails do not include usable unsubscribe links; server lacks canonical email validation and persisted consent; repeated confirmed subscription resends confirmation; digest ignores delivery failures and interpolates unescaped title/excerpt. Unisender route outage is historical tracker evidence only, not revalidated live in this session.",
+      "notes": "inspected: принято after expanded audit. P1: deliver unsubscribe links and escape digest markup; P2: validation/consent decision, confirmed retry UX and digest failure accounting. While provider outage persists, choose temporary truthful suspension (recommended) or separately approve retention/outbox/retry policy."
     }
   ]
 }
