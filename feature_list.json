@@ -870,8 +870,8 @@
         "GREEN target tests, полный релевантный backend/frontend suite и build",
         "Проверка роли admin и явной подписи, что настройка относится только к форумным автоответам"
       ],
-      "evidence": "2026-08-28 RED backend: `pytest tests/test_admin.py -k irishka` — 1 expected failure because GET /admin/settings omitted irishka_enabled and irishka_delay_min. RED frontend: `npm test -- --run src/App.routing.test.tsx -t \"Irishka settings\"` — 2 expected failures because the admin controls were absent; the editor non-access guard already passed. GREEN targeted: backend 1 passed/5 deselected; frontend 2 passed/37 skipped. Full backend: 120 passed, 7 skipped. Full frontend: 22 files / 145 tests passed. `npm run build` passed (`tsc -b && vite build`, 118 modules; existing chunk-size warning only). Final `./init.sh` stopped at the separately excluded external Hermes/desktop global pip-check before MPS tests. Admin GET now returns effective false/true/30 fallbacks, PATCH persists actual irishka_enabled/irishka_delay_min Setting rows, delay bounds 1–10080 return 422 outside range, and subsequent GET returns the stored values.",
-      "notes": "inspected: принято; implemented locally with no migration. `/countries` embeds a compact admin-only block for forum autoanswers and delay 1–10080. Editor/non-admin clients neither render the block nor request `/admin/settings`. A failed save restores the last confirmed values and shows a local alert. The UI explicitly excludes direct Q&A. MiniMax credentials, prompt/persona, retry/timeout/token policy, scheduler cadence and interactive Q&A were not changed. Production remains untouched pending separate push/deploy approval."
+      "evidence": "2026-08-28 RED backend: `pytest tests/test_admin.py -k irishka` — 1 expected failure because GET /admin/settings omitted irishka_enabled and irishka_delay_min. RED frontend: `npm test -- --run src/App.routing.test.tsx -t \"Irishka settings\"` — 2 expected failures because the admin controls were absent; the editor non-access guard already passed. GREEN targeted: backend 1 passed/5 deselected; frontend 2 passed/37 skipped. Full frontend: 22 files / 145 tests passed. `npm run build` passed (`tsc -b && vite build`, 118 modules; existing chunk-size warning only). The first full backend run was 120 passed/7 skipped because `MPS_TEST_POSTGRES_URL` was absent: the familiar 3 forum PostgreSQL tests plus 4 F45 Irishka concurrency tests were skipped. Before push, a temporary PostgreSQL 16 instance was started and the full suite with `MPS_TEST_POSTGRES_URL` present passed 127 tests with 0 skipped in 50.85s, proving the skip increase was environmental rather than an F46 regression. Final `./init.sh` stopped at the separately excluded external Hermes/desktop global pip-check before MPS tests. Production rollout synchronized local/origin/VPS on `78890c873d896b2b97a477ef4e5107ddb813412b`; verified DB backup `/var/backups/mps/mps-2026-08-27-212555.dump.gz` SHA-256 `d6832c5c53c266cf58b3791c707de062986f0ec252c2389665ad0c37ff297c71` and static rollback `/root/backups/mps-frontend-f46-20260828T012555Z.tar.gz` SHA-256 `a8a4af143bbd9d4079ed2c7556e2a5d2dbba746d163942dec3e27dd7abd7bad1` were created. Backend restarted healthy, served `index-Zpi2gptt.js` with production VITE/F46 markers and no localhost fallback, and `deploy/smoke.sh` passed.",
+      "notes": "inspected: принято; implemented and production-deployed at `78890c8` with no migration. `/countries` embeds a compact admin-only block for forum autoanswers and delay 1–10080. Editor/non-admin clients neither render the block nor request `/admin/settings`. A failed save restores the last confirmed values and shows a local alert. The UI explicitly excludes direct Q&A. MiniMax credentials, prompt/persona, retry/timeout/token policy, scheduler cadence and interactive Q&A were not changed."
     },
     {
       "id": "F47",
@@ -912,11 +912,11 @@
       "status": "in_progress",
       "verification": [
         "RED/GREEN frontend tests: single submit, retryable list error and explicit empty state",
-        "После продуктового решения: role-correct moderation UI/API tests",
+        "RED/GREEN role-correct moderation UI/API tests для роли editor",
         "Полный релевантный backend/frontend suite"
       ],
       "evidence": "2026-08-28 read-only diagnosis and inspector acceptance: Reviews is real pending/approved/moderated functionality, not a placeholder. Frontend has no submit-pending guard or load error/empty states and no consumer for moderation API. Text-only photo/guest-login boundaries were separately identified.",
-      "notes": "inspected: принято. Small frontend hardening for submit/list states; moderation UI is a separate medium scope requiring a decision whether editor or admin owns its queue."
+      "notes": "inspected: принято. Павел подтвердил: модерация отзывов принадлежит роли editor, не admin-only. Будущий scope: защита от double-submit, error/empty states и editor moderation UI; реализация не начата."
     },
     {
       "id": "F48c",
@@ -926,12 +926,12 @@
       "user_visible_behavior": "Email-подписка честно сообщает доступность, безопасно подтверждается и даёт пользователю работоспособную отписку.",
       "status": "in_progress",
       "verification": [
-        "RED/GREEN tests для unsubscribe links, validation/canonicalization, repeated confirmed subscribe и digest delivery failures",
-        "После продуктового решения: UI временной недоступности либо approved outbox/retention contract",
-        "Отдельно согласованный live provider/digest smoke после восстановления сети"
+        "RED/GREEN frontend: email-форма скрыта или отключена и заменена честным сообщением о временной недоступности",
+        "RED/GREEN security regression для актуального независимо от отключения неэкранированного HTML",
+        "Полный релевантный backend/frontend suite; email infrastructure/outbox/retention остаются вне scope"
       ],
       "evidence": "2026-08-28 read-only diagnosis and inspector acceptance: double opt-in/backend digest are real, but outgoing emails do not include usable unsubscribe links; server lacks canonical email validation and persisted consent; repeated confirmed subscription resends confirmation; digest ignores delivery failures and interpolates unescaped title/excerpt. Unisender route outage is historical tracker evidence only, not revalidated live in this session.",
-      "notes": "inspected: принято after expanded audit. P1: deliver unsubscribe links and escape digest markup; P2: validation/consent decision, confirmed retry UX and digest failure accounting. While provider outage persists, choose temporary truthful suspension (recommended) or separately approve retention/outbox/retry policy."
+      "notes": "inspected: принято after expanded audit. Павел подтвердил временное решение: честно скрыть/отключить email-форму, пока доставка заблокирована сетью Unisender/HostKey; retention/outbox/retry, unsubscribe и остальная инфраструктура реальной рассылки сейчас не дорабатываются. Независимый security-баг с неэкранированным HTML остаётся обязательным будущим исправлением. Реализация не начата."
     }
   ]
 }

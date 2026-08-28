@@ -1,25 +1,29 @@
 # Session handoff — МПС
 
-## F46 local completion checkpoint — 2026-08-28
+## Current verified checkpoint — 2026-08-28
 
-- F46 is implemented and marked `passing` locally. The admin-only settings block is embedded in `/countries`, as approved.
-- `GET /admin/settings` now returns `fishka_submissions_enabled`, `irishka_enabled` and `irishka_delay_min`. Missing DB rows use effective fallbacks false/true/30; `PATCH /admin/settings` persists the two Irishka values as actual `Setting` rows.
-- The UI edits only forum autoanswers and delay 1–10080 minutes. It sends both fields in one PATCH, restores the last confirmed values after a failed save and explicitly says direct Q&A is unaffected. Editor/non-admin clients neither render the block nor request the admin endpoint.
-- MiniMax credentials/configuration, system prompt/persona, timeout/retry/token policy, scheduler cadence and interactive Q&A were not changed. No migration was added.
+- F46 is `passing` and production-deployed at application SHA `78890c873d896b2b97a477ef4e5107ddb813412b`.
+- Current tracker count: 53 total records, 49 `passing`; exactly F47, F48a, F48b and F48c remain `in_progress` after inspected diagnosis.
+- F01–F46, including F37 Sessions A–D, and F48d are completed and production-deployed.
+- Fresh closeout check: backend active/healthy with PID 838131; served `/assets/index-Zpi2gptt.js` contains production VITE values and the F46 marker, contains no localhost API fallback, and `deploy/smoke.sh` passes.
+- Full backend with temporary PostgreSQL 16 and `MPS_TEST_POSTGRES_URL` present passed 127 tests with 0 skipped. The earlier 120 passed/7 skipped run lacked PostgreSQL: 3 existing forum tests plus 4 F45 Irishka concurrency tests were skipped. This was environment variance, not an F46 regression.
 
-## Verification
+## Backlog in agreed order
 
-- RED backend: 1 expected failure because GET omitted both Irishka fields. GREEN backend target: 1 passed/5 deselected.
-- RED frontend: 2 expected failures because the admin controls were absent; the editor guard passed. GREEN frontend target: 2 passed/37 skipped.
-- Full backend: 120 passed, 7 skipped. Full frontend: 22 files, 145 tests passed.
-- `npm run build`: passed, 118 modules; only the existing Vite chunk-size warning.
-- Final `./init.sh`: stopped at the known external Hermes/desktop global `pip check` before MPS tests. This remains separately excluded; both complete MPS suites passed independently.
+1. **F47 — forum performance.** Diagnosed and inspector-accepted. N+1 was not confirmed: countries, topics and messages each executed one SELECT in 50-row profiling. No runtime/production fix is needed. Optional test-only query-count guard is at implementer discretion; otherwise close with the recorded no-regression evidence.
+2. **F48a — Drafts.** Diagnosed, not implemented. Confirmed defects: staff can delete another author's draft by ID; list-load failure is shown as a false empty state; a failed delete closes the confirmation dialog. Future work requires RED-first backend/frontend fixes for those three contracts.
+3. **F48b — Reviews.** Diagnosed, not implemented. Pavel decided moderation belongs to role `editor`, not admin-only. Future scope: double-submit protection, list error/empty states and editor moderation UI.
+4. **F48c — Subscription.** Diagnosed, not implemented. Pavel decided to honestly hide/disable the email subscription form while delivery is unavailable. Do not implement retention/outbox/retry or broader email infrastructure now. The independently relevant unescaped-HTML security defect still requires a RED-first fix.
+5. **Web design.** Deferred until the functional backlog above is closed.
 
-## Git and production boundary
+## Persistent blockers and boundaries
 
-- Before F46, local and `origin/main` were synchronized on `8d342e4`. The F46 checkpoint is committed locally only and intentionally remains ahead of origin until separate push approval.
-- Production VPS remains on `01c505d332b6a9bce8ee4aa000c1ae785a01e5be`. No VPS connection, deployment, database change, service restart or static publication was performed for F46.
+- Email delivery remains blocked by the external Unisender/HostKey network path. Do not change provider, firewall, credentials or email architecture without a separate approved scope.
+- `npm audit` reports 5 advisories; no audit fix was authorized in F46.
+- Historical tracker entries call `.codex/skills/*.md` a known physical gap. Current checkout verification found both `.codex/skills/verification-before-completion/SKILL.md` and `.codex/skills/tdd-fix-workflow/SKILL.md` present; they were read and applied in this closeout. Treat the older absence statement as stale history, not current filesystem state.
+- F46 changed no schema. Backend restart was required only because the loaded Python admin endpoint changed; Alembic remains `20260828_0017 (head)`.
+- Verified rollback artifacts: PostgreSQL `/var/backups/mps/mps-2026-08-27-212555.dump.gz` SHA-256 `d6832c5c53c266cf58b3791c707de062986f0ec252c2389665ad0c37ff297c71`; frontend `/root/backups/mps-frontend-f46-20260828T012555Z.tar.gz` SHA-256 `a8a4af143bbd9d4079ed2c7556e2a5d2dbba746d163942dec3e27dd7abd7bad1`.
 
-## Next action
+## Continuation order
 
-Wait for Pavel's explicit confirmation to push/deploy F46. Do not start F47 until F46 is fully closed. After that, F47 may be closed with evidence that no N+1 regression exists or receive only the optional test guard. Approved later decisions: F48b moderation belongs to `editor`; F48c should hide/disable the email form while Unisender/HostKey delivery remains blocked, without retention/outbox/retry work. Web design remains last.
+F47 optional guard/closeout → F48a → F48b → F48c → web design.
