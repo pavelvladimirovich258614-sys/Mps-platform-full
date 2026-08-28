@@ -4,12 +4,12 @@
 - Repository root directory: mps-platform/
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
-- Feature state: 54 tracker records; REV-2 is `passing` after adding two-photo reviews, a 1000-character limit and persistent own-review statuses. Its production base is deployed, and a locally verified follow-up now updates «Мои отзывы» immediately after moderation instead of retaining stale pending state. F47 and F48c remain `in_progress`; F48a/F48b are production-deployed `passing`. `init.sh` uses global Python and its pip-check is an external Hermes/desktop blocker, so MPS verification is recorded separately.
-- Deploy state: production is at REV-2 revision `bfab6fe2845d0e780568cf8566be662c993f4d03` with PostgreSQL Alembic `20260829_0018 (head)` and passed backend health, production VITE/no-localhost checks and `deploy/smoke.sh`. The follow-up mine-state fix is local-only and needs a separate commit, push and frontend rebuild/deploy approval; backend restart and migration are not required for it.
+- Feature state: 54 tracker records; REV-2 is production-deployed `passing` with up to two photos, a 1000-character limit, persistent own-review statuses and immediate «Мои отзывы» synchronization after moderation. F47 and F48c remain `in_progress`; F48a/F48b are production-deployed `passing`. `init.sh` uses global Python and its pip-check is an external Hermes/desktop blocker, so MPS verification is recorded separately.
+- Deploy state: production is at REV-2 revision `58a49f5038141b967324e581f0856757cba08dd8` with PostgreSQL Alembic `20260829_0018 (head)`. The follow-up frontend rollout retained backend PID `891354` without restart, served `index-DOiIEML6.js` with production VITE values and no localhost API, and passed health plus `deploy/smoke.sh`.
 - Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15, I-16, I-18 и I-20 закрыты 2026-08-20. I-21 отложен до pre-launch юридической проверки. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
 - Auth/UI state: production build uses `https://mir.pod-solncem.ru/api/v1` and `Reg_Under_the_sun_bot`; F27 hides email form/copy, leaving Telegram Login Widget as the sole visible guest path. Re-enable only by setting `EMAIL_LOGIN_ENABLED` after Unisender/HostKey repair. F28 adds owner-only logout through the own public-profile ••• menu; visitors never receive it. F29 production picker accepts current JPEG/PNG/WebP/HEIC/HEIF/AVIF set and permits repeated selection of the same file. Role storage remains compatible with legacy `ADMIN` and current lower-case values.
 - Email state: UnisenderGo transport использует официальный default `goapi.unisender.ru` (с возможностью override на go1/go2) и `X-API-KEY`; payload `message/recipients/body/subject/from_email` проверен mock-тестами. Production delivery сейчас заблокирована внешним TCP timeout до сети Unisender `31.184.200.*:443`: goapi и go1 недоступны, при этом ya.ru/google.com доступны, а local UFW/iptables outgoing не блокируют. Email-код и digest не работают до восстановления маршрута или смены транспорта/provider.
-- Next best action: commit the verified REV-2 mine-state follow-up locally, then await separate approval for push and frontend-only production rollout. F47 remains optional; F48c and web design remain backlog.
+- Next best action: begin the owner-defined P0 checklist. The closeout request referenced «см. ниже», but no P0 items were included; the next session must obtain/confirm the exact list before code and must not infer it from F47/F48c or other backlog entries.
 
 - F37 update: `passing` and production-deployed through Session D. `Post.category` is nullable, published fishki expose/filter by category, `/posts/fishki/categories` drives the dynamic `/fishki` dropdown, and the importer retains its validated dry-run/conflict/idempotency safeguards. Production now contains 145 imported fishki plus one pre-existing fishka. The removed 15-row category has zero rows, is absent from the 12-category API response and is absent from the live dropdown.
 
@@ -26,14 +26,22 @@
 
 ## Session Record
 
+### Session 64 — 2026-08-29 (Codex, REV-2 production closeout)
+
+- Result: REV-2 and its «Мои отзывы» synchronization fix are production-deployed at `58a49f5038141b967324e581f0856757cba08dd8`; feature status remains `passing`.
+- Rollout evidence: frontend rollback `/root/backups/mps-frontend-rev2-mine-fix-58a49f5.tar.gz`, SHA-256 `339b994a0990db83ada5969a01536603b200ebf670e3cfed1fd6b61564d4e75f`; backend remained PID `891354`, active/healthy without restart; public `index-DOiIEML6.js` contained production API/bot values and no localhost API; smoke passed.
+- Fresh closeout evidence: production checkout still reported `58a49f5038141b967324e581f0856757cba08dd8`, backend `active` with health `ok`, served-bundle guards passed and `deploy/smoke.sh` returned `[OK]`.
+- Scope: tracker-only closeout in `feature_list.json`, `claude-progress.md` and `session-handoff.md`; no application code, dependency, database, migration, production configuration or service change.
+- Next session: start with the P0 checklist. The owner referenced a list «см. ниже», but the closeout message contained no actual items; retrieve/confirm that exact list before selecting scope or changing code.
+
 ### Session 63 — 2026-08-29 (Codex, REV-2 moderation-state follow-up)
 
 - Goal: fix the live defect where rejecting an own review removed it from the editor queue but left «Мои отзывы» showing the cached pending status.
 - Diagnosis: production DB stored `REJECTED`; PATCH moderation and a fresh authenticated `/reviews/mine` serialize `rejected`; `Reviews.tsx` already maps it to «Не опубликован». The defect was isolated to `useReviews.moderate`, which discarded the returned review and updated only `pendingResource`.
 - Completed: the backend application remains unchanged; its test now guards rejected status in both PATCH and `/mine`. A new hook regression test proves immediate mine-state replacement, and the minimal frontend change maps the matching cached entry to the review returned by PATCH while retaining the existing queue removal.
 - RED→GREEN evidence: backend protective contract passed 1/1. Frontend hook RED failed 1/1 with received `pending` instead of expected `rejected`; hook+UI GREEN passed 2 files/9 tests. Whole `tests/test_reviews.py` passed 8/8; full backend passed `125 passed, 7 skipped`; full frontend passed 24 files/156 tests; production build transformed 118 modules with only the existing chunk-size warning.
-- Scope: changed only `backend/tests/test_reviews.py`, new `frontend/app/src/hooks/useReviews.test.tsx`, `frontend/app/src/hooks/index.ts` and the three approved trackers. No backend code, DB, API, migration, `Reviews.tsx`, dependency, secret, push or deploy change.
-- Next best action: commit locally, then await separate approval for push and frontend-only deploy with rollback backup, served-bundle VITE/no-localhost verification and smoke.
+- Scope: changed only `backend/tests/test_reviews.py`, new `frontend/app/src/hooks/useReviews.test.tsx`, `frontend/app/src/hooks/index.ts` and the three approved trackers. No backend code, DB, API, migration, `Reviews.tsx`, dependency or secret change.
+- Deployment: committed as `58a49f5038141b967324e581f0856757cba08dd8` and frontend-deployed with rollback, served-bundle VITE/no-localhost verification, unchanged backend PID/health and passing smoke; superseded by Session 64 closeout.
 
 ### Session 62 — 2026-08-29 (Codex, REV-2 reviews extension)
 
