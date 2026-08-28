@@ -72,11 +72,16 @@ async def test_review_moderation_and_author_notification(client, test_app):
         json={"author_name": "Анна", "rating": 3, "body": "Не публиковать"},
     )
     rejected_id = rejected.json()["id"]
-    assert (await client.patch(
+    rejection = await client.patch(
         f"/api/v1/reviews/{rejected_id}/moderate",
         headers=editor_headers,
         json={"action": "reject"},
-    )).status_code == 200
+    )
+    assert rejection.status_code == 200
+    assert rejection.json()["review"]["status"] == "rejected"
+    mine = await client.get("/api/v1/reviews/mine", headers=reader_headers)
+    assert mine.status_code == 200
+    assert next(review for review in mine.json() if review["id"] == rejected_id)["status"] == "rejected"
     assert [review["id"] for review in (await client.get("/api/v1/reviews?status=approved")).json()] == [review_id]
     async with test_app.state.database.session_factory() as session:
         notification = await session.scalar(select(Notification))

@@ -4,12 +4,12 @@
 - Repository root directory: mps-platform/
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
-- Feature state: 54 tracker records; REV-2 is locally `passing` after adding two-photo reviews, a 1000-character limit and persistent own-review statuses. F47 and F48c remain `in_progress`; F48a/F48b are production-deployed `passing`. REV-2 uses migration `20260829_0018`, but it has not been applied to production. `init.sh` uses global Python and its pip-check is an external Hermes/desktop blocker, so MPS verification is recorded separately.
-- Deploy state: production remains at F48b revision `a19b1769f387dd2281763e1e47668d4714e99091`, with PostgreSQL Alembic `20260828_0017 (head)` before REV-2 migration. REV-2 is local-only and requires a separately approved backup, migration, backend restart, frontend rebuild/deploy and smoke.
+- Feature state: 54 tracker records; REV-2 is `passing` after adding two-photo reviews, a 1000-character limit and persistent own-review statuses. Its production base is deployed, and a locally verified follow-up now updates «Мои отзывы» immediately after moderation instead of retaining stale pending state. F47 and F48c remain `in_progress`; F48a/F48b are production-deployed `passing`. `init.sh` uses global Python and its pip-check is an external Hermes/desktop blocker, so MPS verification is recorded separately.
+- Deploy state: production is at REV-2 revision `bfab6fe2845d0e780568cf8566be662c993f4d03` with PostgreSQL Alembic `20260829_0018 (head)` and passed backend health, production VITE/no-localhost checks and `deploy/smoke.sh`. The follow-up mine-state fix is local-only and needs a separate commit, push and frontend rebuild/deploy approval; backend restart and migration are not required for it.
 - Audit boundary: C-05 остаётся отдельно согласованной security-задачей и не менялся; I-01, I-06a, I-13, I-15, I-16, I-18 и I-20 закрыты 2026-08-20. I-21 отложен до pre-launch юридической проверки. I-06b (единая sanitization policy) остаётся открытым и требует продуктового решения о допустимом содержимом полей.
 - Auth/UI state: production build uses `https://mir.pod-solncem.ru/api/v1` and `Reg_Under_the_sun_bot`; F27 hides email form/copy, leaving Telegram Login Widget as the sole visible guest path. Re-enable only by setting `EMAIL_LOGIN_ENABLED` after Unisender/HostKey repair. F28 adds owner-only logout through the own public-profile ••• menu; visitors never receive it. F29 production picker accepts current JPEG/PNG/WebP/HEIC/HEIF/AVIF set and permits repeated selection of the same file. Role storage remains compatible with legacy `ADMIN` and current lower-case values.
 - Email state: UnisenderGo transport использует официальный default `goapi.unisender.ru` (с возможностью override на go1/go2) и `X-API-KEY`; payload `message/recipients/body/subject/from_email` проверен mock-тестами. Production delivery сейчас заблокирована внешним TCP timeout до сети Unisender `31.184.200.*:443`: goapi и go1 недоступны, при этом ya.ru/google.com доступны, а local UFW/iptables outgoing не блокируют. Email-код и digest не работают до восстановления маршрута или смены транспорта/provider.
-- Next best action: commit REV-2 locally, then await separate approval for push and production rollout (backup, `20260829_0018`, mps-backend restart, frontend deploy and smoke). F47 remains optional; F48c and web design remain backlog.
+- Next best action: commit the verified REV-2 mine-state follow-up locally, then await separate approval for push and frontend-only production rollout. F47 remains optional; F48c and web design remain backlog.
 
 - F37 update: `passing` and production-deployed through Session D. `Post.category` is nullable, published fishki expose/filter by category, `/posts/fishki/categories` drives the dynamic `/fishki` dropdown, and the importer retains its validated dry-run/conflict/idempotency safeguards. Production now contains 145 imported fishki plus one pre-existing fishka. The removed 15-row category has zero rows, is absent from the 12-category API response and is absent from the live dropdown.
 
@@ -26,15 +26,24 @@
 
 ## Session Record
 
+### Session 63 — 2026-08-29 (Codex, REV-2 moderation-state follow-up)
+
+- Goal: fix the live defect where rejecting an own review removed it from the editor queue but left «Мои отзывы» showing the cached pending status.
+- Diagnosis: production DB stored `REJECTED`; PATCH moderation and a fresh authenticated `/reviews/mine` serialize `rejected`; `Reviews.tsx` already maps it to «Не опубликован». The defect was isolated to `useReviews.moderate`, which discarded the returned review and updated only `pendingResource`.
+- Completed: the backend application remains unchanged; its test now guards rejected status in both PATCH and `/mine`. A new hook regression test proves immediate mine-state replacement, and the minimal frontend change maps the matching cached entry to the review returned by PATCH while retaining the existing queue removal.
+- RED→GREEN evidence: backend protective contract passed 1/1. Frontend hook RED failed 1/1 with received `pending` instead of expected `rejected`; hook+UI GREEN passed 2 files/9 tests. Whole `tests/test_reviews.py` passed 8/8; full backend passed `125 passed, 7 skipped`; full frontend passed 24 files/156 tests; production build transformed 118 modules with only the existing chunk-size warning.
+- Scope: changed only `backend/tests/test_reviews.py`, new `frontend/app/src/hooks/useReviews.test.tsx`, `frontend/app/src/hooks/index.ts` and the three approved trackers. No backend code, DB, API, migration, `Reviews.tsx`, dependency, secret, push or deploy change.
+- Next best action: commit locally, then await separate approval for push and frontend-only deploy with rollback backup, served-bundle VITE/no-localhost verification and smoke.
+
 ### Session 62 — 2026-08-29 (Codex, REV-2 reviews extension)
 
 - Goal: implement only the approved review extension: up to two photos, a 1000-character review limit and persistent statuses for the authenticated author.
 - Completed: `review_photos` stores ordered positions 0–1 and backfills legacy `reviews.photo_url`; API responses retain `photo_url` compatibility and add `photo_urls`; GET `/reviews/mine` is authenticated and owner-isolated. The existing review form sequentially reuses POST `/media`, previews/removes up to two files, shows the character counter and displays pending/approved/rejected under «Мои отзывы».
 - Verification run: backend RED 4 expected failures → GREEN 4/4; whole review backend target 8/8; isolated Alembic upgrade reached `20260829_0018 (head)`. Frontend RED 3 expected failures → GREEN `Reviews.test.tsx` 8/8. Full backend `125 passed, 7 skipped`; full frontend `23 files, 155 passed`; build transformed 118 modules (only existing chunk-size warning).
 - Evidence recorded: `feature_list.json` marks REV-2 `passing` with complete commands/outcomes. Final `./init.sh` rerun reached global pip check then stopped on unrelated shared Hermes/desktop conflicts (including missing `llvmlite` for `numba`); no environment was changed.
-- Commits: local-only commit pending at session closeout; push/deploy are not authorised.
+- Commits: base REV-2 was committed as `bfab6fe2845d0e780568cf8566be662c993f4d03` and later production-deployed with Alembic `20260829_0018`; the Session 63 follow-up is separately local-only.
 - Known risks: cancelled/failed submission can leave uploaded media orphaned; this is the accepted minimal reuse of POST `/media`. Existing global pip-check and F47/F48c remain outside scope.
-- Next best action: after explicit approval, back up production, apply `20260829_0018`, restart the backend, rebuild/deploy frontend and run smoke.
+- Next best action: superseded by Session 63; the base rollout completed, while the follow-up awaits its own push/deploy gate.
 
 ### Session 100 — 2026-08-28 (Codex, F48a drafts audit fixes)
 - Goal: implement only the approved F48a contracts: prevent foreign staff draft deletion, expose a retryable drafts-list error, and preserve delete confirmation/card on DELETE failure.

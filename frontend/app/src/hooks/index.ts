@@ -211,8 +211,9 @@ export const useReviews = (canModerate = false, canTrackOwn = false) => {
     return created;
   };
   const moderate = async (reviewId: number, action: "approve" | "reject") => {
-    await apiJson<{ review: Review; pending_count: number }>(`/reviews/${reviewId}/moderate`, "PATCH", { action });
+    const result = await apiJson<{ review: Review; pending_count: number }>(`/reviews/${reviewId}/moderate`, "PATCH", { action });
     pendingResource.setValue((current) => current?.filter((review) => review.id !== reviewId) ?? []);
+    mineResource.setValue((current) => current?.map((review) => review.id === reviewId ? result.review : review) ?? []);
   };
   return {
     ...resource,
