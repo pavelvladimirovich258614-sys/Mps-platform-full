@@ -11,7 +11,8 @@ export type PostDraft = { title: string; type: "article"; body: string; status: 
 export type FishkaDraft = { title: string; type: "fishka"; body: string; emoji: string; status: "pending" | "published" };
 export type DraftSummary = { id: number; title: string; updated_at: string };
 export type DraftPost = ApiPost & { status: "draft"; updated_at: string };
-export type Review = { id: number; author_name: string; rating: number; body: string; photo_url: string | null; status: "pending" | "approved" | "rejected" };
+export type Review = { id: number; author_name: string; rating: number; body: string; photo_url: string | null; photo_urls: string[]; status: "pending" | "approved" | "rejected" };
+export type ReviewCreate = { author_name: string; rating: number; body: string; photo_urls: string[] };
 export type Question = { id: number; target: "manager" | "lawyer"; body: string; status: string; answer: string | null };
 export type Country = { id: number; name: string; topics_count: number };
 export type Topic = { id: number; title: string; author_id: number; messages_count: number };
@@ -194,13 +195,21 @@ export function usePost(slug?: string) {
   }, [reload]);
   return { value, loading, error, notFound, reload, setValue };
 }
-export const useReviews = (canModerate = false) => {
+export const useReviews = (canModerate = false, canTrackOwn = false) => {
   const resource = useResource(() => api<Review[]>("/reviews"), []);
   const pendingResource = useResource(
     () => canModerate ? api<Review[]>("/reviews/pending") : Promise.resolve([]),
     [canModerate],
   );
-  const create = async (body: Omit<Review, "id" | "status" | "photo_url">) => apiJson<Review>("/reviews", "POST", body);
+  const mineResource = useResource(
+    () => canTrackOwn ? api<Review[]>("/reviews/mine") : Promise.resolve([]),
+    [canTrackOwn],
+  );
+  const create = async (body: ReviewCreate) => {
+    const created = await apiJson<Review>("/reviews", "POST", body);
+    if (canTrackOwn) mineResource.setValue((current) => [created, ...(current ?? [])]);
+    return created;
+  };
   const moderate = async (reviewId: number, action: "approve" | "reject") => {
     await apiJson<{ review: Review; pending_count: number }>(`/reviews/${reviewId}/moderate`, "PATCH", { action });
     pendingResource.setValue((current) => current?.filter((review) => review.id !== reviewId) ?? []);
@@ -212,6 +221,10 @@ export const useReviews = (canModerate = false) => {
     pendingLoading: pendingResource.loading,
     pendingError: pendingResource.error,
     reloadPending: pendingResource.reload,
+    mine: mineResource.value ?? [],
+    mineLoading: mineResource.loading,
+    mineError: mineResource.error,
+    reloadMine: mineResource.reload,
     moderate,
   };
 };

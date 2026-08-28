@@ -3,16 +3,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Reviews } from "./Reviews";
 import { useReviews } from "../hooks";
+import { apiForm } from "../api/client";
 
 vi.mock("../hooks", () => ({ useReviews: vi.fn() }));
+vi.mock("../api/client", () => ({ apiForm: vi.fn() }));
 
 const mockedUseReviews = vi.mocked(useReviews);
-const review = { id: 42, author_name: "Анна", rating: 5, body: "Спасибо за путешествие", photo_url: null, status: "pending" };
+const mockedApiForm = vi.mocked(apiForm);
+const review = { id: 42, author_name: "Анна", rating: 5, body: "Спасибо за путешествие", photo_url: null, photo_urls: [], status: "pending" };
 
 function installReviews(overrides: Record<string, unknown> = {}) {
   const resource = {
     value: [], loading: false, error: "", reload: vi.fn(), create: vi.fn().mockResolvedValue(review),
     pending: [], pendingLoading: false, pendingError: "", reloadPending: vi.fn(), moderate: vi.fn(),
+    mine: [], mineLoading: false, mineError: "", reloadMine: vi.fn(),
     ...overrides,
   };
   mockedUseReviews.mockReturnValue(resource as unknown as ReturnType<typeof useReviews>);
@@ -42,7 +46,7 @@ describe("Reviews", () => {
     expect(create).toHaveBeenCalledTimes(1);
     expect((submit as HTMLButtonElement).disabled).toBe(true);
     resolveCreate(review);
-    await waitFor(() => expect(screen.getByText("На проверке")).toBeTruthy());
+    await waitFor(() => expect((screen.getByPlaceholderText("Как вас зовут") as HTMLInputElement).value).toBe(""));
   });
 
   it("keeps load failure distinct from an empty public list and retries it", () => {
@@ -84,5 +88,49 @@ describe("Reviews", () => {
     expect(screen.getByRole("heading", { name: "Отзывы на модерации" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Одобрить отзыв Анна" }));
     await waitFor(() => expect(resource.moderate).toHaveBeenCalledWith(42, "approve"));
+  });
+
+  it("uploads no more than two photos, previews them and submits their URLs", async () => {
+    const create = vi.fn().mockResolvedValue({ ...review, photo_url: "/media/one.webp", photo_urls: ["/media/one.webp", "/media/two.webp"] });
+    mockedApiForm.mockResolvedValueOnce({ url: "/media/one.webp" }).mockResolvedValueOnce({ url: "/media/two.webp" });
+    installReviews({ create });
+    renderReviews();
+
+    const input = screen.getByLabelText("Добавить фотографии к отзыву");
+    fireEvent.change(input, { target: { files: [new File(["one"], "one.webp", { type: "image/webp" }), new File(["two"], "two.webp", { type: "image/webp" }), new File(["three"], "three.webp", { type: "image/webp" })] } });
+
+    await waitFor(() => expect(mockedApiForm).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole("img", { name: "Фото отзыва 1" }).getAttribute("src")).toBe("/media/one.webp");
+    expect(screen.getByRole("img", { name: "Фото отзыва 2" }).getAttribute("src")).toBe("/media/two.webp");
+    fireEvent.change(screen.getByPlaceholderText("Как вас зовут"), { target: { value: "Анна" } });
+    fireEvent.change(screen.getByPlaceholderText("Что понравилось, что нет — по-честному"), { target: { value: "Всё понравилось" } });
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Отправить" }));
+
+    await waitFor(() => expect(create).toHaveBeenCalledWith({ author_name: "Анна", body: "Всё понравилось", rating: 5, photo_urls: ["/media/one.webp", "/media/two.webp"] }));
+  });
+
+  it("limits review text to 1000 characters and displays a counter", () => {
+    installReviews();
+    renderReviews();
+
+    const textarea = screen.getByPlaceholderText("Что понравилось, что нет — по-честному") as HTMLTextAreaElement;
+    fireEvent.change(textarea, { target: { value: "а".repeat(1000) } });
+
+    expect(textarea.maxLength).toBe(1000);
+    expect(screen.getByText("1000 / 1000")).toBeTruthy();
+  });
+
+  it("shows persisted own reviews and their moderation statuses", () => {
+    installReviews({ mine: [
+      { ...review, photo_url: "/media/sea.webp", photo_urls: ["/media/sea.webp"], status: "pending" },
+      { ...review, id: 43, author_name: "Илья", body: "Не опубликован", status: "rejected" },
+    ] });
+    renderReviews();
+
+    expect(screen.getByRole("heading", { name: "Мои отзывы" })).toBeTruthy();
+    expect(screen.getByText("На модерации")).toBeTruthy();
+    expect(screen.getAllByText("Не опубликован").length).toBeGreaterThan(0);
+    expect(screen.getByRole("img", { name: "Фото отзыва Анна 1" }).getAttribute("src")).toBe("/media/sea.webp");
   });
 });

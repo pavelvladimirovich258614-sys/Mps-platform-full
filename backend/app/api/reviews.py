@@ -6,10 +6,11 @@ import nh3
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.deps import get_current_user, get_db, require_role
 from app.models.notification import Notification
-from app.models.review import ModerationStatus, Review, ReviewSource, ReviewToken
+from app.models.review import ModerationStatus, Review, ReviewPhoto, ReviewSource, ReviewToken
 from app.models.user import Role, User
 from app.schemas.moderation import (
     ModerateRequest,
@@ -24,16 +25,22 @@ reviews_router = APIRouter(prefix="/reviews", tags=["reviews"])
 TOKEN_TTL = timedelta(days=7)
 
 
-def review_dto(review: Review) -> dict:
+def review_dto(review: Review, photo_urls: list[str] | None = None) -> dict:
+    urls = photo_urls if photo_urls is not None else [photo.url for photo in review.photos]
     return {
         "id": review.id,
         "author_name": review.author_name,
         "rating": review.rating,
         "body": review.body,
-        "photo_url": review.photo_url,
+        "photo_url": urls[0] if urls else review.photo_url,
+        "photo_urls": urls,
         "status": review.status.value,
         "source": review.source.value,
     }
+
+
+def review_photo_urls(payload: ReviewCreate) -> list[str]:
+    return payload.photo_urls or ([payload.photo_url] if payload.photo_url else [])
 
 
 async def pending_reviews_count(session: AsyncSession) -> int:
@@ -44,7 +51,29 @@ async def pending_reviews_count(session: AsyncSession) -> int:
 async def list_reviews(status: ModerationStatus = ModerationStatus.APPROVED, session: AsyncSession = Depends(get_db)):
     if status != ModerationStatus.APPROVED:
         raise HTTPException(422, "Публично доступны только одобренные отзывы")
-    reviews = (await session.scalars(select(Review).where(Review.status == ModerationStatus.APPROVED))).all()
+    reviews = (
+        await session.scalars(
+            select(Review)
+            .options(selectinload(Review.photos))
+            .where(Review.status == ModerationStatus.APPROVED)
+        )
+    ).all()
+    return [review_dto(review) for review in reviews]
+
+
+@reviews_router.get("/mine")
+async def list_my_reviews(
+    session: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    reviews = (
+        await session.scalars(
+            select(Review)
+            .options(selectinload(Review.photos))
+            .where(Review.user_id == user.id)
+            .order_by(Review.created_at.desc(), Review.id.desc())
+        )
+    ).all()
     return [review_dto(review) for review in reviews]
 
 
@@ -56,6 +85,7 @@ async def list_pending_reviews(
     reviews = (
         await session.scalars(
             select(Review)
+            .options(selectinload(Review.photos))
             .where(Review.status == ModerationStatus.PENDING)
             .order_by(Review.created_at, Review.id)
         )
@@ -69,18 +99,20 @@ async def create_review(
     session: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    photo_urls = review_photo_urls(payload)
     review = Review(
         user_id=user.id,
         author_name=payload.author_name,
         rating=payload.rating,
         body=nh3.clean(payload.body),
-        photo_url=payload.photo_url,
+        photo_url=photo_urls[0] if photo_urls else None,
         source=ReviewSource.SITE,
     )
+    review.photos = [ReviewPhoto(url=url, position=position) for position, url in enumerate(photo_urls)]
     session.add(review)
     await session.commit()
     await session.refresh(review)
-    return review_dto(review)
+    return review_dto(review, photo_urls)
 
 
 @reviews_router.post("/by-token", status_code=201)
@@ -95,18 +127,20 @@ async def create_review_by_token(payload: TokenReviewCreate, session: AsyncSessi
         await session.delete(review_token)
         await session.commit()
         raise HTTPException(410, "Срок действия токена отзыва истёк")
+    photo_urls = review_photo_urls(payload)
     review = Review(
         author_name=payload.author_name,
         rating=payload.rating,
         body=nh3.clean(payload.body),
-        photo_url=payload.photo_url,
+        photo_url=photo_urls[0] if photo_urls else None,
         source=ReviewSource.BOT,
     )
+    review.photos = [ReviewPhoto(url=url, position=position) for position, url in enumerate(photo_urls)]
     session.add(review)
     await session.delete(review_token)
     await session.commit()
     await session.refresh(review)
-    return review_dto(review)
+    return review_dto(review, photo_urls)
 
 
 @reviews_router.patch("/{review_id}/moderate")
@@ -116,7 +150,9 @@ async def moderate_review(
     session: AsyncSession = Depends(get_db),
     editor: User = Depends(require_role(Role.EDITOR)),
 ):
-    review = await session.get(Review, review_id)
+    review = await session.scalar(
+        select(Review).options(selectinload(Review.photos)).where(Review.id == review_id)
+    )
     if review is None:
         raise HTTPException(404, "Отзыв не найден")
     target_status = ModerationStatus.APPROVED if payload.action == ModerationAction.APPROVE else ModerationStatus.REJECTED

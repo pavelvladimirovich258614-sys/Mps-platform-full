@@ -1,5 +1,15 @@
 # clean-state-checklist.md — финальная production control point 2026-08-20
 
+## Session 62 REV-2 local completion — 2026-08-29
+
+- [x] Scope is limited to review photo persistence/API, the existing review form/hooks/styles, regressions and handoff trackers. No dependency, secret, push, production configuration, migration execution, restart or deployment changed.
+- [x] Backend RED: 4/4 expected failures (two-photo DTO missing, third URL accepted, 1001 characters accepted, `/reviews/mine` absent). GREEN: 4/4; full review target 8/8; isolated SQLite Alembic upgrade reached `20260829_0018 (head)`.
+- [x] Frontend RED: 3 expected failures for picker, counter/limit and persistent own statuses. GREEN: `Reviews.test.tsx` 8/8.
+- [x] Full backend: 125 passed / 7 PostgreSQL-only skips. Full frontend: 23 files / 155 tests. `npm run build`: 118 modules, success, only the existing chunk-size warning.
+- [x] Final `./init.sh` reached global pip check then stopped on shared Hermes/desktop conflicts; an earlier Git Bash invocation hit Win32 Error 5 before execution. Both are external to MPS and complete MPS verification ran independently.
+- [x] `feature_list.json` records REV-2 as `passing` only after the fresh evidence above. `claude-progress.md` and `session-handoff.md` preserve the separate production rollout gate.
+- [x] Pre-commit validation: JSON parse, Alembic single head, `git diff --check`, exact staged-name status and clean status after local-only commit. Push/deploy remain unapproved.
+
 ## Session 96 F48d production closeout — 2026-08-28
 
 - [x] Scope is tracker-only: `feature_list.json`, `claude-progress.md`, `session-handoff.md` and this checklist. No application source, dependency, database, production configuration, service or deployment state changes in this closeout.

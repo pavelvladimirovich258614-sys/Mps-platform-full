@@ -162,3 +162,72 @@ async def test_review_moderation_is_idempotent_after_final_decision(client, test
     async with test_app.state.database.session_factory() as session:
         notifications = (await session.scalars(select(Notification))).all()
         assert len(notifications) == 1
+
+
+async def test_review_accepts_two_photos_and_exposes_them(client, test_app):
+    headers = await headers_for(client, test_app, 901)
+
+    created = await client.post(
+        "/api/v1/reviews",
+        headers=headers,
+        json={
+            "author_name": "Анна",
+            "rating": 5,
+            "body": "Две фотографии из поездки",
+            "photo_urls": ["/media/sea.webp", "/media/hotel.webp"],
+        },
+    )
+
+    assert created.status_code == 201
+    assert created.json()["photo_urls"] == ["/media/sea.webp", "/media/hotel.webp"]
+    assert created.json()["photo_url"] == "/media/sea.webp"
+
+
+async def test_review_rejects_more_than_two_photos(client, test_app):
+    headers = await headers_for(client, test_app, 902)
+
+    response = await client.post(
+        "/api/v1/reviews",
+        headers=headers,
+        json={
+            "author_name": "Анна",
+            "rating": 5,
+            "body": "Слишком много фото",
+            "photo_urls": ["/media/one.webp", "/media/two.webp", "/media/three.webp"],
+        },
+    )
+
+    assert response.status_code == 422
+
+
+async def test_review_body_is_limited_to_one_thousand_characters(client, test_app):
+    headers = await headers_for(client, test_app, 903)
+
+    response = await client.post(
+        "/api/v1/reviews",
+        headers=headers,
+        json={"author_name": "Анна", "rating": 5, "body": "а" * 1001},
+    )
+
+    assert response.status_code == 422
+
+
+async def test_review_mine_returns_only_current_users_statuses(client, test_app):
+    author_headers = await headers_for(client, test_app, 904)
+    other_headers = await headers_for(client, test_app, 905)
+    own = await client.post(
+        "/api/v1/reviews",
+        headers=author_headers,
+        json={"author_name": "Анна", "rating": 5, "body": "На модерации"},
+    )
+    foreign = await client.post(
+        "/api/v1/reviews",
+        headers=other_headers,
+        json={"author_name": "Илья", "rating": 4, "body": "Чужой отзыв"},
+    )
+
+    mine = await client.get("/api/v1/reviews/mine", headers=author_headers)
+
+    assert mine.status_code == 200
+    assert [(review["id"], review["status"]) for review in mine.json()] == [(own.json()["id"], "pending")]
+    assert foreign.json()["id"] not in [review["id"] for review in mine.json()]

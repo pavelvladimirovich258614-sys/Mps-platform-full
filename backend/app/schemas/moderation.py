@@ -16,8 +16,9 @@ class ModerateRequest(BaseModel):
 class ReviewCreate(BaseModel):
     author_name: str = Field(min_length=1, max_length=255)
     rating: int = Field(ge=1, le=5)
-    body: str = Field(min_length=1)
+    body: str = Field(min_length=1, max_length=1000)
     photo_url: str | None = None
+    photo_urls: list[str] = Field(default_factory=list, max_length=2)
 
 
 class TokenReviewCreate(ReviewCreate):
