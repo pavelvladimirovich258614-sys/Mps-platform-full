@@ -894,14 +894,14 @@
       "area": "content-audit-drafts",
       "title": "Аудит: Черновики",
       "user_visible_behavior": "Автор видит понятные состояния черновиков и не может потерять чужой черновик через staff delete.",
-      "status": "in_progress",
+      "status": "passing",
       "verification": [
         "RED/GREEN: foreign editor DELETE draft returns 404 while published staff delete remains compatible",
         "RED/GREEN frontend: load error has alert/retry; failed delete keeps dialog and card visible",
         "Полный релевантный backend/frontend suite"
       ],
-      "evidence": "2026-08-28 read-only diagnosis and inspector acceptance: DELETE /posts/{id} lacks draft-owner guard; draft-load errors are rendered as empty state; failed delete closes confirmation because App swallows rejection. Happy save/load/edit/delete flow and later Feed/styles boundary were source-checked.",
-      "notes": "inspected: принято after one clarification of future contracts. Minimum split: draft-only owner 404 guard plus regression; Drafts alert/retry; retain confirmation/card with in-dialog error on failure. No migration/dependency; small backend and small-to-medium frontend scope."
+      "evidence": "2026-08-28 RED→GREEN: backend `python -m pytest tests/test_posts.py -q --basetemp .pytest-f48a` initially failed because a foreign editor DELETE returned 204 instead of 404, then passed 10/10 after the draft-only author guard; the same test proves a staff editor can still delete a published post. Frontend RED `npm test -- --run src/App.routing.test.tsx -t \"retryable alert|keeps the draft card\"` failed 2/2: no list-load alert/retry and DELETE closed the dialog. GREEN targeted drafts tests passed 3/3. Full backend `python -m pytest tests -q --basetemp .pytest-f48a-full` passed 120 with 7 PostgreSQL skips because MPS_TEST_POSTGRES_URL was absent. Full frontend `npm test` passed 22 files / 147 tests; `npm run build` passed with 118 modules and only the existing chunk-size warning. Final `./init.sh` reached global pip check but stopped on external Hermes/desktop package conflicts before MPS pytest; no environment was changed.",
+      "notes": "Completed locally 2026-08-28; no migration, dependency, push or deployment. DELETE now returns 404 only when the target is another author's draft; staff delete of published posts remains compatible. Drafts renders a retryable list error instead of a false empty state and keeps the card/dialog open with an in-dialog error when DELETE fails."
     },
     {
       "id": "F48b",

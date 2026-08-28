@@ -144,7 +144,8 @@ async def patch(post_id:int,payload:PostPatch,session:AsyncSession=Depends(get_d
         record_activity(session, user_id=post.author_id, event_type=ActivityEventType.POST_PUBLISHED, reference_id=post.id)
     await session.commit();await session.refresh(post);author=await session.get(User,post.author_id);return draft_dto(post,author)
 @router.delete("/{post_id}",status_code=204)
-async def remove(post_id:int,session:AsyncSession=Depends(get_db),_:User=Depends(require_role(Role.EDITOR))):
+async def remove(post_id:int,session:AsyncSession=Depends(get_db),user:User=Depends(require_role(Role.EDITOR))):
     post=await session.get(Post,post_id)
     if not post: raise HTTPException(404,"Публикация не найдена")
+    if post.status==PostStatus.DRAFT and post.author_id!=user.id: raise HTTPException(404,"Черновик не найден")
     await session.delete(post);await session.commit()

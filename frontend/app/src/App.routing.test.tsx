@@ -544,7 +544,7 @@ describe("App pathname routing", () => {
     render(<App />);
 
     expect(await screen.findByRole("heading", { level: 1, name: "Черновики" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /^Черновик Бали/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Черновик Бали/ }));
     expect(await screen.findByRole("dialog", { name: "Редактирование публикации" })).toBeTruthy();
     expect((screen.getByLabelText("Заголовок публикации") as HTMLInputElement).value).toBe("Черновик Бали");
     fireEvent.click(screen.getByRole("button", { name: "Сохранить черновик" }));
@@ -576,6 +576,60 @@ describe("App pathname routing", () => {
     fireEvent.click(screen.getByRole("button", { name: "Подтвердить удаление" }));
     await waitFor(() => expect(fetchMock.mock.calls.some(([input, init]) => new URL(String(input)).pathname === `/api/v1/posts/${draft.id}` && (init as RequestInit).method === "DELETE")).toBe(true));
     await waitFor(() => expect(screen.queryByText(draft.title)).toBeNull());
+  });
+
+  it("shows a retryable alert instead of an empty state when drafts cannot load", async () => {
+    window.history.replaceState({}, "", "/drafts");
+    setAccessToken("editor-access-token");
+    const draft = { id: 24, title: "Черновик Бали", updated_at: "2026-08-24T08:00:00+00:00" };
+    let draftsRequests = 0;
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>(async (input, init) => {
+      const path = new URL(String(input)).pathname;
+      if (path === "/api/v1/me") return jsonResponse(200, { id: 5, email: null, name: "Редактор", avatar_url: null, bio: null, role: "editor", is_anonymous: false });
+      if (path === "/api/v1/posts/drafts") {
+        draftsRequests += 1;
+        return draftsRequests === 1 ? jsonResponse(503, { detail: "Черновики временно недоступны" }) : jsonResponse(200, [draft]);
+      }
+      if (path === "/api/v1/posts" || path === "/api/v1/online") return jsonResponse(200, []);
+      if (path === "/api/v1/notifications") return jsonResponse(200, { items: [] });
+      if (path === "/api/v1/auth/refresh") return jsonResponse(401, { detail: "Требуется авторизация" });
+      return jsonResponse(200, {});
+    }));
+
+    render(<App />);
+
+    expect((await screen.findByRole("alert")).textContent).toContain("Черновики временно недоступны");
+    expect(screen.queryByText("Черновиков пока нет.")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Повторить" }));
+    expect(await screen.findByText(draft.title)).toBeTruthy();
+  });
+
+  it("keeps the draft card and delete dialog open when deletion fails", async () => {
+    window.history.replaceState({}, "", "/drafts");
+    setAccessToken("editor-access-token");
+    const draft = { id: 24, title: "Черновик Бали", updated_at: "2026-08-24T08:00:00+00:00" };
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>(async (input, init) => {
+      const path = new URL(String(input)).pathname;
+      if (path === "/api/v1/me") return jsonResponse(200, { id: 5, email: null, name: "Редактор", avatar_url: null, bio: null, role: "editor", is_anonymous: false });
+      if (path === "/api/v1/posts/drafts") return jsonResponse(200, [draft]);
+      if (path === `/api/v1/posts/${draft.id}` && init?.method === "DELETE") return jsonResponse(503, { detail: "Не удалось удалить черновик" });
+      if (path === "/api/v1/posts" || path === "/api/v1/online") return jsonResponse(200, []);
+      if (path === "/api/v1/notifications") return jsonResponse(200, { items: [] });
+      if (path === "/api/v1/auth/refresh") return jsonResponse(401, { detail: "Требуется авторизация" });
+      return jsonResponse(200, {});
+    }));
+
+    render(<App />);
+
+    expect(await screen.findByText(draft.title)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: `Удалить черновик: ${draft.title}` }));
+    fireEvent.click(screen.getByRole("button", { name: "Подтвердить удаление" }));
+    await waitFor(() => {
+      const dialog = screen.queryByRole("dialog", { name: "Удалить черновик" });
+      expect(dialog).toBeTruthy();
+      expect(dialog?.textContent).toContain("Не удалось удалить черновик");
+    });
+    expect(screen.getByText(draft.title)).toBeTruthy();
   });
 
   it("shows a dedicated not-found state for a physically missing slug", async () => {

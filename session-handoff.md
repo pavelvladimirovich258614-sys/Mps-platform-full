@@ -3,18 +3,18 @@
 ## Current verified checkpoint — 2026-08-28
 
 - F46 is `passing` and production-deployed at application SHA `78890c873d896b2b97a477ef4e5107ddb813412b`.
-- Current tracker count: 53 total records, 49 `passing`; exactly F47, F48a, F48b and F48c remain `in_progress` after inspected diagnosis.
+- Current tracker count: 53 total records, 50 `passing`; exactly F47, F48b and F48c remain `in_progress`.
 - F01–F46, including F37 Sessions A–D, and F48d are completed and production-deployed.
 - Fresh closeout check: backend active/healthy with PID 838131; served `/assets/index-Zpi2gptt.js` contains production VITE values and the F46 marker, contains no localhost API fallback, and `deploy/smoke.sh` passes.
-- Full backend with temporary PostgreSQL 16 and `MPS_TEST_POSTGRES_URL` present passed 127 tests with 0 skipped. The earlier 120 passed/7 skipped run lacked PostgreSQL: 3 existing forum tests plus 4 F45 Irishka concurrency tests were skipped. This was environment variance, not an F46 regression.
+- F48a is locally complete, not pushed or deployed: foreign editor DELETE draft now returns 404 while staff DELETE published remains compatible; drafts list errors render an alert/retry instead of false empty state; failed DELETE keeps its dialog/card and renders an in-dialog error. RED→GREEN was backend `204 → 404`, frontend 2 expected failures → 3 target passes; full backend was 120 passed/7 PostgreSQL skips, full frontend 22 files/147 passed and build passed with 118 modules.
+- Final `./init.sh` outside sandbox ran through dependency installation but stopped at the external global Python `pip check` (Hermes/desktop package conflicts) before project pytest. Do not alter that shared environment; the recorded MPS suites are current.
 
 ## Backlog in agreed order
 
 1. **F47 — forum performance.** Diagnosed and inspector-accepted. N+1 was not confirmed: countries, topics and messages each executed one SELECT in 50-row profiling. No runtime/production fix is needed. Optional test-only query-count guard is at implementer discretion; otherwise close with the recorded no-regression evidence.
-2. **F48a — Drafts.** Diagnosed, not implemented. Confirmed defects: staff can delete another author's draft by ID; list-load failure is shown as a false empty state; a failed delete closes the confirmation dialog. Future work requires RED-first backend/frontend fixes for those three contracts.
-3. **F48b — Reviews.** Diagnosed, not implemented. Pavel decided moderation belongs to role `editor`, not admin-only. Future scope: double-submit protection, list error/empty states and editor moderation UI.
-4. **F48c — Subscription.** Diagnosed, not implemented. Pavel decided to honestly hide/disable the email subscription form while delivery is unavailable. Do not implement retention/outbox/retry or broader email infrastructure now. The independently relevant unescaped-HTML security defect still requires a RED-first fix.
-5. **Web design.** Deferred until the functional backlog above is closed.
+2. **F48b — Reviews.** Diagnosed, not implemented. Pavel decided moderation belongs to role `editor`, not admin-only. Future scope: double-submit protection, list error/empty states and editor moderation UI.
+3. **F48c — Subscription.** Diagnosed, not implemented. Pavel decided to honestly hide/disable the email subscription form while delivery is unavailable. Do not implement retention/outbox/retry or broader email infrastructure now. The independently relevant unescaped-HTML security defect still requires a RED-first fix.
+4. **Web design.** Deferred until the functional backlog above is closed.
 
 ## Persistent blockers and boundaries
 
@@ -26,4 +26,4 @@
 
 ## Continuation order
 
-F47 optional guard/closeout → F48a → F48b → F48c → web design.
+F47 optional guard/closeout → F48b → F48c → web design.
