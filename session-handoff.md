@@ -1,20 +1,25 @@
 # Session handoff — МПС
 
-## Coordination checkpoint — 2026-08-28
+## F46 local completion checkpoint — 2026-08-28
 
-- This was a diagnostic-only relay: sub-agent A → inspector → B → inspector → V with individual inspectors for F48a/F48b/F48c. No application code, tests, database, production configuration, deployment or VPS files were changed.
-- Tracker state is now 48 historical `passing` records plus five inspected `in_progress` records: F46, F47, F48a, F48b and F48c. None of the five is `passing`.
-- Startup: `./init.sh` was run outside the Windows sandbox and stopped at the known external Hermes/desktop global `pip check` before MPS pytest. The external issue remains separate.
-- Git: local worktree was clean before this tracker update, with local `main` `0376679` one tracker-only commit ahead of `origin/main` `01c505d`. VPS tracked tree is `01c505d` and `mps-backend` is active, but pre-existing untracked deployment artefacts remain untouched. Push is not authorized.
+- F46 is implemented and marked `passing` locally. The admin-only settings block is embedded in `/countries`, as approved.
+- `GET /admin/settings` now returns `fishka_submissions_enabled`, `irishka_enabled` and `irishka_delay_min`. Missing DB rows use effective fallbacks false/true/30; `PATCH /admin/settings` persists the two Irishka values as actual `Setting` rows.
+- The UI edits only forum autoanswers and delay 1–10080 minutes. It sends both fields in one PATCH, restores the last confirmed values after a failed save and explicitly says direct Q&A is unaffected. Editor/non-admin clients neither render the block nor request the admin endpoint.
+- MiniMax credentials/configuration, system prompt/persona, timeout/retry/token policy, scheduler cadence and interactive Q&A were not changed. No migration was added.
 
-## Accepted diagnostics
+## Verification
 
-1. **F46 — Иришка admin UI.** `irishka_enabled` and `irishka_delay_min` are DB-backed if rows exist, with runtime fallbacks true/30; they affect forum autoanswers only. Scheduler cadence, prompt/triggers, MiniMax configuration and shared timeout/retry/token policy remain code/env contracts. Minimal future UI: admin-only compact block on `/countries` with forum-autoanswer toggle, delay 1–10080 and explicit Q&A boundary. First report was corrected because fallbacks are not proof of stored DB defaults.
-2. **F47 — forum N+1.** Instrumented 50-row profiling found one SELECT for countries, topics and messages. Do not replace the aggregate/scalar/explicit-join shapes with eager loading. Optional future test-only guard covers all three endpoints. Cursor validation/scoping and query-cost/index questions are separate findings, not F47 implementation authorization.
-3. **F48a — Drafts.** Confirmed: staff can delete another author’s draft by ID; a list-load error looks empty; failed deletion closes confirmation. Future scope: draft-only owner 404 guard preserving staff deletion of published posts, alert/retry, and retained failure dialog/card.
-4. **F48b — Reviews.** Real pending/approved/moderation backend, not a placeholder. Confirmed frontend gaps: duplicate submit, no list error/empty state, no moderation consumer. Moderation UI needs a product role decision (editor versus admin). Photo/guest-login behaviour is a separate scope.
-5. **F48c — Subscription.** Real double opt-in and digest job, but no usable delivered unsubscribe link, no canonical email validation or persisted consent, misleading repeated-confirmed UX, ignored digest delivery failures, unescaped digest title/excerpt and undefined order. The Unisender TCP outage is historical tracker evidence only. Before implementation choose temporary truthful suspension of email collection (recommended) or approve consent/retention/outbox/retry architecture.
+- RED backend: 1 expected failure because GET omitted both Irishka fields. GREEN backend target: 1 passed/5 deselected.
+- RED frontend: 2 expected failures because the admin controls were absent; the editor guard passed. GREEN frontend target: 2 passed/37 skipped.
+- Full backend: 120 passed, 7 skipped. Full frontend: 22 files, 145 tests passed.
+- `npm run build`: passed, 118 modules; only the existing Vite chunk-size warning.
+- Final `./init.sh`: stopped at the known external Hermes/desktop global `pip check` before MPS tests. This remains separately excluded; both complete MPS suites passed independently.
+
+## Git and production boundary
+
+- Before F46, local and `origin/main` were synchronized on `8d342e4`. The F46 checkpoint is committed locally only and intentionally remains ahead of origin until separate push approval.
+- Production VPS remains on `01c505d332b6a9bce8ee4aa000c1ae785a01e5be`. No VPS connection, deployment, database change, service restart or static publication was performed for F46.
 
 ## Next action
 
-Pavel selects one isolated feature/package and explicitly approves its implementation plan. F48c requires the wording/retention decision first. Web design remains last.
+Wait for Pavel's explicit confirmation to push/deploy F46. Do not start F47 until F46 is fully closed. After that, F47 may be closed with evidence that no N+1 regression exists or receive only the optional test guard. Approved later decisions: F48b moderation belongs to `editor`; F48c should hide/disable the email form while Unisender/HostKey delivery remains blocked, without retention/outbox/retry work. Web design remains last.

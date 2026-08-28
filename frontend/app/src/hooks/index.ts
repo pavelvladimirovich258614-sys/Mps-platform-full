@@ -73,6 +73,15 @@ export const useFishkaAdminSettings = (enabled: boolean) => {
   };
   return { ...resource, update };
 };
+export type IrishkaAdminSettings = { irishka_enabled: boolean; irishka_delay_min: number };
+export const useIrishkaAdminSettings = (enabled: boolean) => {
+  const resource = useResource(() => enabled ? api<IrishkaAdminSettings>("/admin/settings") : Promise.resolve(null), [enabled]);
+  const update = async (settings: IrishkaAdminSettings) => {
+    await apiJson<Record<string, string>>("/admin/settings", "PATCH", settings);
+    resource.setValue(settings);
+  };
+  return { ...resource, update };
+};
 export const usePostEditor = () => ({ update: (postId: number, post: PostDraft) => apiJson<ApiPost>(`/posts/${postId}`, "PATCH", post), remove: (postId: number) => apiJson<void>(`/posts/${postId}`, "DELETE") });
 export const useDrafts = (enabled: boolean) => useResource(() => enabled ? api<DraftSummary[]>("/posts/drafts") : Promise.resolve([]), [enabled]);
 export const getDraft = (postId: number) => api<DraftPost>(`/posts/drafts/${postId}`);

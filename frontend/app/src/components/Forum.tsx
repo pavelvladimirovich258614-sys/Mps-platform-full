@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { type Country, type ForumMessage, type Topic, type User, useForum } from "../hooks";
 import { countryFlag } from "../utils/countryFlags";
@@ -11,6 +11,7 @@ type ForumProps = {
   onCountryNavigate: (countryId: number) => void;
   onError: (message: string) => void;
   viewer?: User | null;
+  irishkaAdminControls?: ReactNode;
 };
 
 const canDeleteTopic = (viewer: User | null | undefined, topic: Topic) => viewer?.id === topic.author_id || viewer?.role === "admin";
@@ -21,7 +22,7 @@ function DeleteConfirmation({ label, onCancel, onConfirm }: { label: "тему" 
   return <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={title.slice(0, -1)}><section className="delete-confirmation"><h2>{title}</h2><p>Это действие нельзя отменить</p><div><button type="button" className="panel-button" onClick={onCancel}>Отмена</button><button type="button" className="danger-button" onClick={onConfirm}>Подтвердить удаление</button></div></section></div>;
 }
 
-export function Forum({ page, initialCountryId, onNavigate, onCountryNavigate, onError, viewer = null }: ForumProps) {
+export function Forum({ page, initialCountryId, onNavigate, onCountryNavigate, onError, viewer = null, irishkaAdminControls }: ForumProps) {
   const [country, setCountry] = useState<Country | null>(null);
   const [topic, setTopic] = useState<Topic | null>(null);
   const forum = useForum(country?.id, topic?.id);
@@ -38,7 +39,7 @@ export function Forum({ page, initialCountryId, onNavigate, onCountryNavigate, o
     }
   }, [country?.id, forum.countries.value, initialCountryId]);
   if (page === "topic" && topic && country) return <TopicView country={country} topic={topic} forum={forum} viewer={viewer} onBack={() => { setTopic(null); onNavigate("countries"); }} onError={onError} />;
-  return <main className="forum-page"><div className="forum-wrap"><p className="forum-kicker">Обсуждения</p><h1>Страны — Форум</h1><p className="forum-description">Спросите тех, кто был там неделю назад. Менеджеры и Иришка помогут с ответом.</p>{forum.countries.loading ? <div className="comment-skeleton"><i /><i /><i /></div> : <div className="country-grid">{(forum.countries.value ?? []).map((item) => <button className="country-card" key={item.id} onClick={() => { setCountry(item); setTopic(null); onCountryNavigate(item.id); }}><span>{countryFlag(item.name)}</span><strong>{item.name}</strong><small>{item.topics_count} тем</small><em>{country?.id === item.id ? "Выберите тему ниже" : "Открыть обсуждения"}</em></button>)}</div>}{forum.countries.error && <p className="form-success">{forum.countries.error}</p>}{country && <Topics country={country} forum={forum} viewer={viewer} onSelect={(selected) => { setTopic(selected); onNavigate("topic"); }} onError={onError} />}</div></main>;
+  return <main className="forum-page"><div className="forum-wrap"><p className="forum-kicker">Обсуждения</p><h1>Страны — Форум</h1><p className="forum-description">Спросите тех, кто был там неделю назад. Менеджеры и Иришка помогут с ответом.</p>{irishkaAdminControls}{forum.countries.loading ? <div className="comment-skeleton"><i /><i /><i /></div> : <div className="country-grid">{(forum.countries.value ?? []).map((item) => <button className="country-card" key={item.id} onClick={() => { setCountry(item); setTopic(null); onCountryNavigate(item.id); }}><span>{countryFlag(item.name)}</span><strong>{item.name}</strong><small>{item.topics_count} тем</small><em>{country?.id === item.id ? "Выберите тему ниже" : "Открыть обсуждения"}</em></button>)}</div>}{forum.countries.error && <p className="form-success">{forum.countries.error}</p>}{country && <Topics country={country} forum={forum} viewer={viewer} onSelect={(selected) => { setTopic(selected); onNavigate("topic"); }} onError={onError} />}</div></main>;
 }
 
 function Topics({ country, forum, viewer, onSelect, onError }: { country: Country; forum: ReturnType<typeof useForum>; viewer: User | null; onSelect: (topic: Topic) => void; onError: (message: string) => void }) {

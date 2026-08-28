@@ -8,6 +8,7 @@ from app.models.comment import Comment
 from app.models.post import Post, PostStatus, PostType
 from app.models.question import Question, QuestionStatus, QuestionTarget
 from app.models.review import ModerationStatus, Review, ReviewSource
+from app.models.setting import Setting
 from app.models.subscription import Subscription
 from app.models.user import Role, User
 from app.services.tokens import create_access_token
@@ -167,6 +168,55 @@ async def test_only_admin_can_manage_fishka_submission_setting_and_reader_sees_e
     assert disabled.status_code == 200
     assert (await client.get("/api/v1/posts/fishki/permission", headers=headers(test_app, reader))).json() == {"can_submit_fishka": False}
     assert (await client.get("/api/v1/posts/fishki/permission", headers=headers(test_app, admin))).json() == {"can_submit_fishka": True}
+
+
+async def test_admin_reads_effective_irishka_defaults_and_persists_updates(client, test_app):
+    admin = await make_user(test_app, "irishka-admin@example.test", Role.ADMIN)
+    editor = await make_user(test_app, "irishka-editor@example.test", Role.EDITOR)
+
+    assert (await client.get("/api/v1/admin/settings", headers=headers(test_app, editor))).status_code == 403
+
+    initial = await client.get("/api/v1/admin/settings", headers=headers(test_app, admin))
+    assert initial.status_code == 200
+    assert initial.json() == {
+        "fishka_submissions_enabled": False,
+        "irishka_enabled": True,
+        "irishka_delay_min": 30,
+    }
+
+    changed = await client.patch(
+        "/api/v1/admin/settings",
+        headers=headers(test_app, admin),
+        json={"irishka_enabled": False, "irishka_delay_min": 45},
+    )
+    assert changed.status_code == 200
+    assert changed.json() == {"irishka_enabled": "false", "irishka_delay_min": "45"}
+
+    async with test_app.state.database.session_factory() as session:
+        persisted = {
+            setting.key: setting.value
+            for setting in (
+                await session.scalars(
+                    select(Setting).where(Setting.key.in_(("irishka_enabled", "irishka_delay_min")))
+                )
+            ).all()
+        }
+    assert persisted == {"irishka_enabled": "false", "irishka_delay_min": "45"}
+
+    refreshed = await client.get("/api/v1/admin/settings", headers=headers(test_app, admin))
+    assert refreshed.json() == {
+        "fishka_submissions_enabled": False,
+        "irishka_enabled": False,
+        "irishka_delay_min": 45,
+    }
+
+    for invalid_delay in (0, 10081):
+        response = await client.patch(
+            "/api/v1/admin/settings",
+            headers=headers(test_app, admin),
+            json={"irishka_delay_min": invalid_delay},
+        )
+        assert response.status_code == 422
 
 
 async def test_admin_moderation_queue_includes_pending_fishka(client, test_app):

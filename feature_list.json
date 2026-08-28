@@ -864,14 +864,14 @@
       "area": "irishka-admin",
       "title": "Иришка: admin UI настроек форумных автоответов",
       "user_visible_behavior": "Администратор в разделе форума видит и безопасно изменяет включение форумных автоответов Иришки и задержку ответа, не затрагивая интерактивный Q&A или MiniMax-секреты.",
-      "status": "in_progress",
+      "status": "passing",
       "verification": [
         "RED backend/frontend tests для GET/PATCH admin-настроек Иришки, границ delay и отсутствия controls у non-admin",
         "GREEN target tests, полный релевантный backend/frontend suite и build",
         "Проверка роли admin и явной подписи, что настройка относится только к форумным автоответам"
       ],
-      "evidence": "2026-08-28 read-only coordination diagnosis and inspector acceptance: DB rows irishka_enabled/irishka_delay_min have runtime fallbacks true/30 when absent; GET /admin/settings exposes only fishka today, while PATCH already validates/writes Irishka fields. Scheduler remains fixed at 5 minutes; MiniMax credentials/config and shared timeout/retry/token settings remain env/code-only. Direct Q&A ignores the forum flag.",
-      "notes": "inspected: принято after one factual correction: true/30 are runtime fallbacks, not proven persisted defaults. Future minimum: extend admin GET, typed hook, compact admin-only block on /countries with toggle and 1–10080 delay, explicit Q&A boundary, and focused tests. Estimate 6–8 files, no migration; low risk."
+      "evidence": "2026-08-28 RED backend: `pytest tests/test_admin.py -k irishka` — 1 expected failure because GET /admin/settings omitted irishka_enabled and irishka_delay_min. RED frontend: `npm test -- --run src/App.routing.test.tsx -t \"Irishka settings\"` — 2 expected failures because the admin controls were absent; the editor non-access guard already passed. GREEN targeted: backend 1 passed/5 deselected; frontend 2 passed/37 skipped. Full backend: 120 passed, 7 skipped. Full frontend: 22 files / 145 tests passed. `npm run build` passed (`tsc -b && vite build`, 118 modules; existing chunk-size warning only). Final `./init.sh` stopped at the separately excluded external Hermes/desktop global pip-check before MPS tests. Admin GET now returns effective false/true/30 fallbacks, PATCH persists actual irishka_enabled/irishka_delay_min Setting rows, delay bounds 1–10080 return 422 outside range, and subsequent GET returns the stored values.",
+      "notes": "inspected: принято; implemented locally with no migration. `/countries` embeds a compact admin-only block for forum autoanswers and delay 1–10080. Editor/non-admin clients neither render the block nor request `/admin/settings`. A failed save restores the last confirmed values and shows a local alert. The UI explicitly excludes direct Q&A. MiniMax credentials, prompt/persona, retry/timeout/token policy, scheduler cadence and interactive Q&A were not changed. Production remains untouched pending separate push/deploy approval."
     },
     {
       "id": "F47",

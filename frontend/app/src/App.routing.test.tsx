@@ -57,7 +57,14 @@ const jsonResponse = (status: number, body: unknown) => new Response(JSON.string
 const scrollIntoViewMock = vi.fn();
 
 type DetailResult = "ok" | "missing" | "network";
-type FishkaOptions = { canSubmit?: boolean; adminEnabled?: boolean; adminUpdateStatus?: number; categories?: string[] };
+type FishkaOptions = {
+  canSubmit?: boolean;
+  adminEnabled?: boolean;
+  adminUpdateStatus?: number;
+  categories?: string[];
+  irishkaEnabled?: boolean;
+  irishkaDelayMin?: number;
+};
 type QAOptions = {
   irishkaResponse?: Promise<Response>;
   questions?: Question[];
@@ -84,9 +91,13 @@ function installApi(detailResult: DetailResult = "ok", currentUser: Record<strin
     if (path === "/api/v1/posts/fishki/permission") return jsonResponse(200, { can_submit_fishka: fishkaOptions.canSubmit ?? false });
     if (path === "/api/v1/admin/settings" && init?.method === "PATCH") {
       if (fishkaOptions.adminUpdateStatus) return jsonResponse(fishkaOptions.adminUpdateStatus, { detail: "Настройка недоступна" });
-      return jsonResponse(200, { fishka_submissions_enabled: JSON.parse(String(init.body)).fishka_submissions_enabled });
+      return jsonResponse(200, JSON.parse(String(init.body)));
     }
-    if (path === "/api/v1/admin/settings") return jsonResponse(200, { fishka_submissions_enabled: fishkaOptions.adminEnabled ?? false });
+    if (path === "/api/v1/admin/settings") return jsonResponse(200, {
+      fishka_submissions_enabled: fishkaOptions.adminEnabled ?? false,
+      irishka_enabled: fishkaOptions.irishkaEnabled ?? true,
+      irishka_delay_min: fishkaOptions.irishkaDelayMin ?? 30,
+    });
     if (path === "/api/v1/posts" && init?.method === "POST") return jsonResponse(201, { ...fishka, ...JSON.parse(String(init.body)), status: JSON.parse(String(init.body)).status });
     if (path === "/api/v1/posts") {
       const category = url.searchParams.get("category");
@@ -690,6 +701,60 @@ describe("App pathname routing", () => {
     await waitFor(() => expect(window.location.pathname).toBe("/countries/1"));
     expect(pushState).toHaveBeenCalledWith({}, "", "/countries/1");
     expect(await screen.findByRole("heading", { name: /Темы: ОАЭ/ })).toBeTruthy();
+  });
+
+  it("lets an admin persist forum Irishka settings from the countries page", async () => {
+    window.history.replaceState({}, "", "/countries");
+    setAccessToken("admin-access-token");
+    const fetchMock = installApi("ok", { id: 1, email: null, name: "Администратор", avatar_url: null, bio: null, role: "admin", is_anonymous: false }, [post], [], [], [], { items: [], next_cursor: null }, { items: [], next_cursor: null }, { irishkaEnabled: false, irishkaDelayMin: 45 });
+
+    render(<App />);
+
+    const enabled = await screen.findByRole("checkbox", { name: "Автоответы Иришки в форуме" });
+    const delay = screen.getByRole("spinbutton", { name: "Ответить не раньше чем через, минут" });
+    expect((enabled as HTMLInputElement).checked).toBe(false);
+    expect((delay as HTMLInputElement).value).toBe("45");
+
+    fireEvent.click(enabled);
+    fireEvent.change(delay, { target: { value: "60" } });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить настройки Иришки" }));
+
+    await waitFor(() => expect(fetchMock.mock.calls.some(([input, init]) => {
+      if (new URL(String(input)).pathname !== "/api/v1/admin/settings" || (init as RequestInit).method !== "PATCH") return false;
+      return JSON.stringify(JSON.parse(String((init as RequestInit).body))) === JSON.stringify({ irishka_enabled: true, irishka_delay_min: 60 });
+    })).toBe(true));
+    expect((screen.getByRole("checkbox", { name: "Автоответы Иришки в форуме" }) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByRole("spinbutton", { name: "Ответить не раньше чем через, минут" }) as HTMLInputElement).value).toBe("60");
+  });
+
+  it("never requests or shows Irishka admin settings to an editor", async () => {
+    window.history.replaceState({}, "", "/countries");
+    setAccessToken("editor-access-token");
+    const fetchMock = installApi("ok", { id: 5, email: null, name: "Редактор", avatar_url: null, bio: null, role: "editor", is_anonymous: false });
+
+    render(<App />);
+
+    await screen.findByRole("heading", { level: 1, name: "Страны — Форум" });
+    expect(screen.queryByRole("checkbox", { name: "Автоответы Иришки в форуме" })).toBeNull();
+    expect(fetchMock.mock.calls.some(([input]) => new URL(String(input)).pathname === "/api/v1/admin/settings")).toBe(false);
+  });
+
+  it("restores confirmed Irishka settings when saving fails", async () => {
+    window.history.replaceState({}, "", "/countries");
+    setAccessToken("admin-access-token");
+    installApi("ok", { id: 1, email: null, name: "Администратор", avatar_url: null, bio: null, role: "admin", is_anonymous: false }, [post], [], [], [], { items: [], next_cursor: null }, { items: [], next_cursor: null }, { irishkaEnabled: false, irishkaDelayMin: 45, adminUpdateStatus: 503 });
+
+    render(<App />);
+
+    const enabled = await screen.findByRole("checkbox", { name: "Автоответы Иришки в форуме" });
+    const delay = screen.getByRole("spinbutton", { name: "Ответить не раньше чем через, минут" });
+    fireEvent.click(enabled);
+    fireEvent.change(delay, { target: { value: "60" } });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить настройки Иришки" }));
+
+    expect((await screen.findByRole("alert")).textContent).toContain("Не удалось сохранить настройки Иришки");
+    expect((screen.getByRole("checkbox", { name: "Автоответы Иришки в форуме" }) as HTMLInputElement).checked).toBe(false);
+    expect((screen.getByRole("spinbutton", { name: "Ответить не раньше чем через, минут" }) as HTMLInputElement).value).toBe("45");
   });
 
   it("reacts to browser back/forward popstate navigation", async () => {

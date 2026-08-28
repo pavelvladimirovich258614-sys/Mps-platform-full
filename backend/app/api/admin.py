@@ -12,7 +12,7 @@ from app.models.review import ModerationStatus, Review
 from app.models.setting import Setting
 from app.models.subscription import Subscription
 from app.models.user import Role, User
-from app.schemas.admin import SettingsUpdate, UserBanUpdate
+from app.schemas.admin import AdminSettingsResponse, SettingsUpdate, UserBanUpdate
 
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -140,13 +140,24 @@ async def update_user(
     return {"id": user.id, "is_banned": user.is_banned}
 
 
-@router.get("/settings")
+@router.get("/settings", response_model=AdminSettingsResponse)
 async def settings(
     session: AsyncSession = Depends(get_db),
     _: User = Depends(require_role(Role.ADMIN)),
-) -> dict[str, bool]:
-    value = await session.scalar(select(Setting.value).where(Setting.key == "fishka_submissions_enabled"))
-    return {"fishka_submissions_enabled": value is not None and value.strip().lower() == "true"}
+) -> AdminSettingsResponse:
+    settings = (await session.scalars(
+        select(Setting).where(Setting.key.in_({
+            "fishka_submissions_enabled",
+            "irishka_enabled",
+            "irishka_delay_min",
+        }))
+    )).all()
+    values = {setting.key: setting.value for setting in settings}
+    return AdminSettingsResponse(
+        fishka_submissions_enabled=values.get("fishka_submissions_enabled", "false").strip().lower() == "true",
+        irishka_enabled=values.get("irishka_enabled", "true").strip().lower() == "true",
+        irishka_delay_min=int(values.get("irishka_delay_min", "30")),
+    )
 
 
 @router.patch("/settings")

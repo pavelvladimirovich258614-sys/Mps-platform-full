@@ -20,6 +20,12 @@ class SettingsUpdate(BaseModel):
     contact_address: str | None = Field(default=None, max_length=500)
 
 
+class AdminSettingsResponse(BaseModel):
+    fishka_submissions_enabled: bool = False
+    irishka_enabled: bool = True
+    irishka_delay_min: int = 30
+
+
 class PublicSettingsResponse(BaseModel):
     legal_name: str | None = None
     legal_inn: str | None = None

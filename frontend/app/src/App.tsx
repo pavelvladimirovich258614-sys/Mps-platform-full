@@ -7,6 +7,7 @@ import { Drafts } from "./components/Drafts";
 import { Feed } from "./components/Feed";
 import { FishkaAdminSettings } from "./components/FishkaAdminSettings";
 import { Forum } from "./components/Forum";
+import { IrishkaAdminSettings } from "./components/IrishkaAdminSettings";
 import { Layout, type Page } from "./components/Layout";
 import { Legal, type LegalKind } from "./components/Legal";
 import { Notifications } from "./components/Notifications";
@@ -16,7 +17,7 @@ import { PublicProfile } from "./components/PublicProfile";
 import { QA } from "./components/QA";
 import { Reviews } from "./components/Reviews";
 import { Subscribe } from "./components/Subscribe";
-import { getDraft, getLikedPosts, type ApiPost, type FishkaDraft, useAuthorPosts, useAuth, useDrafts, useFishkaAdminSettings, useFishkaCategories, useFishkaPermission, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, useProfileActivity, useProfileComments, useProfileFollowers, useProfileFollowing, usePublicProfile, usePublicSettings, useQAQuestions, useUserFollow } from "./hooks";
+import { getDraft, getLikedPosts, type ApiPost, type FishkaDraft, useAuthorPosts, useAuth, useDrafts, useFishkaAdminSettings, useFishkaCategories, useFishkaPermission, useIrishkaAdminSettings, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, useProfileActivity, useProfileComments, useProfileFollowers, useProfileFollowing, usePublicProfile, usePublicSettings, useQAQuestions, useUserFollow } from "./hooks";
 import { pathForRoute, type PathRoute, routeFromPath } from "./router";
 
 function routeForPage(page: Page): PathRoute {
@@ -57,6 +58,7 @@ export function App() {
   const fishkaCategories = useFishkaCategories(fishkiPage);
   const fishkaPermission = useFishkaPermission(route.page === "fishki" && Boolean(auth.user) && !canManagePosts);
   const fishkaAdminSettings = useFishkaAdminSettings(route.page === "fishki" && isAdmin);
+  const irishkaAdminSettings = useIrishkaAdminSettings(route.page === "countries" && route.countryId === undefined && isAdmin);
   const postCreator = usePostCreator();
   const postEditor = usePostEditor();
   const postLike = usePostLike();
@@ -211,6 +213,7 @@ export function App() {
         onNavigate={openPage}
         onCountryNavigate={(countryId) => navigate({ page: "countries", countryId })}
         onError={showError}
+        irishkaAdminControls={<IrishkaAdminSettings settings={isAdmin ? irishkaAdminSettings.value : null} loading={isAdmin && irishkaAdminSettings.loading} onUpdate={irishkaAdminSettings.update} />}
       />
     );
   }
