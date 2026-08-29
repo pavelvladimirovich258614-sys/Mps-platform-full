@@ -7,7 +7,7 @@
       "priority": 0,
       "area": "frontend-theme",
       "title": "P0: светлая тема по Claude Design",
-      "user_visible_behavior": "Новый пользователь сразу видит светлую тему без тёмной вспышки; сохранённый выбор light/dark не перезаписывается. Текущая структура header/sidebar/center/presence сохранена, а обе темы используют согласованные цвета, тени, Inter и Playfair Display.",
+      "user_visible_behavior": "Новый пользователь сразу видит светлую тему без тёмной вспышки; сохранённый выбор light/dark не перезаписывается. Обе темы используют согласованные цвета, тени, Inter и Playfair Display. Header получил обведённые круглые действия и account pill с инициалом; sidebar — дополнительное действие «Создать»; правый rail — реальные подписки пользователя и сохранённый presence.",
       "status": "passing",
       "verification": [
         "RED/GREEN App.routing.test.tsx: новый пользователь -> light; сохранённые dark/light сохраняются",
@@ -15,8 +15,23 @@
         "Browser light/dark на 375/768/1024/1440, reload persistence, font loading, focus-visible, reduced-motion и отсутствие horizontal overflow/reflow",
         "git diff --check перед локальным коммитом"
       ],
-      "evidence": "2026-08-29: RED `npm test -- --run src/App.routing.test.tsx -t \"uses light for a new user and keeps saved theme choices\" --reporter=verbose` failed 1/1 with received `dark` instead of expected `light`; GREEN той же команды passed 1/1. Полный App.routing.test.tsx passed 42/42. Полный frontend `npm test` passed 24 files / 157 tests. `npm run build` passed (`tsc -b && vite build`, 118 modules; existing chunk-size warning only). Bundled Playwright + installed Chrome verified both exact 16-token palettes at 375/768/1024/1440: 8/8 renders, 0 failures, no horizontal overflow or light/dark geometry reflow. Saved dark/light survived reload with matching theme-color; pre-React bootstrap selected light; Inter 400/800 and Playfair Display 600/700/900 loaded; focus-visible was a 2px solid outline; reduced-motion reduced animations/transitions to 0.01ms. `git diff --check` passed with no whitespace errors; Git emitted only informational LF-to-CRLF working-copy warnings.",
-      "notes": "Implemented locally from the read-only external reference `D:/Профессиональный редизайн сайта/Мир под солнцем.dc.html`; the reference was not copied or tracked. `--gold-ink` is used only by the 40px hero heading and `--muted` is not used as a small-text color. DOM composition and the location of the existing create action are unchanged. No push, deployment, backend, API, database, dependency or production change."
+      "evidence": "2026-08-29 theme baseline: RED `npm test -- --run src/App.routing.test.tsx -t \"uses light for a new user and keeps saved theme choices\" --reporter=verbose` failed 1/1 with received `dark` instead of expected `light`; GREEN passed 1/1; full frontend passed 24 files / 157 tests and build 118 modules. 2026-08-29 structure follow-up: commit `613faab` adds header outlines, account initial/chevron and a sidebar shortcut to the existing composer. `SubscriptionsPanel` RED failed because the component import did not exist; GREEN passed 2/2. Targeted integration passed 52/52; full frontend passed 25 files / 164 tests; build passed with 119 modules and only the chunk-size warning. Browser light/dark at 375/768/1024/1440 passed 8/8: no horizontal overflow or theme-toggle reflow, saved theme survived reload, Inter/Playfair loaded, focus/reduced-motion passed; the rail is hidden at 375/768 and renders width 252/280px at 1024/1440 with 8 real following records in 4 columns plus presence. Commit `85cb16a` contains the real subscriptions rail.",
+      "notes": "Implemented locally from the read-only external reference `D:/Профессиональный редизайн сайта/Мир под солнцем.dc.html`; the reference was not copied or tracked. `--gold-ink` is used only by the 40px hero heading and `--muted` is not used as a small-text color. The central create action remains in place; the sidebar action is additional. Subscriptions reuse the existing UserFollow API/hooks. No push, deployment, backend, database, dependency or production change."
+    },
+    {
+      "id": "WIDG-4",
+      "priority": 4,
+      "area": "frontend-backend",
+      "title": "Поиск и рекомендации в правой колонке",
+      "user_visible_behavior": "Правый rail получает отдельный поиск по журналу/пользователям и блок персональных рекомендаций с подпиской и возможностью скрыть карточку.",
+      "status": "planned",
+      "verification": [
+        "RED/GREEN backend API-контракты поиска, рекомендаций и скрытых карточек",
+        "RED/GREEN frontend-компоненты поиска и рекомендаций с реальными данными",
+        "Полные backend/frontend suites, build и browser light/dark на 375/768/1024/1440"
+      ],
+      "evidence": "2026-08-29: диагностика подтвердила существующие UserFollow model/API/hooks, но не обнаружила общего поиска по журналу/пользователям, recommendation endpoint/алгоритм, описания кандидатов в списочном ответе или состояние скрытых рекомендаций.",
+      "notes": "Отложено отдельным owner-approved backend+frontend scope. Не входит в light-theme/subscriptions commits `613faab` и `85cb16a`; статические или вымышленные рекомендации запрещены."
     },
     {
       "id": "F01",

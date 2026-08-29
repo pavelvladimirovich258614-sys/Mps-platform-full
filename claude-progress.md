@@ -954,3 +954,14 @@
 - Final verification: backend `python -m pytest tests -q` — 121 passed, 7 skipped (PostgreSQL-only); frontend `npm test` — 23 files, 152 passed; `npm run build` — 118 modules, success, только существующее chunk-size warning. `./init.sh` повторён через Git Bash: дошёл до глобального `pip check` и остановился на внешних Hermes/desktop dependency conflicts (включая отсутствующий `llvmlite` для `numba`); Win32 Error 5 не воспроизвёлся. Shared environment не менялся.
 - Evidence recorded: `feature_list.json` → F48b `passing`; `session-handoff.md` updated. Commit is local only; push/deploy await separate approval.
 - Next best action: commit F48b locally, then await explicit push/deploy approval; agreed backlog continues with F47 closeout or F48c.
+
+### Session 62 — 2026-08-29 (Codex, P0 structure + real subscriptions rail)
+
+- Goal: приблизить light/dark UI к Claude Design по структуре header/sidebar и добавить в правый rail только ту часть эталона, которая обеспечена существующими UserFollow API/hooks.
+- Completed in commit `613faab`: три header action-кнопки получили 2px theme-aware outline; account pill получил тёмный круг с инициалом и шеврон; в sidebar добавлен отдельный `Создать`, открывающий существующий publication composer. Центральное действие сохранено.
+- Completed in commit `85cb16a`: добавлен изолированный `SubscriptionsPanel`; `App` загружает `/users/{currentUser.id}/following`, panel показывает первые 8 реальных подписок в 4 колонки и открывает существующие public-profile routes. Правый rail расширен до 280px (252px на 901–1100px), а presence сохранён отдельным блоком. На ширинах ≤900px rail скрыт по прежнему адаптивному принципу.
+- RED→GREEN evidence: новый `SubscriptionsPanel.test.tsx` сначала не собрался из-за отсутствующего `./SubscriptionsPanel`; после минимальной реализации passed 2/2. Targeted component/Layout/App integration passed 52/52. Старые draft fetch-fixtures были точечно дополнены новым `/users/5/following -> []` контрактом; production-компонент не маскирует неверный API-тип.
+- Final verification: frontend `npm test` — 25 files / 164 passed; `npm run build` — 119 modules, success, только chunk-size warning. Bundled Playwright/Chrome проверил light/dark на 375/768/1024/1440: 8/8 passed, rail visibility/width, 8 real records, 4 CSS columns, presence, reload persistence, Inter/Playfair, focus-visible, reduced-motion, zero horizontal overflow и zero theme-toggle reflow.
+- Deferred: `WIDG-4` фиксирует поиск по журналу/пользователям и рекомендации со скрытием карточек как отдельную planned backend+frontend feature. Статические данные не добавлялись.
+- Publication boundary: commits `613faab` и `85cb16a` локальные; push/deploy не выполнялись и требуют отдельного подтверждения владельца.
+- Next best action: после review получить отдельное разрешение на push; production deployment проводить отдельным шагом с rollback и smoke.
