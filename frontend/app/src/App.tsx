@@ -20,6 +20,18 @@ import { Subscribe } from "./components/Subscribe";
 import { getDraft, getLikedPosts, type ApiPost, type FishkaDraft, useAuthorPosts, useAuth, useDrafts, useFishkaAdminSettings, useFishkaCategories, useFishkaPermission, useIrishkaAdminSettings, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, useProfileActivity, useProfileComments, useProfileFollowers, useProfileFollowing, usePublicProfile, usePublicSettings, useQAQuestions, useUserFollow } from "./hooks";
 import { pathForRoute, type PathRoute, routeFromPath } from "./router";
 
+type Theme = "dark" | "light";
+
+const THEME_COLORS: Record<Theme, string> = {
+  dark: "#0a0e18",
+  light: "#efece4",
+};
+
+function initialTheme(): Theme {
+  const savedTheme = localStorage.getItem("mps-theme2");
+  return savedTheme === "dark" || savedTheme === "light" ? savedTheme : "light";
+}
+
 function routeForPage(page: Page): PathRoute {
   if (page === "countries") return { page: "countries" };
   if (page === "fishki") return { page: "fishki" };
@@ -33,9 +45,7 @@ function routeForPage(page: Page): PathRoute {
 export function App() {
   const [route, setRoute] = useState<PathRoute>(() => routeFromPath(window.location.pathname));
   const [topicOpen, setTopicOpen] = useState(false);
-  const [theme, setTheme] = useState<"dark" | "light">(
-    () => localStorage.getItem("mps-theme2") === "light" ? "light" : "dark",
-  );
+  const [theme, setTheme] = useState<Theme>(initialTheme);
   const [overlay, setOverlay] = useState<"qa" | "profile" | null>(null);
   const [qaQuestionId, setQaQuestionId] = useState<number | null>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -84,6 +94,8 @@ export function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem("mps-theme2", theme);
+    document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+      ?.setAttribute("content", THEME_COLORS[theme]);
   }, [theme]);
 
   useEffect(() => {

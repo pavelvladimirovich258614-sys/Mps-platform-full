@@ -3,8 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0A1526" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#F7F2E8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#efece4" />
+    <script>
+      (() => {
+        let theme = "light";
+        try {
+          const savedTheme = localStorage.getItem("mps-theme2");
+          if (savedTheme === "dark" || savedTheme === "light") theme = savedTheme;
+        } catch {
+          // Storage can be unavailable in privacy-restricted browser contexts.
+        }
+        document.documentElement.dataset.theme = theme;
+        document.querySelector('meta[name="theme-color"]')?.setAttribute(
+          "content",
+          theme === "dark" ? "#0a0e18" : "#efece4",
+        );
+      })();
+    </script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />

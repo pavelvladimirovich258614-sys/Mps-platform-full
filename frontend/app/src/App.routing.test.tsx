@@ -145,6 +145,26 @@ describe("App pathname routing", () => {
     Reflect.deleteProperty(Element.prototype, "scrollIntoView");
   });
 
+  it("uses light for a new user and keeps saved theme choices", async () => {
+    installApi();
+
+    const firstRender = render(<App />);
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("light"));
+    expect(localStorage.getItem("mps-theme2")).toBe("light");
+    firstRender.unmount();
+
+    localStorage.setItem("mps-theme2", "dark");
+    const darkRender = render(<App />);
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
+    expect(localStorage.getItem("mps-theme2")).toBe("dark");
+    darkRender.unmount();
+
+    localStorage.setItem("mps-theme2", "light");
+    render(<App />);
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("light"));
+    expect(localStorage.getItem("mps-theme2")).toBe("light");
+  });
+
   it("loads and renders an article opened directly by pathname", async () => {
     window.history.replaceState({}, "", "/posts/bali-guide");
     const fetchMock = installApi();
