@@ -11,6 +11,7 @@ import { IrishkaAdminSettings } from "./components/IrishkaAdminSettings";
 import { Layout, type Page } from "./components/Layout";
 import { Legal, type LegalKind } from "./components/Legal";
 import { Notifications } from "./components/Notifications";
+import { PageCard } from "./components/PageCard";
 import { Profile } from "./components/Profile";
 import { PostComposer, type EditablePost } from "./components/PostComposer";
 import { PublicProfile } from "./components/PublicProfile";
@@ -348,7 +349,7 @@ export function App() {
         onOpenPrivacy={() => openPage("privacy")}
         onOpenTerms={() => openPage("terms")}
       >
-        {content}
+        <PageCard>{content}</PageCard>
         {notificationsOpen && (
           <Notifications
             notifications={notifications.items}

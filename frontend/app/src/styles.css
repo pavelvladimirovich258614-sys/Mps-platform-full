@@ -83,15 +83,16 @@ button, textarea { font:inherit; } button { color:inherit; } button, a { transit
 .notification-popover { background:var(--shell-2); border-color:var(--line); box-shadow:var(--card-shadow); }
 
 /* Light-theme pass 2: sidebar. */
-.side-nav { background:var(--shell); box-shadow:inset -1px 0 var(--line); }
 .nav-item { color:var(--text); }
-.nav-item:hover,.nav-item.current { background:var(--hover); color:var(--text); }
-.nav-item.current { border-left-color:var(--gold); }
+.nav-item:hover { background:var(--hover); color:var(--text); }
+.nav-item.current { background:var(--gold-soft); border-left-color:var(--gold); color:var(--text); }
 .sidebar-create-button { align-items:center; background:linear-gradient(180deg,var(--gold-lt),var(--gold)); border:0; border-radius:6px; color:var(--action-ink); display:flex; font-size:14px; font-weight:800; gap:8px; justify-content:center; margin-top:18px; min-height:48px; padding:11px 16px; width:100%; }
 .sidebar-create-button:hover { filter:brightness(1.04); }
 .sidebar-create-chevron { height:14px; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.8; width:14px; }
 
 /* Light-theme pass 3: central cards, forms, and modals. */
+.page-card { background:var(--card); border:1px solid var(--card-line); border-radius:16px; box-shadow:var(--card-shadow); margin:24px 12px 40px; min-width:0; padding:40px 40px 44px; }
+.page-card>main { padding:0; }
 .surface-card,.review-card,.country-card,.fishka-admin-settings,.irishka-admin-settings,.post-composer,.composer-modal,.qa-modal,.profile-modal,.delete-confirmation { background:var(--card); border-color:var(--card-line); box-shadow:var(--card-shadow); color:var(--card-text); }
 .rich-editor-toolbar,.sheet-content { background:var(--card-soft); }
 .form-grid input,.form-grid textarea,.subscribe-form input,.post-composer-title input,.topic-reply textarea,.comment-form textarea,.fishka-text textarea,.qa-modal textarea,.qa-modal .qa-composer-input,.irishka-admin-settings input[type="number"] { background:var(--field); border-color:var(--card-line); color:var(--card-text); }
@@ -144,4 +145,8 @@ input:focus-visible,select:focus-visible,[contenteditable="true"]:focus-visible 
 
 @media (max-width:900px) {
   .right-rail { display:none; }
+}
+
+@media (max-width:767px) {
+  .page-card { margin:16px 12px 98px; padding:24px 16px 28px; }
 }

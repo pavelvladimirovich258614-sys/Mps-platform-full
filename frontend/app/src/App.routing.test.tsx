@@ -169,6 +169,19 @@ describe("App pathname routing", () => {
     expect(localStorage.getItem("mps-theme2")).toBe("light");
   });
 
+  it("keeps the primary page inside the page card and overlays outside it", async () => {
+    installApi();
+
+    const view = render(<App />);
+    const main = await screen.findByRole("main");
+
+    expect(main.parentElement?.classList.contains("page-card")).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: /Вопрос-ответ/ }));
+    const dialog = await screen.findByRole("dialog", { name: "Вопрос-ответ" });
+    expect(view.container.querySelector(".page-card")?.contains(dialog)).toBe(false);
+  });
+
   it("loads and renders an article opened directly by pathname", async () => {
     window.history.replaceState({}, "", "/posts/bali-guide");
     const fetchMock = installApi();

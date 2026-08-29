@@ -965,3 +965,13 @@
 - Deferred: `WIDG-4` фиксирует поиск по журналу/пользователям и рекомендации со скрытием карточек как отдельную planned backend+frontend feature. Статические данные не добавлялись.
 - Publication boundary: commits `613faab` и `85cb16a` локальные; push/deploy не выполнялись и требуют отдельного подтверждения владельца.
 - Next best action: после review получить отдельное разрешение на push; production deployment проводить отдельным шагом с rollback и smoke.
+
+### Session 63 — 2026-08-29 (Codex, P0 shared center PageCard)
+
+- Goal: исправить перепутанную карточность shell без изменения состава страниц: плоский sidebar, единая центральная PageCard и сохранённые отдельные секции right rail.
+- Completed: добавлен переиспользуемый `PageCard`, которым в `App` обёрнут только route `content`; notifications, QA/Profile и остальные overlays остаются соседями вне карточки. Desktop-контракт центра использует `var(--card)`, `var(--card-line)`, radius 16px, padding 40/40/44 и `var(--card-shadow)`; mobile padding уменьшен до 24/16/28. Прямой page-root `main` получает нулевой внешний padding, поэтому двойных отступов нет. У sidebar удалены white background/shadow, active item переведён на `var(--gold-soft)`. Right rail не изменялся.
+- RED→GREEN evidence: новый `App.routing.test.tsx` contract сначала failed 1/1 с `expected false to be true`, потому что основной `main` не имел родителя `.page-card`. После минимальной реализации узкий тест passed 1/1, весь `App.routing.test.tsx` passed 45/45.
+- Final verification: frontend `npm test` — 25 files / 165 passed; `npm run build` — 120 modules, success, только существующее chunk-size warning. Bundled Playwright/Chromium проверил light/dark после reload на 375/768/1024/1440: 8/8 passed, exact card background/border/radius/padding/shadow, transparent/no-shadow sidebar, `--gold-soft` active item, zero page-root padding, zero horizontal overflow, Inter/Playfair loaded, focus 2px, reduced-motion 0.01ms и zero theme-toggle reflow. Center width: 580px at 768, 552px at 1024. Стабильные screenshots просмотрены без обрезки или конфликтов в изменённой области.
+- Design reference: `design/DESIGN_SYSTEM.md` фиксирует правило shell layout, 25 основных light/dark токенов и 13 semantic aliases; значения программно сверены с `styles.css` без расхождений.
+- Publication boundary: этот четвёртый локальный commit должен оставаться без push/deploy до отдельного подтверждения владельца на все четыре commits.
+- Next best action: получить отдельное разрешение на общий push четырёх локальных commits; production deployment выполнять отдельным owner-approved шагом с rollback и smoke.
