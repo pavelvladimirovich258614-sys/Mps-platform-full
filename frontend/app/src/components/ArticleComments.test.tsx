@@ -75,6 +75,13 @@ describe("ArticleComments", () => {
     expect(container.querySelector(".article-hero")).toBeNull();
   });
 
+  it("keeps the complete carousel visible on the full post page", () => {
+    render(<ArticleComments article={{ ...article, cover_url: "/media/bali-cover.webp", body: '<p>Короткий текст</p><figure data-carousel="images"><img src="/media/one.webp" alt="Первый слайд"><img src="/media/two.webp" alt="Второй слайд"></figure>' }} commentsModerationEnabled={false} onBack={vi.fn()} onError={vi.fn()} onOpenProfile={vi.fn()} />);
+
+    expect(screen.getByRole("region", { name: "Карусель изображений" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Читать полностью" })).toBeNull();
+  });
+
   it("renders no hero element when an article has no cover URL", () => {
     const { container } = render(<ArticleComments article={article} commentsModerationEnabled={false} onBack={vi.fn()} onError={vi.fn()} onOpenProfile={vi.fn()} />);
 

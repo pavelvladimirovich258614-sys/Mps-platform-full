@@ -994,3 +994,13 @@
 - Evidence recorded: `feature_list.json` → `FEED-UX-SEO` `passing`; `session-handoff.md` updated. Временные browser/server/pytest артефакты удалены.
 - Publication boundary: новый commit остаётся локальным и должен публиковаться только после отдельного подтверждения вместе с уже готовым `ac0235a`; push/deploy не выполнялись.
 - Next best action: получить разрешение на общий push двух локальных commits, затем отдельным production cycle сделать backup, frontend/backend rollout и smoke.
+
+### Session 65 — 2026-08-30 (Codex, FEED-F/FEED-G reading flow follow-up)
+
+- Goal: убрать лишнюю прокрутку после обсуждения и уточнить preview-контракт карусели: при наличии отдельной обложки дополнительная карусель сворачивается вместе с текстом; без обложки остаётся видимой.
+- Completed: локальный commit `3c95711` добавляет нижнее действие «Назад к ленте» после комментариев. `RichTextContent` получил opt-in `collapseCarouselInPreview`; в collapsed-состоянии отфильтровываются только carousel-сегменты, inline-фото остаются, а после раскрытия возвращается полный sanitized HTML. Article-ветка `Feed` включает режим через `Boolean(coverUrl)`; fishka/video и полная `/posts/{slug}` его не используют. Toggle появляется при скрытом тексте или карусели, поэтому работает и для короткого текста с обложкой.
+- RED→GREEN evidence: новый целевой набор сначала дал 2 ожидаемых failure / 29 passed — статьи с обложкой и коротким текстом всё ещё показывали карусель; сценарии без обложки и полной страницы уже сохраняли правильное поведение. После минимальной реализации и обновления прежнего frame-теста на раскрытое состояние целевой набор passed 3 files / 31 tests.
+- Final verification: fresh `npm test` — 25 files / 177 tests passed; `npm run build` — 120 modules, success, только существующее chunk-size warning. Bundled Playwright/Chrome проверил light/dark на 375/768/1024/1440: 8/8 passed, covered carousel скрывается/возвращается/снова скрывается, no-cover carousel остаётся видимой, inline image остаётся, full post не получает toggle, active theme совпадает, focus outline видим, reduced-motion включён и horizontal overflow равен 0. Крайние screenshots 375/1440 обеих тем просмотрены визуально.
+- Evidence recorded: `feature_list.json` → `FEED-UX-SEO`; `session-handoff.md` updated. Временный preview server, browser harness и screenshots удалены.
+- Publication boundary: `ac0235a`/`367dd3e` уже находятся в origin/production. Локально поверх них остаются `3c95711` и новый FEED-G commit; push/deploy не выполнялись и требуют отдельного подтверждения владельца.
+- Next best action: получить отдельное разрешение на общий push/deploy двух локальных frontend commits, сделать frontend backup/build/deploy и повторить smoke без backend restart.

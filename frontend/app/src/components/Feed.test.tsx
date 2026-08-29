@@ -17,6 +17,7 @@ const post = {
 };
 const fishka = { ...post, id: 18, type: "fishka" as const, title: "Фишка вне ленты", slug: "fishka-outside-feed", emoji: "💡" };
 const video = { ...post, id: 19, type: "video_review" as const, title: "Видео для ленты", slug: "video-in-feed", shot_at: "2026-08-26" };
+const carouselPreviewBody = '<p>Первый абзац</p><p>Второй абзац</p><p>Третий абзац</p><p>Четвёртый абзац</p><img src="/media/inline.webp" alt="Фото в тексте"><figure data-carousel="images"><img src="/media/one.webp" alt="Первый слайд"><img src="/media/two.webp" alt="Второй слайд"></figure>';
 
 const editorProps = {
   posts: [],
@@ -45,6 +46,26 @@ afterEach(() => {
 });
 
 describe("Feed composer modal", () => {
+  it("collapses an article carousel with the text when a cover is present", () => {
+    render(<Feed {...editorProps} posts={[{ ...post, cover_url: "/media/cover.webp", body: carouselPreviewBody }]} />);
+
+    expect(screen.getByRole("img", { name: "Фото в тексте" })).toBeTruthy();
+    expect(screen.queryByText("Четвёртый абзац")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Карусель изображений" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Читать полностью" }));
+    expect(screen.getByText("Четвёртый абзац")).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Карусель изображений" })).toBeTruthy();
+  });
+
+  it("keeps an article carousel visible in a collapsed preview without a cover", () => {
+    render(<Feed {...editorProps} posts={[{ ...post, body: carouselPreviewBody }]} />);
+
+    expect(screen.queryByText("Четвёртый абзац")).toBeNull();
+    expect(screen.getByRole("img", { name: "Фото в тексте" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Карусель изображений" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Читать полностью" })).toBeTruthy();
+  });
+
   it("gives carousel arrows a high-contrast 44px touch target", () => {
     render(<Feed {...editorProps} posts={[{ ...post, body: '<figure data-carousel="images"><img src="/media/one.webp" alt="Первое"><img src="/media/two.webp" alt="Второе"></figure>' }]} />);
 
@@ -64,6 +85,7 @@ describe("Feed composer modal", () => {
     expect(cssRule(".post-card .image-carousel")?.style.border).toBe("1px solid var(--card-line)");
     expect(cssRule(".post-card .image-carousel-stage img")?.style.border).toBe("0");
     expect(screen.getByRole("img", { name: "Фото в тексте" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Читать полностью" }));
     expect(screen.getByRole("img", { name: "Первый слайд" })).toBeTruthy();
     expect(container.querySelector(".post-card .image-carousel")).toBeTruthy();
   });

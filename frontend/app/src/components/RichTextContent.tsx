@@ -6,7 +6,7 @@ const richTextPattern = /<(?:p|br|strong|em|s|h[1-3]|ul|ol|li|blockquote|a|img|f
 const allowedTags = ["p", "br", "strong", "em", "s", "h1", "h2", "h3", "ul", "ol", "li", "blockquote", "a", "img", "figure"];
 const allowedAttributes = ["href", "src", "alt", "data-carousel"];
 
-type RichTextContentProps = { html: string; className?: string; preview?: boolean };
+type RichTextContentProps = { html: string; className?: string; preview?: boolean; collapseCarouselInPreview?: boolean };
 type ContentSegment = { kind: "html"; html: string } | { kind: "carousel"; images: CarouselImage[] };
 const previewTextBlocks = 3;
 const previewTextCharacters = 420;
@@ -114,19 +114,19 @@ function previewLegacyText(text: string): { text: string; truncated: boolean } {
   return { text: `${byBlocks.slice(0, previewTextCharacters).trimEnd()}…`, truncated: true };
 }
 
-function RichHtml({ html, className }: { html: string; className: string }) {
+function RichHtml({ html, className, showCarousels = true }: { html: string; className: string; showCarousels?: boolean }) {
   const segments = splitCarouselSegments(html);
   if (!segments.some((segment) => segment.kind === "carousel")) {
     return <div className={`rich-text-content ${className}`.trim()} dangerouslySetInnerHTML={{ __html: html }} />;
   }
-  return <div className={`rich-text-content ${className}`.trim()}>{segments.map((segment, index) => segment.kind === "carousel"
+  return <div className={`rich-text-content ${className}`.trim()}>{segments.filter((segment) => showCarousels || segment.kind !== "carousel").map((segment, index) => segment.kind === "carousel"
     ? <ImageCarousel key={`carousel-${index}`} images={segment.images} />
     : <div key={`html-${index}`} dangerouslySetInnerHTML={{ __html: segment.html }} />,
   )}</div>;
 }
 
 /** Renders the server-approved editor format, with a second client-side sanitization boundary. */
-export function RichTextContent({ html, className = "", preview = false }: RichTextContentProps) {
+export function RichTextContent({ html, className = "", preview = false, collapseCarouselInPreview = false }: RichTextContentProps) {
   const [expanded, setExpanded] = useState(false);
   useEffect(() => setExpanded(false), [html]);
 
@@ -137,5 +137,8 @@ export function RichTextContent({ html, className = "", preview = false }: RichT
 
   const safeHtml = sanitizeRichTextHtml(html);
   const collapsed = previewHtml(safeHtml);
-  return <><RichHtml html={preview && !expanded ? collapsed.html : safeHtml} className={className} />{preview && collapsed.truncated && <button type="button" className="rich-text-toggle" aria-expanded={expanded} onClick={() => setExpanded((current) => !current)}>{expanded ? "Свернуть" : "Читать полностью"}</button>}</>;
+  const hasCarousel = splitCarouselSegments(safeHtml).some((segment) => segment.kind === "carousel");
+  const carouselCollapsed = preview && collapseCarouselInPreview && !expanded && hasCarousel;
+  const canExpand = collapsed.truncated || (collapseCarouselInPreview && hasCarousel);
+  return <><RichHtml html={preview && !expanded ? collapsed.html : safeHtml} className={className} showCarousels={!carouselCollapsed} />{preview && canExpand && <button type="button" className="rich-text-toggle" aria-expanded={expanded} onClick={() => setExpanded((current) => !current)}>{expanded ? "Свернуть" : "Читать полностью"}</button>}</>;
 }

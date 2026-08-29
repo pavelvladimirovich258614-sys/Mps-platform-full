@@ -4,6 +4,15 @@ import { describe, expect, it } from "vitest";
 import { RichTextContent, sanitizeRichTextHtml } from "./RichTextContent";
 
 describe("RichTextContent", () => {
+  it("offers expansion when only a carousel is collapsed beside short text", () => {
+    render(<RichTextContent preview collapseCarouselInPreview html={'<p>Короткий текст</p><figure data-carousel="images"><img src="/media/one.webp" alt="Первый слайд"><img src="/media/two.webp" alt="Второй слайд"></figure>'} />);
+
+    expect(screen.getByText("Короткий текст")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Карусель изображений" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Читать полностью" }));
+    expect(screen.getByRole("region", { name: "Карусель изображений" })).toBeTruthy();
+  });
+
   it("collapses only text in preview mode while keeping every image visible", () => {
     render(<RichTextContent preview html={'<p>Первый абзац</p><p>Второй абзац</p><p>Третий абзац</p><p>Четвёртый абзац</p><img src="/media/alone.webp" alt="Одиночное фото"><figure data-carousel="images"><img src="/media/one.webp" alt="Первый слайд"><img src="/media/two.webp" alt="Второй слайд"></figure>'} />);
 
