@@ -332,6 +332,17 @@ describe("App pathname routing", () => {
     expect(choices.filter((emoji) => emoji === "📱")).toHaveLength(1);
   });
 
+  it("opens the existing publication composer from the editor sidebar shortcut", async () => {
+    setAccessToken("editor-access-token");
+    installApi("ok", { id: 5, email: null, name: "Редактор", avatar_url: null, bio: null, role: "editor", is_anonymous: false });
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Создать" }));
+    expect(await screen.findByRole("dialog", { name: "Создание публикации" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Создать публикацию" })).toBeTruthy();
+  });
+
   it("always shows the fishka form to an editor and publishes selected emoji immediately", async () => {
     window.history.replaceState({}, "", "/fishki");
     setAccessToken("editor-access-token");

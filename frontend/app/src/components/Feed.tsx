@@ -11,6 +11,8 @@ type FeedProps = {
   loading: boolean;
   canCreate?: boolean;
   onCreatePost?: (post: PostDraft) => Promise<EditablePost | undefined>;
+  createPostRequested?: boolean;
+  onCreatePostRequestHandled?: () => void;
   canCreateFishka?: boolean;
   fishkaPublishesImmediately?: boolean;
   fishkaAdminControls?: ReactNode;
@@ -22,12 +24,18 @@ type FeedProps = {
   onOpenArticle: (post: ApiPost) => void;
   onOpenProfile: (userId: number) => void;
 };
-export function Feed({ mode = "feed", posts, loading, canCreate = false, onCreatePost, canCreateFishka = false, fishkaPublishesImmediately = false, fishkaAdminControls, fishkaCategories = [], fishkaCategory = "", onFishkaCategoryChange, onCreateFishka, onToggleLike, onOpenArticle, onOpenProfile }: FeedProps) {
+export function Feed({ mode = "feed", posts, loading, canCreate = false, onCreatePost, createPostRequested = false, onCreatePostRequestHandled, canCreateFishka = false, fishkaPublishesImmediately = false, fishkaAdminControls, fishkaCategories = [], fishkaCategory = "", onFishkaCategoryChange, onCreateFishka, onToggleLike, onOpenArticle, onOpenProfile }: FeedProps) {
   const [composerOpen, setComposerOpen] = useState(false);
   const [fishkaComposerOpen, setFishkaComposerOpen] = useState(false);
   const isFishki = mode === "fishki";
   const canOpenComposer = canCreate && !isFishki && Boolean(onCreatePost);
   const visiblePosts = isFishki ? posts.filter((post) => post.type === "fishka") : posts.filter((post) => post.type !== "fishka");
+
+  useEffect(() => {
+    if (!createPostRequested || !canOpenComposer) return;
+    setComposerOpen(true);
+    onCreatePostRequestHandled?.();
+  }, [canOpenComposer, createPostRequested, onCreatePostRequestHandled]);
 
   useEffect(() => {
     if (!composerOpen && !fishkaComposerOpen) return;

@@ -58,6 +58,7 @@ export function App() {
   const [likedPostsByUserId, setLikedPostsByUserId] = useState<Record<number, ApiPost[]>>({});
   const [editingPost, setEditingPost] = useState<EditablePost | null>(null);
   const [fishkaCategory, setFishkaCategory] = useState("");
+  const [createPostRequested, setCreatePostRequested] = useState(false);
 
   const auth = useAuth();
   const canManagePosts = auth.user?.role === "editor" || auth.user?.role === "admin";
@@ -210,7 +211,7 @@ export function App() {
   };
   const page: Page = route.page === "countries" && topicOpen ? "topic" : route.page;
   let content = null;
-  if (page === "feed") content = <Feed posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} canCreate={canManagePosts} onCreatePost={createPost} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
+  if (page === "feed") content = <Feed posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} canCreate={canManagePosts} onCreatePost={createPost} createPostRequested={createPostRequested} onCreatePostRequestHandled={() => setCreatePostRequested(false)} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
   if (page === "fishki") content = <Feed mode="fishki" posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} canCreateFishka={canManagePosts || fishkaPermission.value?.can_submit_fishka === true} fishkaPublishesImmediately={canManagePosts} fishkaAdminControls={<FishkaAdminSettings settings={isAdmin ? fishkaAdminSettings.value : null} loading={isAdmin && fishkaAdminSettings.loading} onUpdate={fishkaAdminSettings.update} />} fishkaCategories={fishkaCategories.value ?? []} fishkaCategory={fishkaCategory} onFishkaCategoryChange={setFishkaCategory} onCreateFishka={createFishka} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} />;
   if (page === "countries" || page === "topic") {
     content = (
@@ -325,7 +326,7 @@ export function App() {
         notificationsOpen={notificationsOpen}
         unreadCount={notifications.items.filter((item) => !item.is_read).length}
         userName={auth.user?.name || (auth.user ? "Читатель" : "Войти")}
-        userAvatarUrl={auth.user?.avatar_url ?? null}
+        isAuthenticated={Boolean(auth.user)}
         online={online.value ?? []}
         publicSettings={publicSettings.value}
         onNavigate={openPage}
@@ -336,6 +337,10 @@ export function App() {
           else setOverlay("profile");
         }}
         onToggleNotifications={() => setNotificationsOpen(!notificationsOpen)}
+        onCreatePost={() => {
+          setCreatePostRequested(true);
+          navigate({ page: "feed" });
+        }}
         onOpenPrivacy={() => openPage("privacy")}
         onOpenTerms={() => openPage("terms")}
       >
