@@ -49,6 +49,18 @@ describe("ArticleComments", () => {
     expect(screen.queryByRole("textbox", { name: "Ответ для Анна" })).toBeNull();
   });
 
+  it("offers the same feed return action below the discussion", () => {
+    const onBack = vi.fn();
+    const { container } = render(<ArticleComments article={article} commentsModerationEnabled={false} onBack={onBack} onError={vi.fn()} onOpenProfile={vi.fn()} />);
+
+    const backButtons = screen.getAllByRole("button", { name: "← В ленту" });
+    expect(backButtons).toHaveLength(2);
+    expect(container.querySelector(".comments")?.compareDocumentPosition(backButtons[1])).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    fireEvent.click(backButtons[1]);
+
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
   it("renders a like button and its count on the full article", () => {
     render(<ArticleComments article={article} commentsModerationEnabled={false} onBack={vi.fn()} onError={vi.fn()} onOpenProfile={vi.fn()} onToggleLike={vi.fn()} />);
 
