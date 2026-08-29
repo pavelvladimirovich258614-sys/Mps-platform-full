@@ -1,7 +1,15 @@
 # Session handoff — МПС
 
+## Next session first — P0 checklist gate
+
+1. Read `AGENTS.md`; run `./init.sh`; read `claude-progress.md`, `feature_list.json` and this handoff; fetch and confirm local/origin/VPS SHA, clean tracked trees and backend health before any change.
+2. Retrieve or confirm the exact owner P0 checklist before selecting scope or writing code. The closeout request referenced «см. ниже», but no checklist items followed, so the list must not be inferred.
+3. Keep F47, F48c and `WIDG-4` separate unless the confirmed P0 list explicitly prioritizes them. Preserve Plan → Approve → Code, RED→GREEN and a separate production approval for every new package.
+4. Preflight SSH in BatchMode with the currently authorized replacement key before a future deploy. If access fails again, stop and diagnose key authorization/provider-console recovery; do not guess credentials.
+
 ## Current verified checkpoint — 2026-08-30
 
+- Session closeout production SHA is `7ba81997f6dd165350395967f89789283c245918`. REV-2, P0-LIGHT-THEME, BUG-1/FEED-A–G and the About-navigation order are production-deployed `passing`; local `main`, `origin/main` and VPS matched this SHA before the documentation-only closeout commit.
 - P0-LIGHT-THEME is production-deployed `passing`. New users default to light before React mounts; saved `dark` and `light` remain authoritative and update the matching `theme-color`. The `--card-soft` inset-surface follow-up is included in production commit `ac0235a`.
 - Exact approved light/dark tokens are defined in `frontend/app/src/styles.css`; semantic aliases remain compatible. Inter replaces all four Manrope rules, and Playfair Display loads 600/700/900.
 - Production commit `613faab` adds 2px outlined header actions, an account initial/chevron, and a separate sidebar `Создать` shortcut wired to the existing publication composer. The central create action remains in place.
@@ -21,28 +29,21 @@
 - Production rollout for `ac0235a`/`367dd3e`: DB backup `/var/backups/mps/mps-2026-08-29-123936.dump.gz` SHA-256 `3189103688145280aab11dd420fb2a2424c43fac9e54942fcb953232cea96812`; frontend rollback `/root/backups/mps-frontend-feed-predeploy-20260829T164035Z-c4f10e4.tar.gz` SHA-256 `358ab9a9a15f0ddf101800ff419205ec3c73adb121d186328fcbed1cc2467739`. Backend restarted active/healthy, smoke passed, production served `/assets/index-Tqj8Nx_B.js`, and all four live OG User-Agents returned identical complete meta.
 - Production commits `3c95711` and `4ee6a75` add the second «Назад к ленте» action and conditionally collapse only carousel segments in article previews with a separate cover; inline images stay visible, no-cover carousels stay visible, and full `/posts/{slug}` rendering stays expanded.
 - FEED-G RED produced 2 expected failures / 29 passed while no-cover/full-page preservation already passed; targeted GREEN passed 3 files / 31 tests. Fresh full frontend passed 25 files / 177 tests; build passed with 120 modules plus only the existing chunk-size warning. Browser light/dark at 375/768/1024/1440 passed 8/8 with conditional expand/collapse, exact active theme, visible focus, reduced-motion, zero horizontal overflow and visually reviewed 375/1440 screenshots.
-- The current local navigation checkpoint moves «О нас» immediately after «Лента», before «Форум стран», through the shared `Layout` navigation array. Desktop sidebar and mobile sheet use the same order; footer and `/about` content are unchanged.
+- Production commit `7ba8199` moves «О нас» immediately after «Лента», before «Форум стран», through the shared `Layout` navigation array. Desktop sidebar and mobile sheet use the same order; footer and `/about` content are unchanged.
 - Navigation RED received the old order with «О нас» after «Подписка»; targeted GREEN passed 1/1 and the whole Layout file passed 7/7. Fresh full frontend passed 25 files / 178 tests; build passed with 120 modules plus only the existing chunk-size warning. Chrome light/dark at 375/768/1024/1440 passed 8/8 for exact order, `/about`, unchanged footer, focus, reduced motion and zero horizontal overflow.
 - The external design reference `D:/Профессиональный редизайн сайта/Мир под солнцем.dc.html` remained read-only and was not copied or tracked.
 - `WIDG-4` is planned, not implemented: journal/user search, recommendations, recommendation descriptions/algorithm and hidden-card state require a separate backend+frontend contract. No static recommendation data was introduced.
-- REV-2 is production-deployed `passing` at application SHA `58a49f5038141b967324e581f0856757cba08dd8` with Alembic `20260829_0018 (head)`.
+- REV-2 is production-deployed `passing` at package SHA `58a49f5038141b967324e581f0856757cba08dd8`, included in final application SHA `7ba81997f6dd165350395967f89789283c245918`, with Alembic `20260829_0018 (head)`.
 - Reviews support up to two ordered photos, a 1000-character body limit and authenticated `/reviews/mine` statuses. Public `/reviews` remains approved-only; editor moderation remains role-gated.
 - The live stale-state follow-up is included in the same production SHA: `useReviews.moderate` replaces the matching mine entry with the review returned by PATCH, so reject immediately renders «Не опубликован» while preserving queue removal.
 - Local verification for the follow-up: backend protective PATCH + `/mine` contract 1/1; frontend RED received `pending` instead of expected `rejected`; hook+UI GREEN 2 files/9 tests; full backend `125 passed, 7 skipped`; full frontend 24 files/156 tests; build 118 modules.
 - Production evidence: rollback `/root/backups/mps-frontend-rev2-mine-fix-58a49f5.tar.gz`, SHA-256 `339b994a0990db83ada5969a01536603b200ebf670e3cfed1fd6b61564d4e75f`; served bundle `index-DOiIEML6.js` contains production API/bot values and no localhost API; `mps-backend` stayed PID `891354`, active/healthy without restart; `deploy/smoke.sh` passed.
 - Fresh closeout check again observed VPS SHA `58a49f5038141b967324e581f0856757cba08dd8`, backend `active` with health `ok`, production bundle guards and smoke `[OK]`.
 
-## Next session — About navigation frontend push gate
-
-1. Read `AGENTS.md`; run `./init.sh`; read `claude-progress.md`, `feature_list.json` and this handoff; fetch and confirm local/origin/VPS synchronization before changes.
-2. Treat the local About-navigation commit as a frontend-only publication batch. Do not push or deploy it without a separate explicit owner instruction; `HEAD` and `origin/main` were both `4ee6a75f962f6eba5941d41e577f659905239595` before this local change.
-3. Before any approved push/deployment, rerun the fresh frontend suite/build and confirm exact local/origin/VPS divergence. Backend, database and SEO are unchanged, so do not restart `mps-backend`; still confirm health for completeness.
-4. For deployment, create a frontend rollback backup, verify production VITE values and absence of localhost, deploy the built assets, run `deploy/smoke.sh`, and browser-smoke the About order in desktop sidebar and mobile navigation.
-5. Keep `WIDG-4`, F47 (optional N+1 guard) and F48c (subscription while delivery is externally blocked) separate from this checkpoint.
-
 ## Known risks / boundaries
 
 - Existing POST `/media` deliberately has no review-specific provisional ownership or orphan cleanup. A cancelled/failed review submission can leave an uploaded media file; no cleanup expansion was approved for REV-2.
 - The theme fonts are loaded from Google Fonts with `display=swap`; live browser verification loaded all required weights, but offline clients still fall back to the declared system/Georgia stacks.
 - Global `init.sh` pip-check can stop on unrelated shared Hermes/desktop dependency conflicts; record this separately and verify MPS suites directly.
+- SSH incident: `mps_deploy_key` disappeared from VPS `authorized_keys`; the root cause remains unknown. Access was restored with replacement key `s048_rotate`, whose local Windows ACL had to be restricted before OpenSSH accepted it. Every deployment must begin with a BatchMode key check; if it repeats, use read-only diagnosis and HostKey console/authorized_keys recovery rather than password guessing. Never record or print credentials in trackers or logs.
 - F47 and F48c are both currently marked `in_progress` despite the tracker rule that only one feature may be in progress. Do not change their statuses during startup without an owner-confirmed P0 ordering decision.
