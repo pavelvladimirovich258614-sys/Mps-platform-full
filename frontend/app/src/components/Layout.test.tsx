@@ -9,6 +9,31 @@ const callbacks = {
 };
 
 describe("Layout presence", () => {
+  it("places About between Feed and Country Forum in desktop and mobile navigation", () => {
+    const view = render(
+      <Layout
+        {...callbacks}
+        page="feed"
+        theme="light"
+        notificationsOpen={false}
+        unreadCount={0}
+        userName="Павел"
+        online={[]}
+        publicSettings={null}
+      >
+        <main>Лента</main>
+      </Layout>,
+    );
+    const expectedOrder = ["Лента", "О нас", "Форум стран", "Фишки", "Отзывы", "Подписка", "Вопрос-ответ"];
+    const labelsIn = (element: HTMLElement) => within(element).getAllByRole("button")
+      .map((button) => button.textContent?.replace(/[^А-Яа-яЁё -]/g, "").trim())
+      .filter((label): label is string => Boolean(label && expectedOrder.includes(label)));
+
+    expect(labelsIn(view.container.querySelector(".side-nav") as HTMLElement)).toEqual(expectedOrder);
+    fireEvent.click(screen.getByRole("button", { name: "Меню" }));
+    expect(labelsIn(view.container.querySelector(".mobile-sheet") as HTMLElement)).toEqual(expectedOrder);
+  });
+
   it("uses an accessible bell icon for notifications", () => {
     render(
       <Layout

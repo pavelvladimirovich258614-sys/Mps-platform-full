@@ -1004,3 +1004,12 @@
 - Evidence recorded: `feature_list.json` → `FEED-UX-SEO`; `session-handoff.md` updated. Временный preview server, browser harness и screenshots удалены.
 - Publication boundary: `ac0235a`/`367dd3e` уже находятся в origin/production. Локально поверх них остаются `3c95711` и новый FEED-G commit; push/deploy не выполнялись и требуют отдельного подтверждения владельца.
 - Next best action: получить отдельное разрешение на общий push/deploy двух локальных frontend commits, сделать frontend backup/build/deploy и повторить smoke без backend restart.
+
+### Session 66 — 2026-08-30 (Codex, About navigation priority)
+
+- Goal: выполнить подтверждённую формулировку Сергея «между лентой и форумом стран... чтобы не в конце была», не добавляя новый контентный блок и не меняя footer или страницу `/about`.
+- Completed: единый массив `Layout` теперь задаёт порядок `Лента → О нас → Форум стран → Фишки → Отзывы → Подписка`; условные «Черновики» сохраняют своё прежнее место для editor/admin, а «Вопрос-ответ» остаётся завершающим общим действием. Изменение одновременно применяется к desktop sidebar, mobile sheet и первым пунктам mobile bottom navigation.
+- RED→GREEN evidence: новый `Layout.test.tsx` contract сначала failed 1/1 и получил прежний порядок `Лента, Форум стран, Фишки, Отзывы, Подписка, О нас, Вопрос-ответ`. После минимальной перестановки целевой тест passed 1/1, весь `Layout.test.tsx` passed 7/7.
+- Final verification: fresh `npm test` — 25 files / 178 tests passed; `npm run build` — 120 modules, success, только существующее chunk-size warning. Headless Chrome проверил light/dark на 375/768/1024/1440: 8/8 passed для точного порядка, перехода `/about`, неизменного footer, видимого focus, reduced-motion и отсутствия horizontal overflow. Репрезентативные mobile/tablet/desktop screenshots обеих тем просмотрены визуально без наложений.
+- Publication boundary: footer и `/about` не менялись; backend/database/dependencies не затронуты. Новый commit остаётся локальным без push/deploy до отдельного подтверждения владельца.
+- Next best action: после отдельного разрешения выполнить frontend-only push/deploy с rollback backup, production VITE guard, backend health-check без restart и `deploy/smoke.sh`.
