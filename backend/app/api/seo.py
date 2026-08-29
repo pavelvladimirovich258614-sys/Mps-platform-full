@@ -1,8 +1,11 @@
-"""Public crawl endpoints and bot-specific post prerendering."""
+"""Public crawl endpoints and post metadata injection for the SPA shell."""
 
 from html import escape
+from html.parser import HTMLParser
 import json
 from pathlib import Path
+import re
+from urllib.parse import urljoin
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, Response
@@ -31,6 +34,66 @@ def json_ld(value: dict) -> str:
     return json.dumps(value, ensure_ascii=False).replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
 
 
+class _PlainTextParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self.skip_depth = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in {"script", "style"}:
+            self.skip_depth += 1
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in {"script", "style"} and self.skip_depth:
+            self.skip_depth -= 1
+
+    def handle_data(self, data: str) -> None:
+        if not self.skip_depth:
+            self.parts.append(data)
+
+
+def plain_text(value: str) -> str:
+    parser = _PlainTextParser()
+    parser.feed(value)
+    parser.close()
+    return " ".join(" ".join(parser.parts).split())
+
+
+def frontend_index(request: Request) -> Path:
+    index = Path(request.app.state.settings.frontend_dist_dir) / "index.html"
+    if not index.is_file():
+        raise HTTPException(503, "Фронтенд ещё не собран")
+    return index
+
+
+def inject_post_metadata(index_html: str, *, title: str, description: str, canonical: str, image: str) -> str:
+    safe_title = escape(title, quote=True)
+    safe_description = escape(description, quote=True)
+    safe_canonical = escape(canonical, quote=True)
+    safe_image = escape(image, quote=True)
+    article = json_ld({"@context": "https://schema.org", "@type": "Article", "headline": title, "description": description, "mainEntityOfPage": canonical, "image": image})
+    metadata = "".join((
+        f'<link rel="canonical" href="{safe_canonical}">',
+        f'<meta name="description" content="{safe_description}">',
+        '<meta property="og:type" content="article">',
+        f'<meta property="og:title" content="{safe_title}">',
+        f'<meta property="og:description" content="{safe_description}">',
+        f'<meta property="og:url" content="{safe_canonical}">',
+        f'<meta property="og:image" content="{safe_image}">',
+        '<meta name="twitter:card" content="summary_large_image">',
+        f'<script type="application/ld+json">{article}</script>',
+    ))
+    title_tag = f"<title>{escape(title)}</title>"
+    if re.search(r"<title(?:\s[^>]*)?>.*?</title>", index_html, flags=re.IGNORECASE | re.DOTALL):
+        index_html = re.sub(r"<title(?:\s[^>]*)?>.*?</title>", lambda _match: title_tag, index_html, count=1, flags=re.IGNORECASE | re.DOTALL)
+    else:
+        metadata = f"{title_tag}{metadata}"
+    if "</head>" not in index_html.lower():
+        raise HTTPException(503, "Собранный frontend не содержит head")
+    return re.sub(r"</head>", lambda _match: f"{metadata}</head>", index_html, count=1, flags=re.IGNORECASE)
+
+
 @router.get("/robots.txt", include_in_schema=False)
 async def robots(request: Request) -> Response:
     base_url = request.app.state.settings.base_url.rstrip("/")
@@ -51,18 +114,14 @@ async def sitemap(request: Request, session: AsyncSession = Depends(get_db)) -> 
 
 @router.get("/posts/{slug}", include_in_schema=False)
 async def post_page(slug: str, request: Request, session: AsyncSession = Depends(get_db)) -> Response:
-    if not is_bot(request):
-        index = Path(request.app.state.settings.frontend_dist_dir) / "index.html"
-        if index.is_file():
-            return FileResponse(index)
-        raise HTTPException(503, "Фронтенд ещё не собран")
     post = await session.scalar(select(Post).where(Post.slug == slug, Post.status == PostStatus.PUBLISHED))
     if post is None:
+        if not is_bot(request):
+            return FileResponse(frontend_index(request))
         raise HTTPException(404, "Публикация не найдена")
     base_url = request.app.state.settings.base_url.rstrip("/")
     canonical = public_url(base_url, f"/posts/{post.slug}")
-    description = (post.excerpt or post.body)[:300]
-    image = post.cover_url or public_url(base_url, "/favicon.ico")
-    article = json_ld({"@context": "https://schema.org", "@type": "Article", "headline": post.title, "description": description, "mainEntityOfPage": canonical})
-    html = f"<!doctype html><html lang=\"ru\"><head><title>{escape(post.title)}</title><link rel=\"canonical\" href=\"{canonical}\"><meta property=\"og:title\" content=\"{escape(post.title, quote=True)}\"><meta property=\"og:description\" content=\"{escape(description, quote=True)}\"><meta property=\"og:url\" content=\"{canonical}\"><meta property=\"og:image\" content=\"{escape(image, quote=True)}\"><meta name=\"description\" content=\"{escape(description, quote=True)}\"><script type=\"application/ld+json\">{article}</script></head><body><h1>{escape(post.title)}</h1><p>{escape(description)}</p></body></html>"
+    description = plain_text(post.excerpt or post.body)[:300]
+    image = urljoin(f"{base_url}/", post.cover_url or "/favicon.ico")
+    html = inject_post_metadata(frontend_index(request).read_text(encoding="utf-8"), title=post.title, description=description, canonical=canonical, image=image)
     return Response(html, media_type="text/html")

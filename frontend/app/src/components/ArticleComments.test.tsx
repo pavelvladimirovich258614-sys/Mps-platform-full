@@ -3,10 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ArticleComments } from "./ArticleComments";
 
-const mocks = vi.hoisted(() => ({ create: vi.fn(), react: vi.fn() }));
+const mocks = vi.hoisted(() => ({ comments: [] as Array<Record<string, unknown>>, create: vi.fn(), react: vi.fn() }));
 
 vi.mock("../hooks", () => ({
-  useComments: () => ({ comments: [], loading: false, react: mocks.react, create: mocks.create }),
+  useComments: () => ({ comments: mocks.comments, loading: false, react: mocks.react, create: mocks.create }),
 }));
 
 const article = {
@@ -23,8 +23,30 @@ const article = {
 
 describe("ArticleComments", () => {
   beforeEach(() => {
+    mocks.comments.length = 0;
     mocks.create.mockReset();
     mocks.react.mockReset();
+  });
+
+  it("opens a reply composer, submits parent_id and renders one nested level", async () => {
+    mocks.comments.push(
+      { id: 31, parent_id: null, status: "approved", body: "Основной комментарий", author: { id: 8, name: "Анна", avatar_url: null }, reactions: {}, my_reaction: null },
+      { id: 32, parent_id: 31, status: "approved", body: "Вложенный ответ", author: { id: 9, name: "Игорь", avatar_url: null }, reactions: {}, my_reaction: null },
+    );
+    mocks.create.mockResolvedValue({ status: "approved" });
+
+    const { container } = render(<ArticleComments article={article} commentsModerationEnabled={false} onBack={vi.fn()} onError={vi.fn()} onOpenProfile={vi.fn()} />);
+
+    const replies = container.querySelector(".comment-replies");
+    expect(replies).not.toBeNull();
+    expect(replies?.textContent).toContain("Вложенный ответ");
+    expect(screen.getAllByRole("button", { name: "Ответить" })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Ответить" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Ответ для Анна" }), { target: { value: "Спасибо за совет" } });
+    fireEvent.click(screen.getByRole("button", { name: "Отправить ответ" }));
+
+    await waitFor(() => expect(mocks.create).toHaveBeenCalledWith("Спасибо за совет", 31));
+    expect(screen.queryByRole("textbox", { name: "Ответ для Анна" })).toBeNull();
   });
 
   it("renders a like button and its count on the full article", () => {

@@ -1,6 +1,6 @@
 # Session handoff — МПС
 
-## Current verified checkpoint — 2026-08-29
+## Current verified checkpoint — 2026-08-30
 
 - P0-LIGHT-THEME is locally `passing`. New users default to light before React mounts; saved `dark` and `light` remain authoritative and update the matching `theme-color`. The current `--card-soft` inset-surface follow-up is intentionally not pushed/deployed.
 - Exact approved light/dark tokens are defined in `frontend/app/src/styles.css`; semantic aliases remain compatible. Inter replaces all four Manrope rules, and Playfair Display loads 600/700/900.
@@ -14,6 +14,10 @@
 - Browser verification: bundled Playwright/Chrome produced 8 light/dark screenshots at 375/768/1024/1440 with 0 failures. Reload persistence, Inter/Playfair loading, focus-visible, reduced-motion, zero horizontal overflow and zero theme-toggle reflow passed. The rail is hidden at 375/768; at 1024/1440 it is 252/280px wide with 8 following records, 4 CSS columns and presence.
 - PageCard RED failed 1/1 because the main route content had no `.page-card` parent; targeted GREEN passed 1/1 and the full routing file passed 45/45. Fresh full frontend verification passed 25 files/165 tests; build passed with 120 modules and only the existing chunk-size warning. The new browser gate passed 8/8 after reload with exact computed card/sidebar styles; center width is 580px at 768 and 552px at 1024.
 - Soft-surface RED failed 1/1 because `.empty-comments` computed transparent instead of `var(--card-soft)`; targeted GREEN passed 1/1 and full Feed passed 7/7. Fresh full frontend passed 25 files/166 tests; build passed with 120 modules and only the existing chunk-size warning. Bundled Chromium passed 8/8 light/dark checks at 375/768/1024/1440: exact active `--card-soft`, zero horizontal overflow/reflow, 2px focus and 0.01ms reduced motion. All eight screenshots were visually checked against the read-only reference.
+- The current feed package closes BUG-1 and FEED-A–E locally. Root comments can open a separate one-level reply composer and send `parent_id`; feed bodies use a deterministic 3-block/420-character text preview while all images/carousels stay visible. Carousel arrows are 44px, theme-aware and focusable; scoped media frames cover cover/hero/inline images and one carousel container without a double frame. Share copies the absolute `/posts/{slug}` URL with Clipboard API plus a legacy fallback and reports through the existing toast.
+- FastAPI now injects post-specific canonical, description, Open Graph, Twitter and JSON-LD metadata into the real React SPA head for every existing published `/posts/{slug}`, not only crawler UAs. Descriptions are plain escaped text, cover images are absolute, `og:type=article` and `twitter:card=summary_large_image` are present; unknown-slug behavior remains unchanged.
+- Feed package RED→GREEN: replies failed on absent `.comment-replies`; preview failed because paragraph four remained; media/share failed on 34px arrows, no frame and no share action; browser-UA SEO failed because `og:title` was absent. All narrow contracts then passed; combined frontend targets passed 26 tests and backend SEO passed 3/3.
+- Feed package final verification: backend 125 passed / 7 existing PostgreSQL-only skipped; frontend 25 files / 172 passed; build 120 modules with only the existing chunk-size warning. Browser light/dark at 375/768/1024/1440 passed 8/8 for preview/media/replies/focus/reduced-motion/overflow; Clipboard held the exact absolute post URL. Real `curl.exe` requests with Mozilla, TelegramBot, WhatsApp and VKShare UAs each returned 200, React root and complete post meta.
 - The external design reference `D:/Профессиональный редизайн сайта/Мир под солнцем.dc.html` remained read-only and was not copied or tracked.
 - `WIDG-4` is planned, not implemented: journal/user search, recommendations, recommendation descriptions/algorithm and hidden-card state require a separate backend+frontend contract. No static recommendation data was introduced.
 - REV-2 is production-deployed `passing` at application SHA `58a49f5038141b967324e581f0856757cba08dd8` with Alembic `20260829_0018 (head)`.
@@ -23,12 +27,13 @@
 - Production evidence: rollback `/root/backups/mps-frontend-rev2-mine-fix-58a49f5.tar.gz`, SHA-256 `339b994a0990db83ada5969a01536603b200ebf670e3cfed1fd6b61564d4e75f`; served bundle `index-DOiIEML6.js` contains production API/bot values and no localhost API; `mps-backend` stayed PID `891354`, active/healthy without restart; `deploy/smoke.sh` passed.
 - Fresh closeout check again observed VPS SHA `58a49f5038141b967324e581f0856757cba08dd8`, backend `active` with health `ok`, production bundle guards and smoke `[OK]`.
 
-## Next session — P0 card-soft review/push gate
+## Next session — combined local feed/card-soft push gate
 
 1. Read `AGENTS.md`; run `./init.sh`; read `claude-progress.md`, `feature_list.json` and this handoff; fetch and confirm local/origin/VPS synchronization before changes.
-2. Treat the local card-soft follow-up as the completed implementation boundary: empty and inset content blocks use `--card-soft`, while controls and overlays retain `--panel`. Do not amend its scope, push or deploy without a separate explicit owner instruction.
-3. Before any approved push/deployment, rerun the required fresh frontend suite/build and confirm the exact local/origin/VPS divergence. Keep production rollback, served-bundle VITE/no-localhost checks and live smoke as a separately approved rollout sequence.
-4. Keep `WIDG-4`, F47 (optional N+1 guard) and F48c (subscription while delivery is externally blocked) separate from this checkpoint.
+2. Treat `ac0235a` plus the following local feed UX/SEO commit as one approved future publication batch. Do not amend their scope, push or deploy without a separate explicit owner instruction.
+3. Before any approved push/deployment, rerun fresh backend/frontend suites and the frontend build, then confirm exact local/origin/VPS divergence. Because `backend/app/api/seo.py` changed, the future rollout must include backend restart/health as well as frontend backup/build, served-bundle VITE/no-localhost checks and live smoke.
+4. After deployment, repeat real public `/posts/{slug}` meta checks with normal, Telegram, WhatsApp and VK UAs against production, plus browser share/reply/preview smoke.
+5. Keep `WIDG-4`, F47 (optional N+1 guard) and F48c (subscription while delivery is externally blocked) separate from this checkpoint.
 
 ## Known risks / boundaries
 

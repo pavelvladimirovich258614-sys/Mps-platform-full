@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 
 import type { ApiPost, FishkaDraft, PostDraft } from "../hooks";
+import { pathForRoute } from "../router";
 import { FishkaComposer } from "./FishkaComposer";
 import { PostComposer, type EditablePost } from "./PostComposer";
 import { RichTextContent } from "./RichTextContent";
@@ -23,8 +24,9 @@ type FeedProps = {
   onToggleLike: (post: ApiPost) => void;
   onOpenArticle: (post: ApiPost) => void;
   onOpenProfile: (userId: number) => void;
+  onNotice?: (message: string) => void;
 };
-export function Feed({ mode = "feed", posts, loading, canCreate = false, onCreatePost, createPostRequested = false, onCreatePostRequestHandled, canCreateFishka = false, fishkaPublishesImmediately = false, fishkaAdminControls, fishkaCategories = [], fishkaCategory = "", onFishkaCategoryChange, onCreateFishka, onToggleLike, onOpenArticle, onOpenProfile }: FeedProps) {
+export function Feed({ mode = "feed", posts, loading, canCreate = false, onCreatePost, createPostRequested = false, onCreatePostRequestHandled, canCreateFishka = false, fishkaPublishesImmediately = false, fishkaAdminControls, fishkaCategories = [], fishkaCategory = "", onFishkaCategoryChange, onCreateFishka, onToggleLike, onOpenArticle, onOpenProfile, onNotice }: FeedProps) {
   const [composerOpen, setComposerOpen] = useState(false);
   const [fishkaComposerOpen, setFishkaComposerOpen] = useState(false);
   const isFishki = mode === "fishki";
@@ -54,7 +56,7 @@ export function Feed({ mode = "feed", posts, loading, canCreate = false, onCreat
     {fishkaComposerOpen && onCreateFishka && <FishkaComposerModal onClose={() => setFishkaComposerOpen(false)} publishesImmediately={fishkaPublishesImmediately} onCreate={onCreateFishka} />}
     {!isFishki && <div className="feed-filters"><h2>Статьи</h2></div>}
     {loading && <div className="comment-skeleton"><i /><i /><i /></div>}
-    {visiblePosts.map((post) => <PostCard key={post.id} post={post} onLike={() => onToggleLike(post)} onOpen={() => onOpenArticle(post)} onOpenProfile={() => onOpenProfile(post.author.id)} />)}
+    {visiblePosts.map((post) => <PostCard key={post.id} post={post} onLike={() => onToggleLike(post)} onOpen={() => onOpenArticle(post)} onOpenProfile={() => onOpenProfile(post.author.id)} onNotice={onNotice} />)}
     {!loading && !visiblePosts.length && <div className="empty-comments">Публикаций в этом разделе пока нет.</div>}
     <section className="tour-cta"><div><h2>Подберём тур под ваш бюджет</h2><p>Ответьте на пять вопросов в боте — менеджер пришлёт три варианта с ценами.</p></div><a href="https://t.me/pod_solncem_travel_bot" target="_blank" rel="noreferrer">Подобрать тур →</a></section>
   </div></main>;
@@ -80,13 +82,43 @@ function FishkaComposerModal({ onClose, publishesImmediately, onCreate }: { onCl
   </div>;
 }
 
-function PostCard({ post, onLike, onOpen, onOpenProfile }: { post: ApiPost; onLike: () => void; onOpen: () => void; onOpenProfile: () => void }) {
+function PostCard({ post, onLike, onOpen, onOpenProfile, onNotice }: { post: ApiPost; onLike: () => void; onOpen: () => void; onOpenProfile: () => void; onNotice?: (message: string) => void }) {
   const kind = post.type === "video_review" ? "video" : post.type;
-  if (kind === "fishka") return <article className="post-card tip-card"><div className="tip-mark">{post.emoji ?? "✦"}</div><div><p className="post-tag">Фишка</p><h2 onClick={onOpen}>{post.title}</h2><AuthorLink post={post} onOpenProfile={onOpenProfile} /><RichTextContent html={post.body} className="post-body-excerpt" /><PostActions likesCount={post.likes_count} onLike={onLike} onOpen={onOpen} /></div></article>;
-  if (kind === "video") return <article className="post-card video-card"><div className="video-cover"><button aria-label="Смотреть видео">▶</button><span>Под солнцем</span>{post.shot_at && <b>Снято {new Date(post.shot_at).toLocaleDateString("ru-RU")}</b>}</div><h2 onClick={onOpen}>{post.title}</h2><AuthorLink post={post} onOpenProfile={onOpenProfile} /><RichTextContent html={post.body} className="post-body-excerpt" /><PostActions likesCount={post.likes_count} onLike={onLike} onOpen={onOpen} /></article>;
+  const share = async () => {
+    const url = new URL(pathForRoute({ page: "article", slug: post.slug }), window.location.origin).toString();
+    const copied = await copyText(url);
+    onNotice?.(copied ? "Ссылка на публикацию скопирована" : "Не удалось скопировать ссылку");
+  };
+  if (kind === "fishka") return <article className="post-card tip-card"><div className="tip-mark">{post.emoji ?? "✦"}</div><div><p className="post-tag">Фишка</p><h2 onClick={onOpen}>{post.title}</h2><AuthorLink post={post} onOpenProfile={onOpenProfile} /><RichTextContent html={post.body} className="post-body-excerpt" preview /><PostActions likesCount={post.likes_count} onLike={onLike} onOpen={onOpen} onShare={share} /></div></article>;
+  if (kind === "video") return <article className="post-card video-card"><div className="video-cover"><button aria-label="Смотреть видео">▶</button><span>Под солнцем</span>{post.shot_at && <b>Снято {new Date(post.shot_at).toLocaleDateString("ru-RU")}</b>}</div><h2 onClick={onOpen}>{post.title}</h2><AuthorLink post={post} onOpenProfile={onOpenProfile} /><RichTextContent html={post.body} className="post-body-excerpt" preview /><PostActions likesCount={post.likes_count} onLike={onLike} onOpen={onOpen} onShare={share} /></article>;
   const coverUrl = post.cover_url?.trim();
-  return <article className="post-card article-card">{coverUrl && <img className="article-cover-image" src={coverUrl} alt={`Обложка: ${post.title}`} />}<p className="post-tag">Статья · {post.views} просмотров</p><h2 onClick={onOpen}>{post.title}</h2><AuthorLink post={post} onOpenProfile={onOpenProfile} /><RichTextContent html={post.body} className="post-body-excerpt" /><PostActions likesCount={post.likes_count} onLike={onLike} onOpen={onOpen} /></article>;
+  return <article className="post-card article-card">{coverUrl && <img className="article-cover-image" src={coverUrl} alt={`Обложка: ${post.title}`} />}<p className="post-tag">Статья · {post.views} просмотров</p><h2 onClick={onOpen}>{post.title}</h2><AuthorLink post={post} onOpenProfile={onOpenProfile} /><RichTextContent html={post.body} className="post-body-excerpt" preview /><PostActions likesCount={post.likes_count} onLike={onLike} onOpen={onOpen} onShare={share} /></article>;
 }
 
 function AuthorLink({ post, onOpenProfile }: { post: ApiPost; onOpenProfile: () => void }) { return <button className="author-profile-link" onClick={onOpenProfile}>Автор: {post.author.name}</button>; }
-function PostActions({ likesCount, onLike, onOpen }: { likesCount: number; onLike: () => void; onOpen: () => void }) { return <div className="post-actions"><button className="post-like-button" onClick={onLike} aria-label={`Нравится: ${likesCount}`}>♥ <span>{likesCount}</span></button><button onClick={onOpen}>Читать дальше →</button><button onClick={onOpen}>◌ Обсуждение</button></div>; }
+function PostActions({ likesCount, onLike, onOpen, onShare }: { likesCount: number; onLike: () => void; onOpen: () => void; onShare: () => Promise<void> }) { return <div className="post-actions"><button className="post-like-button" onClick={onLike} aria-label={`Нравится: ${likesCount}`}>♥ <span>{likesCount}</span></button><button onClick={onOpen}>Читать дальше →</button><button onClick={onOpen}>◌ Обсуждение</button><button onClick={() => void onShare()}>Поделиться</button></div>; }
+
+async function copyText(value: string): Promise<boolean> {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(value);
+      return true;
+    } catch {
+      // Continue with the compatibility path below.
+    }
+  }
+  const field = document.createElement("textarea");
+  field.value = value;
+  field.setAttribute("readonly", "");
+  field.style.position = "fixed";
+  field.style.opacity = "0";
+  document.body.append(field);
+  field.select();
+  try {
+    return document.execCommand("copy");
+  } catch {
+    return false;
+  } finally {
+    field.remove();
+  }
+}

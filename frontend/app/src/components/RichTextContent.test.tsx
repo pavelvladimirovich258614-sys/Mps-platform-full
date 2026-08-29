@@ -4,6 +4,19 @@ import { describe, expect, it } from "vitest";
 import { RichTextContent, sanitizeRichTextHtml } from "./RichTextContent";
 
 describe("RichTextContent", () => {
+  it("collapses only text in preview mode while keeping every image visible", () => {
+    render(<RichTextContent preview html={'<p>Первый абзац</p><p>Второй абзац</p><p>Третий абзац</p><p>Четвёртый абзац</p><img src="/media/alone.webp" alt="Одиночное фото"><figure data-carousel="images"><img src="/media/one.webp" alt="Первый слайд"><img src="/media/two.webp" alt="Второй слайд"></figure>'} />);
+
+    expect(screen.getByText("Первый абзац")).toBeTruthy();
+    expect(screen.queryByText("Четвёртый абзац")).toBeNull();
+    expect(screen.getByRole("img", { name: "Одиночное фото" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Карусель изображений" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Читать полностью" }));
+    expect(screen.getByText("Четвёртый абзац")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Свернуть" }));
+    expect(screen.queryByText("Четвёртый абзац")).toBeNull();
+  });
+
   it("renders stored rich HTML but strips unsafe markup again on read", () => {
     const { container } = render(
       <RichTextContent html={'<h2>Маршрут</h2><p><strong>Важно</strong> <a href="https://example.com">ссылка</a><img src="https://cdn.example/sea.jpg" alt="Море"><script>alert(1)</script><code>не формат редактора</code></p>'} />,

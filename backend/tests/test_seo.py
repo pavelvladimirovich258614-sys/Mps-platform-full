@@ -15,22 +15,30 @@ async def client(test_app):
         yield value
 
 
-async def test_sitemap_robots_and_bot_post_metadata(client, test_app, tmp_path):
+async def test_sitemap_robots_and_post_metadata_for_every_visitor(client, test_app, tmp_path):
     test_app.state.settings.base_url = "https://example.test"
     test_app.state.settings.frontend_dist_dir = str(tmp_path)
-    (tmp_path / "index.html").write_text("<div id='root'></div>", encoding="utf-8")
+    (tmp_path / "index.html").write_text("<!doctype html><html><head><title>Мир под солнцем</title></head><body><div id='root'></div></body></html>", encoding="utf-8")
     async with test_app.state.database.session_factory() as session:
         author = User(email="editor@example.test", name="Редактор")
         country = Country(name="ОАЭ", flag_emoji="🇦🇪", sort_order=1)
         session.add_all([author, country])
         await session.flush()
-        session.add(Post(type=PostType.ARTICLE, title="Тестовая публикация", slug="test-post", cover_url="https://example.test/cover.jpg", body="Описание публикации", excerpt="Короткое описание", author_id=author.id, status=PostStatus.PUBLISHED, published_at=datetime.now(UTC)))
+        session.add(Post(type=PostType.ARTICLE, title="Тестовая публикация", slug="test-post", cover_url="/media/cover.jpg", body="<p>Описание <strong>без HTML-тегов</strong></p>", excerpt="", author_id=author.id, status=PostStatus.PUBLISHED, published_at=datetime.now(UTC)))
         await session.commit()
     assert "https://example.test/posts/test-post" in (await client.get("/sitemap.xml")).text
     assert "Sitemap: https://example.test/sitemap.xml" in (await client.get("/robots.txt")).text
-    bot = await client.get("/posts/test-post", headers={"User-Agent": "Googlebot"})
-    assert bot.status_code == 200 and 'property="og:title" content="Тестовая публикация"' in bot.text and '"@type": "Article"' in bot.text
-    assert (await client.get("/posts/test-post", headers={"User-Agent": "Mozilla/5.0"})).text == "<div id='root'></div>"
+    for user_agent in ("Mozilla/5.0", "TelegramBot", "WhatsApp/2.24.1", "VKShare/1.0"):
+        response = await client.get("/posts/test-post", headers={"User-Agent": user_agent})
+        assert response.status_code == 200
+        assert "<div id='root'></div>" in response.text
+        assert 'property="og:title" content="Тестовая публикация"' in response.text
+        assert 'property="og:description" content="Описание без HTML-тегов"' in response.text
+        assert 'property="og:url" content="https://example.test/posts/test-post"' in response.text
+        assert 'property="og:image" content="https://example.test/media/cover.jpg"' in response.text
+        assert 'property="og:type" content="article"' in response.text
+        assert 'name="twitter:card" content="summary_large_image"' in response.text
+        assert '"@type": "Article"' in response.text
 
 
 async def test_unknown_post_loads_spa_for_browser_but_is_not_prerendered(client, test_app, tmp_path):
@@ -45,7 +53,9 @@ async def test_unknown_post_loads_spa_for_browser_but_is_not_prerendered(client,
     assert bot.status_code == 404
 
 
-async def test_json_ld_escapes_html_significant_characters(client, test_app):
+async def test_json_ld_escapes_html_significant_characters(client, test_app, tmp_path):
+    test_app.state.settings.frontend_dist_dir = str(tmp_path)
+    (tmp_path / "index.html").write_text("<!doctype html><html><head><title>Мир под солнцем</title></head><body><div id='root'></div></body></html>", encoding="utf-8")
     title = "</script><script>window.__injected = true</script> & >"
     excerpt = "Описание </script><script>window.__injected = true</script> & >"
     async with test_app.state.database.session_factory() as session:
@@ -66,4 +76,4 @@ async def test_json_ld_escapes_html_significant_characters(client, test_app):
     assert match is not None
     article = json.loads(match.group(1))
     assert article["headline"] == title
-    assert article["description"] == excerpt
+    assert article["description"] == "Описание & >"

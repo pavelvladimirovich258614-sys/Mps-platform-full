@@ -36,6 +36,25 @@
       "notes": "Отложено отдельным owner-approved backend+frontend scope. Не входит в light-theme/subscriptions commits `613faab` и `85cb16a`; статические или вымышленные рекомендации запрещены."
     },
     {
+      "id": "FEED-UX-SEO",
+      "priority": 49,
+      "area": "frontend-backend",
+      "title": "Лента: ответы, preview, медиа, share и Open Graph",
+      "user_visible_behavior": "Пользователь может ответить на корневой комментарий одним уровнем вложенности; длинный текст поста в ленте предсказуемо сворачивается без скрытия фото; карусель и все фото поста имеют заметные тематические контролы и рамки; кнопка «Поделиться» копирует абсолютную ссылку; любой публичный `/posts/{slug}` возвращает SPA с корректной Open Graph/Twitter метой независимо от User-Agent.",
+      "status": "passing",
+      "verification": [
+        "RED/GREEN ArticleComments: reply-композер, parent_id и одноуровневая вложенность",
+        "RED/GREEN RichTextContent: структурный preview текста с сохранением всех изображений и каруселей",
+        "RED/GREEN Feed: 44px carousel controls, единая рамка медиа и Clipboard API/fallback share",
+        "RED/GREEN backend SEO: SPA и post-specific OG/Twitter meta для обычного браузера, Telegram, WhatsApp и VK",
+        "Полный backend pytest, полный frontend npm test и npm run build",
+        "Browser light/dark на 375/768/1024/1440: expand/collapse, replies, media framing, focus, reduced-motion и отсутствие overflow",
+        "Реальный curl с четырьмя User-Agent против локальной FastAPI SPA-оболочки"
+      ],
+      "evidence": "2026-08-30: BUG-1 RED failed because `.comment-replies` was absent; GREEN ArticleComments passed with reply state, separate composer, `parent_id` and root/child rendering. FEED-A RED still rendered the fourth paragraph; GREEN RichTextContent passed with a 3-block/420-character structural text preview while every image/carousel remained visible. FEED-B/C/D RED failed on 34px carousel arrows, absent media frame and absent share action; GREEN passed 4/4 with 44px theme-aware controls, one carousel-container frame, framed cover/hero/inline media and Clipboard API plus `execCommand` fallback. FEED-E RED showed no post OG title for a normal browser UA; GREEN backend SEO passed 3/3 and preserves the React root while injecting escaped plain description, absolute image URL, `og:type=article` and `twitter:card=summary_large_image` for all four tested UAs. Combined changed frontend targets passed 3 files/26 tests. Fresh full frontend passed 25 files/172 tests; build passed with 120 modules and only the existing chunk-size warning. Fresh full backend passed 125 tests with 7 existing PostgreSQL-only skips. Browser matrix passed 8/8 in light/dark at 375/768/1024/1440: preview expansion stayed in place, all media remained visible, carousel controls were 44x44 with visible focus, nested replies rendered, frames avoided double borders, reduced-motion was 0.01ms and horizontal overflow was zero. Clipboard contained the exact absolute `/posts/bali-guide` URL. Real curl requests with Mozilla, TelegramBot, WhatsApp and VKShare UAs each returned 200 with the React root, post title, plain description, absolute image, og:type and twitter:card.",
+      "notes": "Local implementation only; no push or deployment. It must be published in one separately approved cycle together with existing local commit `ac0235a`. React remains CSR; FastAPI rewrites only the HTML head for existing published post routes. Unknown-slug browser/bot behavior remains unchanged."
+    },
+    {
       "id": "F01",
       "priority": 1,
       "area": "core",
