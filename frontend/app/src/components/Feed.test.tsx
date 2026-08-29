@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import "../styles.css";
 import { Feed } from "./Feed";
 
 const post = {
@@ -28,6 +29,15 @@ const editorProps = {
 };
 
 describe("Feed composer modal", () => {
+  it("uses the soft card surface for empty and inset content blocks", () => {
+    const { container } = render(<Feed {...editorProps} />);
+    const emptyState = screen.getByText("Публикаций в этом разделе пока нет.");
+    const tourCta = container.querySelector(".tour-cta") as HTMLElement;
+
+    expect(getComputedStyle(emptyState).background).toBe("var(--card-soft)");
+    expect(getComputedStyle(tourCta).background).toBe("var(--card-soft)");
+  });
+
   it("keeps fishki out of the main feed while retaining articles and video reviews", () => {
     render(<Feed posts={[post, fishka, video]} loading={false} onToggleLike={vi.fn()} onOpenArticle={vi.fn()} onOpenProfile={vi.fn()} />);
 

@@ -12,6 +12,8 @@ This document is the layout and theme contract for the MPS frontend. The executa
 
 The Feed page is the structural reference. A new section must reuse the shared center wrapper rather than reproduce these styles in a page component.
 
+Inside `PageCard`, secondary content surfaces use `var(--card-soft)`: empty states and inset informational or CTA blocks such as `video-request`, `article-cta`, `tour-cta`, `subscribe-cta`, and `about-contacts`. In the light theme this is the warm cream `#f6f3ec`, distinct from the white `--card`. Interactive controls and overlays may continue to use `--panel`; they must not be used as the background of these inset content blocks.
+
 ## Theme tokens
 
 | Token | Light | Dark |
