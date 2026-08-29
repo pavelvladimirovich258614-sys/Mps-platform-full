@@ -85,6 +85,7 @@ export function App() {
   const profileComments = useProfileComments(route.page === "profile" ? route.userId : undefined);
   const profileFollowers = useProfileFollowers(route.page === "profile" ? route.userId : undefined);
   const profileFollowing = useProfileFollowing(route.page === "profile" ? route.userId : undefined);
+  const railSubscriptions = useProfileFollowing(auth.user?.id);
   const userFollow = useUserFollow();
 
   useEffect(() => {
@@ -328,6 +329,8 @@ export function App() {
         userName={auth.user?.name || (auth.user ? "Читатель" : "Войти")}
         isAuthenticated={Boolean(auth.user)}
         online={online.value ?? []}
+        subscriptions={railSubscriptions.value ?? []}
+        subscriptionsLoading={railSubscriptions.loading}
         publicSettings={publicSettings.value}
         onNavigate={openPage}
         onThemeToggle={() => setTheme(theme === "dark" ? "light" : "dark")}
@@ -336,6 +339,7 @@ export function App() {
           if (auth.user) navigate({ page: "profile", userId: auth.user.id });
           else setOverlay("profile");
         }}
+        onOpenUserProfile={(userId) => navigate({ page: "profile", userId })}
         onToggleNotifications={() => setNotificationsOpen(!notificationsOpen)}
         onCreatePost={() => {
           setCreatePostRequested(true);

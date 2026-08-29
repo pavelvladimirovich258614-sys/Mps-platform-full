@@ -81,7 +81,11 @@ function installApi(detailResult: DetailResult = "ok", currentUser: Record<strin
     if (path === "/api/v1/users/7/likes") return jsonResponse(200, currentProfileLikes);
     if (path === "/api/v1/users/7/activity") return jsonResponse(200, url.searchParams.has("cursor") ? nextProfileActivity : profileActivity);
     if (path === "/api/v1/users/7/comments") return jsonResponse(200, profileComments);
-    if (path === "/api/v1/users/7/followers" || path === "/api/v1/users/7/following") return jsonResponse(200, []);
+    if (path === "/api/v1/users/7/followers") return jsonResponse(200, []);
+    if (path.endsWith("/following")) {
+      const ownFollowingPath = currentUser ? `/api/v1/users/${currentUser.id}/following` : "";
+      return jsonResponse(200, path === ownFollowingPath ? [{ id: 7, name: "Мария", avatar_url: "/media/maria.webp", is_following: true }] : []);
+    }
     if (path === "/api/v1/posts/bali-guide") {
       if (detailResult === "missing") return jsonResponse(404, { detail: "Публикация не найдена" });
       if (detailResult === "network") throw new TypeError("Failed to fetch");
@@ -343,6 +347,18 @@ describe("App pathname routing", () => {
     expect(screen.getByRole("heading", { name: "Создать публикацию" })).toBeTruthy();
   });
 
+  it("loads the current user's real following list into the right rail", async () => {
+    setAccessToken("editor-access-token");
+    const fetchMock = installApi("ok", { id: 5, email: null, name: "Редактор", avatar_url: null, bio: null, role: "editor", is_anonymous: false });
+
+    render(<App />);
+
+    const panel = await screen.findByRole("complementary", { name: "Подписки" });
+    fireEvent.click(within(panel).getByRole("button", { name: "Открыть профиль Мария" }));
+    expect(await screen.findByRole("heading", { level: 1, name: "Мария" })).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([input]) => new URL(String(input)).pathname === "/api/v1/users/5/following")).toBe(true);
+  });
+
   it("always shows the fishka form to an editor and publishes selected emoji immediately", async () => {
     window.history.replaceState({}, "", "/fishki");
     setAccessToken("editor-access-token");
@@ -566,6 +582,7 @@ describe("App pathname routing", () => {
       if (path === "/api/v1/posts/drafts") return jsonResponse(200, [{ id: draft.id, title: draft.title, updated_at: draft.updated_at }]);
       if (path === `/api/v1/posts/drafts/${draft.id}`) return jsonResponse(200, draft);
       if (path === `/api/v1/posts/${draft.id}` && init?.method === "PATCH") return jsonResponse(200, { ...draft, ...JSON.parse(String(init.body)) });
+      if (path === "/api/v1/users/5/following") return jsonResponse(200, []);
       if (path === "/api/v1/posts" || path === "/api/v1/online") return jsonResponse(200, []);
       if (path === "/api/v1/notifications") return jsonResponse(200, { items: [] });
       if (path === "/api/v1/auth/refresh") return jsonResponse(401, { detail: "Требуется авторизация" });
@@ -592,6 +609,7 @@ describe("App pathname routing", () => {
       if (path === "/api/v1/me") return jsonResponse(200, { id: 5, email: null, name: "Редактор", avatar_url: null, bio: null, role: "editor", is_anonymous: false });
       if (path === "/api/v1/posts/drafts") return jsonResponse(200, visibleDrafts);
       if (path === `/api/v1/posts/${draft.id}` && init?.method === "DELETE") { visibleDrafts = []; return new Response(null, { status: 204 }); }
+      if (path === "/api/v1/users/5/following") return jsonResponse(200, []);
       if (path === "/api/v1/posts" || path === "/api/v1/online") return jsonResponse(200, []);
       if (path === "/api/v1/notifications") return jsonResponse(200, { items: [] });
       if (path === "/api/v1/auth/refresh") return jsonResponse(401, { detail: "Требуется авторизация" });
@@ -621,6 +639,7 @@ describe("App pathname routing", () => {
         draftsRequests += 1;
         return draftsRequests === 1 ? jsonResponse(503, { detail: "Черновики временно недоступны" }) : jsonResponse(200, [draft]);
       }
+      if (path === "/api/v1/users/5/following") return jsonResponse(200, []);
       if (path === "/api/v1/posts" || path === "/api/v1/online") return jsonResponse(200, []);
       if (path === "/api/v1/notifications") return jsonResponse(200, { items: [] });
       if (path === "/api/v1/auth/refresh") return jsonResponse(401, { detail: "Требуется авторизация" });
@@ -644,6 +663,7 @@ describe("App pathname routing", () => {
       if (path === "/api/v1/me") return jsonResponse(200, { id: 5, email: null, name: "Редактор", avatar_url: null, bio: null, role: "editor", is_anonymous: false });
       if (path === "/api/v1/posts/drafts") return jsonResponse(200, [draft]);
       if (path === `/api/v1/posts/${draft.id}` && init?.method === "DELETE") return jsonResponse(503, { detail: "Не удалось удалить черновик" });
+      if (path === "/api/v1/users/5/following") return jsonResponse(200, []);
       if (path === "/api/v1/posts" || path === "/api/v1/online") return jsonResponse(200, []);
       if (path === "/api/v1/notifications") return jsonResponse(200, { items: [] });
       if (path === "/api/v1/auth/refresh") return jsonResponse(401, { detail: "Требуется авторизация" });
