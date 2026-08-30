@@ -39,6 +39,21 @@
       "notes": "Production-deployed `passing`. The four original PNG files and the pre-change DB row remain in verified rollback storage and were not deleted. Upload protection and responsive delivery apply to future posts; the published Thailand post now references large WebP fallbacks with generated AVIF/WebP srcsets. Nginx `/media/` has scoped PNG/JPEG/WebP/AVIF mappings, preserves `try_files`, nosniff inheritance and 30-day cache headers. The existing 705.15 kB frontend chunk warning and unauthenticated 401 responses from `/me`, `/notifications` and `/auth/refresh` remain known non-blocking behavior."
     },
     {
+      "id": "WIDG-1",
+      "priority": 1,
+      "area": "frontend-backend",
+      "title": "Плавающий виджет «Подобрать тур»",
+      "user_visible_behavior": "Посетитель может открыть плавающую форму подбора тура, оставить контакт, направление, бюджет и комментарий с обязательным согласием на обработку персональных данных; заявка сохраняется и направляется менеджерам через существующий Telegram relay.",
+      "status": "in_progress",
+      "verification": [
+        "RED/GREEN backend: публичное создание, очистка и ограничения полей, обязательный consent, реальный per-IP rate-limit и безопасная Telegram failure-семантика",
+        "RED/GREEN frontend: desktop floating с 768px, mobile FAB/fullscreen dialog, focus trap/Escape/return focus/scroll lock и страны с разрешённым свободным вводом",
+        "Полные backend/frontend suites, build и browser light/dark на 375/768/1024/1440"
+      ],
+      "evidence": "2026-08-30 Stage 1 backend: исходный RED прошёл вне Win32 sandbox и дал 10 ожидаемых failures — отсутствующий `/api/v1/tour-requests` возвращал 404 вместо контрактных 201/422/502/429. Минимальная реализация добавила `tour_requests`, публичный POST, plain-text sanitization, обязательный `personal_data_consent=true`, лимиты полей, nullable authenticated `user_id`, существующие `RELAY_BOT_TOKEN`/`MANAGERS_CHAT_ID` через общий `tg_relay.send_message()` и сохранённую Q&A-обёртку `send()`. Targeted GREEN прошёл 10/10. Дополнительный IP RED доказал, что прямой peer key объединял разные nginx `X-Real-IP`; минимальный trusted-proxy key сделал его GREEN 1/1. Q&A regression прошёл 16/16. Изолированная Alembic-проверка выполнила `20260830_0019 → 20260830_0020`, подтвердила все 11 колонок и оба CHECK, а downgrade удалил таблицу. Свежий полный backend suite прошёл 141 tests с 10 известными PostgreSQL-only skips без `MPS_TEST_POSTGRES_URL`.",
+      "notes": "Stage 1 локально завершён и ожидает подтверждения владельца. Telegram failure сохраняет лид со статусом NEW и `tg_message_id=NULL`, возвращает безопасный 502 «заявка сохранена», не раскрывая relay token. Frontend, DESIGN_SYSTEM, полный cross-stack/build/browser gate, push и deploy не выполнялись; WIDG-1 остаётся `in_progress` до этапов 2–3."
+    },
+    {
       "id": "WIDG-4",
       "priority": 4,
       "area": "frontend-backend",

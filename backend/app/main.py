@@ -25,6 +25,7 @@ from app.api.admin import router as admin_router
 from app.api.settings import router as settings_router
 from app.api.seo import router as seo_router
 from app.api.discovery import router as discovery_router
+from app.api.tour_requests import router as tour_requests_router
 from app.config import Settings, get_settings
 from app.db import Database
 from app.models.user import User
@@ -101,6 +102,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_router, prefix="/api/v1")
     app.include_router(settings_router, prefix="/api/v1")
     app.include_router(discovery_router, prefix="/api/v1")
+    app.include_router(tour_requests_router, prefix="/api/v1")
     app.include_router(seo_router)
     return app
 

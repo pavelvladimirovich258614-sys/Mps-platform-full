@@ -1,5 +1,14 @@
 # Session handoff — МПС
 
+## Current checkpoint — WIDG-1 Stage 1 backend
+
+1. Stage 1 is locally complete and verified; WIDG-1 remains `in_progress` until frontend Stage 2 and full Stage 3 verification. No push or deploy was performed.
+2. Backend adds public `POST /api/v1/tour-requests`, Alembic `20260830_0020`, required stored personal-data consent, sanitized/length-limited lead fields, nullable authenticated user, NEW/CONTACTED/CLOSED status and nullable Telegram message ID.
+3. Manager delivery reuses the existing relay bot and managers chat through generalized `tg_relay.send_message()`. The Q&A `send()` wrapper, routing and `#Q` marker are unchanged. A delivery failure keeps the lead with null Telegram ID and returns a token-safe 502 saying the request was saved.
+4. Rate limiting is 5/minute per nginx-overwritten `X-Real-IP`, with direct peer fallback. The RED regression proved two forwarded IPs were previously combined; the scoped key fixed it without changing forum limits.
+5. Fresh evidence: initial RED 10/10 expected failures; final target 10/10; Q&A regression 16/16; isolated migration upgrade/schema/downgrade passed; full backend `141 passed, 10 skipped` with only the known PostgreSQL-only environment skips.
+6. Stop here for owner confirmation. Stage 2 begins with frontend RED tests for `≤767px` FAB/fullscreen and `≥768px` desktop floating placement, focus trap/Escape/return focus/scroll lock, country suggestions plus free text, mandatory consent and form states. Persist that breakpoint/pattern in `design/DESIGN_SYSTEM.md` during Stage 2.
+
 ## Completed production checkpoint — WIDG-4 + P0-POST-MEDIA
 
 1. WIDG-4 and all five P0 post-media stages are production-deployed and verified `passing`. Application code was deployed at `0b33784d18736b82526b9dd35cc6def245ae239c`; the final scoped nginx-test/template/tracker commit is the next commit in `origin/main` after this handoff.
