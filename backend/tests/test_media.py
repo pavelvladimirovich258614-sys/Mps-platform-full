@@ -86,7 +86,8 @@ async def test_upload_supported_images(client, test_app, image_format, content_t
         files={"file": (filename, image_bytes(image_format), content_type)},
     )
     assert response.status_code == 200
-    assert len(list(Path(test_app.state.settings.media_dir).iterdir())) == 1
+    assert response.json()["url"].endswith("-large.webp")
+    assert len(list(Path(test_app.state.settings.media_dir).iterdir())) == 6
 
 
 @pytest.mark.parametrize(
@@ -115,7 +116,9 @@ async def test_upload_accepts_avif(client, test_app):
     )
 
     assert response.status_code == 200
-    saved_file = Path(test_app.state.settings.media_dir, Path(response.json()["url"]).name)
+    payload = response.json()
+    assert payload["url"].endswith("-large.webp")
+    saved_file = Path(test_app.state.settings.media_dir, Path(payload["variants"]["large"]["avif_url"]).name)
     assert saved_file.suffix == ".avif"
     with Image.open(saved_file) as saved:
         assert saved.format == "AVIF"
@@ -140,7 +143,7 @@ async def test_uploads_two_images_sequentially_with_same_token(client, test_app)
     assert first.status_code == 200
     assert second.status_code == 200
     assert first.json()["url"] != second.json()["url"]
-    assert len(list(Path(test_app.state.settings.media_dir).iterdir())) == 2
+    assert len(list(Path(test_app.state.settings.media_dir).iterdir())) == 12
 
 
 async def test_upload_rejects_invalid_image_and_large_file(client):

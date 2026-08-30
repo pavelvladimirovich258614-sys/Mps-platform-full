@@ -1,12 +1,20 @@
 # Session handoff — МПС
 
-## Next session first — P0 post-media Stage 2 approval gate
+## Next session first — P0 post-media Stage 3 approval gate
 
 1. Read `AGENTS.md`; run `./init.sh`; read `claude-progress.md`, `feature_list.json` and this handoff. The Git Bash Win32 Error 5/global pip-check issues remain known external blockers; rerun MPS checks directly outside sandbox when necessary.
-2. `P0-POST-MEDIA` Stage 1 is the latest local-only commit and intentionally RED. Do not alter the tests to fit the current implementation. Wait for the owner's explicit confirmation before Stage 2.
-3. Stage 2 scope is backend upload only: EXIF transpose; 320/960/1600 variants; WebP fallback plus AVIF; iterative/quality-bounded encoding that satisfies the two-medium 700 KiB contract; never publish the input JPEG/PNG as-is. Preserve the existing 10 MiB author upload acceptance and Russian validation errors.
-4. After Stage 2 targeted GREEN, run the full relevant backend suite, update the three trackers, create one local `[in_progress]` commit and stop. Do not start frontend Stage 3, production post migration, push or deploy without the next confirmation.
-5. WIDG-4 remains locally verified `passing`; stages 1–2 are already in `origin/main`, stage 3 is the commit immediately before this P0 work. Its push/deploy remains paused until all five media stages close.
+2. `P0-POST-MEDIA` Stages 1–2 are the latest local-only commits. Stage 2 backend is GREEN; feature status remains `in_progress`. Wait for the owner's explicit confirmation before Stage 3.
+3. Stage 3 scope is frontend only: consume upload variants, render responsive WebP/AVIF with fallback, add `srcset/sizes/decoding=async`, lazy-load only below-fold inline images, preserve hero priority, and keep inactive carousel sources out of the DOM until interaction. Extend both stored markup and DOMPurify/nh3 boundaries only as required by the approved attributes/elements.
+4. After Stage 3 targeted GREEN, run the full frontend suite/build and the agreed browser accessibility/responsive checks, update the three trackers, create one local `[in_progress]` commit and stop. Do not start the existing-post migration, push or deploy without the next confirmation.
+5. WIDG-4 remains locally verified `passing`; stages 1–2 are already in `origin/main`, stage 3 precedes the two P0 commits. Its push/deploy remains paused until all five media stages close.
+
+## P0-POST-MEDIA Stage 2 — committed backend GREEN checkpoint
+
+- `backend/app/api/media.py`: EXIF transpose and RGB/RGBA normalization precede resizing. One UUID produces 320/960/1600 WebP+AVIF pairs; no input JPEG/PNG is saved. `url` remains the large WebP fallback and `variants` exposes dimensions and both format URLs.
+- Each medium encoding is capped at 350 KiB. Test artifacts measured two WebP medium files at 542684 bytes total and two AVIF medium files at 434952 bytes total, both under 700 KiB.
+- Fresh RED: 2 failed / 11 deselected because the old endpoint omitted `variants`. Target GREEN: 2 passed / 11 deselected. Full `test_media.py`: 13 passed.
+- Full backend: 130 passed / 10 known PostgreSQL-only skipped without `MPS_TEST_POSTGRES_URL`.
+- No dependency, migration, frontend source, DB, existing media, VPS, push or deploy changed. `P0-POST-MEDIA` remains `in_progress` until Stages 3–5 finish.
 
 ## P0-POST-MEDIA Stage 1 — committed RED checkpoint
 
