@@ -1,13 +1,15 @@
 # Session handoff — МПС
 
-## Current checkpoint — WIDG-1 locally complete, awaiting publication approval
+## Current checkpoint — WIDG-2 locally complete, awaiting publication approval
 
-1. WIDG-1 Stages 1–2 are locally complete and verified `passing`. Stage 1 is commit `6711b0f`; Stage 2 is the next local commit. Neither commit was pushed or deployed, and production Alembic was not changed.
-2. Backend adds public `POST /api/v1/tour-requests`, Alembic `20260830_0020`, required stored personal-data consent, sanitized/length-limited lead fields, nullable authenticated user, NEW/CONTACTED/CLOSED status, nullable Telegram message ID and 5/minute trusted-proxy IP rate limiting.
-3. Manager delivery reuses the existing relay bot/managers chat through generalized `tg_relay.send_message()`. Q&A remains green. A relay failure retains the lead with null Telegram ID and returns a token-safe 502 saying that the request was saved.
-4. Frontend mounts `TourRequestWidget` globally in `Layout`: `≤767px` gets a lower-left safe-area-aware FAB above mobile-nav; `≥768px` gets a floating card confined to the left rail. Both open one fullscreen dialog with focus trap, Escape, opener-focus return, scroll lock, reduced motion, labelled fields, country hints plus free text, mandatory privacy consent, inline errors, loading/disabled and success states.
-5. Fresh evidence: focused frontend GREEN `3 files / 15 tests`; full backend `141 passed, 10 skipped`; full frontend `31 files / 197 tests`; final build `124 modules`, only the existing CJS/chunk-size warnings. Browser light/dark 8/8 at 375/768/1024/1440 passed placement, safe mobile-nav separation, fullscreen geometry, keyboard/focus/aria, consent, contrast (`6.22:1`/`7.37:1`), reduced motion and zero horizontal overflow. Browser submit was intercepted and created no real lead.
-6. Next action: wait for one explicit owner confirmation to push both WIDG-1 commits and then run the production migration/deploy/health/smoke/browser sequence. Do not push or deploy from this checkpoint without that approval.
+1. WIDG-2 is implemented and locally verified `passing`. `Layout` mounts one global `SvyazioWidget`; it configures the exact approved org/server values and appends one async script with a unique ID, without duplicate loads across SPA navigation or repeated Layout mounts.
+2. Current production and the nginx template have no CSP header/meta, so Svyazio script/connect traffic is not blocked. The live service renders through an open Shadow DOM rather than an iframe. HSTS, `X-Content-Type-Options: nosniff` and `X-Frame-Options: SAMEORIGIN` were not changed.
+3. The only injected vendor override is scoped to `@media (max-width: 767px)`: launcher and teaser receive `bottom: calc(74px + env(safe-area-inset-bottom)) !important`. The fullscreen `.svyazio-window`, all widths from 768px, vendor color and chat behavior remain untouched. Document plus Shadow DOM observers restore the dedicated style after host replacement or internal redraw and are disconnected on React unmount.
+4. RED failed 3/3 for the absent global script/config/mobile style. GREEN passed 3/3. Fresh full frontend passed 32 files / 200 tests; production-configured build passed 125 modules with only the established CJS/chunk-size warnings.
+5. Real Svyazio browser-check passed light/dark 8/8 at 375/768/1024/1440: one exact async script, visible/clickable `#C08E37` launcher, zero horizontal overflow and no page/Svyazio request failures. At 375 the launcher is `y=678..738` and mobile-nav is `y=753..812`, so their overlap is now zero instead of the diagnosed 44px; WIDG-1 overlap is also zero. Mobile chat opens fullscreen 375x812. At 768/1024/1440 vendor positioning stays at bottom 24px and the open chat stays 400x600.
+6. Known vendor boundary: the current third-party launcher exposes no accessible name inside its Shadow DOM. This was observed and recorded, but the approved positioning-only scope does not rewrite vendor semantics; use a separate accessibility/vendor decision if that behavior must be overridden.
+7. WIDG-1 commits `6711b0f` and `dc2e89e` are already production-deployed with Alembic `20260830_0020`; the previous top-of-file handoff saying they were local-only was stale and is superseded here.
+8. Next action: wait for explicit owner confirmation before pushing or deploying the new WIDG-2 commit. No VPS access, production mutation, push or deploy occurred in this checkpoint.
 
 ## Completed production checkpoint — WIDG-4 + P0-POST-MEDIA
 

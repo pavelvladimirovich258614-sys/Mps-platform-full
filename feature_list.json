@@ -54,6 +54,22 @@
       "notes": "Локально полностью проверен и помечен `passing`. Telegram failure сохраняет лид со статусом NEW и `tg_message_id=NULL`, возвращает безопасный 502 «заявка сохранена», не раскрывая relay token. Browser submit перехватывался локально и не создавал production-лидов. Stage 1 и Stage 2 находятся в двух локальных коммитах; push, Alembic production upgrade и deploy не выполнялись и требуют отдельного подтверждения владельца."
     },
     {
+      "id": "WIDG-2",
+      "priority": 2,
+      "area": "frontend-integration",
+      "title": "Плавающий виджет поддержки Связио",
+      "user_visible_behavior": "На всех страницах один раз загружается виджет Связио с фирменной настройкой организации: на desktop он остаётся в штатном правом нижнем положении, а на мобильном launcher поднят над нижней навигацией и открывает стандартный fullscreen-чат.",
+      "status": "passing",
+      "verification": [
+        "RED/GREEN: точные orgId/serverUrl, async script с уникальным ID и отсутствие дублей при повторных Layout mounts",
+        "RED/GREEN: scoped Shadow DOM style только до 767px для launcher/teaser, без изменения fullscreen window или desktop",
+        "RED/GREEN: MutationObserver восстанавливает отдельный style после очистки Shadow DOM и замены host",
+        "Полный frontend suite, production-configured build и browser light/dark на 375/768/1024/1440 с реальным сервисом Связио"
+      ],
+      "evidence": "2026-08-30 WIDG-2: production и nginx-шаблон не содержат CSP, поэтому script/connect Связио не блокируются; HSTS, nosniff и SAMEORIGIN остаются без изменений. Исходный реальный probe установил open Shadow DOM без iframe и мобильное пересечение launcher с nav 44px из 60px. RED прошёл 3 ожидаемыми failures: script count был 0, scoped-style отсутствовал и не восстанавливался. GREEN прошёл 3/3. После минимального observer narrowing fix targeted снова прошёл 3/3; свежий полный frontend suite прошёл 32 files / 200 tests. Production-configured build прошёл 125 modules, JS 714.12 kB / gzip 230.80 kB, только прежние CJS/chunk-size warnings. Реальный Chrome browser-check прошёл light/dark 8/8 на 375/768/1024/1440: единственный async script и точная конфигурация, цвет launcher `#C08E37`, zero horizontal overflow, ноль page errors/Svyazio request failures, кликабельность и открытие чата. На 375 launcher стал `y=678..738` при nav `y=753..812`, поэтому пересечение с nav и WIDG-1 равно нулю вместо прежних 44px; чат открылся fullscreen 375x812. На 768/1024/1440 scoped mobile rule не применился: штатный bottom 24px и окно 400x600 сохранились.",
+      "notes": "Локально проверен и помечен `passing`; commit остаётся local-only, push/deploy не выполнялись. Внешний launcher Связио не имеет собственного accessible name в текущей vendor-версии. Подтверждённый scope меняет только позиционирование и не переписывает семантику/логику стороннего UI; это ограничение записано для отдельного решения с поставщиком или отдельного accessibility scope."
+    },
+    {
       "id": "WIDG-4",
       "priority": 4,
       "area": "frontend-backend",
