@@ -1,15 +1,19 @@
 # Session handoff — МПС
 
-## Current checkpoint — WIDG-2 locally complete, awaiting publication approval
+## Current checkpoint — WIDG-1 + WIDG-2 production complete
 
-1. WIDG-2 is implemented and locally verified `passing`. `Layout` mounts one global `SvyazioWidget`; it configures the exact approved org/server values and appends one async script with a unique ID, without duplicate loads across SPA navigation or repeated Layout mounts.
-2. Current production and the nginx template have no CSP header/meta, so Svyazio script/connect traffic is not blocked. The live service renders through an open Shadow DOM rather than an iframe. HSTS, `X-Content-Type-Options: nosniff` and `X-Frame-Options: SAMEORIGIN` were not changed.
-3. The only injected vendor override is scoped to `@media (max-width: 767px)`: launcher and teaser receive `bottom: calc(74px + env(safe-area-inset-bottom)) !important`. The fullscreen `.svyazio-window`, all widths from 768px, vendor color and chat behavior remain untouched. Document plus Shadow DOM observers restore the dedicated style after host replacement or internal redraw and are disconnected on React unmount.
-4. RED failed 3/3 for the absent global script/config/mobile style. GREEN passed 3/3. Fresh full frontend passed 32 files / 200 tests; production-configured build passed 125 modules with only the established CJS/chunk-size warnings.
-5. Real Svyazio browser-check passed light/dark 8/8 at 375/768/1024/1440: one exact async script, visible/clickable `#C08E37` launcher, zero horizontal overflow and no page/Svyazio request failures. At 375 the launcher is `y=678..738` and mobile-nav is `y=753..812`, so their overlap is now zero instead of the diagnosed 44px; WIDG-1 overlap is also zero. Mobile chat opens fullscreen 375x812. At 768/1024/1440 vendor positioning stays at bottom 24px and the open chat stays 400x600.
-6. Known vendor boundary: the current third-party launcher exposes no accessible name inside its Shadow DOM. This was observed and recorded, but the approved positioning-only scope does not rewrite vendor semantics; use a separate accessibility/vendor decision if that behavior must be overridden.
-7. WIDG-1 commits `6711b0f` and `dc2e89e` are already production-deployed with Alembic `20260830_0020`; the previous top-of-file handoff saying they were local-only was stale and is superseded here.
-8. Next action: wait for explicit owner confirmation before pushing or deploying the new WIDG-2 commit. No VPS access, production mutation, push or deploy occurred in this checkpoint.
+1. WIDG-1 and WIDG-2 are both production-deployed `passing`. The completed application rollout is `9586cafe0885941cfcfbd6c4f3bd634751e69680`, confirmed on local `main`, `origin/main` and the VPS checkout before this documentation-only closeout.
+2. WIDG-1 commits `6711b0f` and `dc2e89e` are live. Alembic reached `20260830_0020`; `mps-backend` is active/healthy. The public tour-request form, consent gate, persistence and existing Telegram relay path are deployed.
+3. WIDG-2 commit `9586caf` is live. `Layout` mounts one idempotent Svyazio integration; the mobile-only launcher/teaser offset is applied through the open Shadow DOM, while desktop and fullscreen vendor behavior remain unchanged.
+4. The WIDG-2 production frontend build contains the production API/bot values and no localhost fallback. The served bundle matched the built asset, `deploy/smoke.sh` passed, and backend PID remained unchanged because this rollout was frontend-only.
+5. Live iPhone 14 verification at 390x664 confirmed both launchers simultaneously visible after the normal cookie-consent step: WIDG-1 on the left, WIDG-2 on the right, no mutual or mobile-nav overlap, `bottom: 74px`, zero horizontal overflow, clickable Svyazio launcher and fullscreen 390x664 chat with no page errors or Svyazio request failures.
+6. Known vendor boundary: the current third-party launcher exposes no accessible name inside its Shadow DOM. This remains a separate vendor/accessibility decision rather than an unverified local override.
+
+## Next session
+
+1. Назначение Сергея админом — ждёт email/Telegram ID от Павла. Не менять production-роли без этих точных контактных данных и отдельного подтверждения.
+2. `npm audit`: 3 moderate, 1 high, 1 critical. До любого исправления провести отдельную RED-диагностику critical advisory; не применять `npm audit fix --force` вслепую.
+3. Разобрать, почему Telegram-уведомления от виджета Связио не доходят. Диагностика запланирована на завтра отдельным промптом; не начинать её из этого closeout.
 
 ## Completed production checkpoint — WIDG-4 + P0-POST-MEDIA
 
