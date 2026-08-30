@@ -44,6 +44,20 @@ export type PublicProfileActivity = {
 export type PublicProfileActivityPage = { items: PublicProfileActivity[]; next_cursor: string | null };
 export type PublicSettings = { legal_name: string | null; legal_inn: string | null; legal_ogrn: string | null; contact_email: string | null; contact_phone: string | null; contact_address: string | null; comments_moderation_enabled: boolean };
 export type TelegramLoginPayload = { id: number; first_name: string; last_name?: string; username?: string; photo_url?: string; auth_date: number; hash: string };
+export type TourRequestPayload = {
+  name: string;
+  contact: string;
+  destination: string;
+  budget: string | null;
+  comment: string | null;
+  personal_data_consent: true;
+};
+export type TourRequestResponse = {
+  id: number;
+  status: "new" | "contacted" | "closed";
+  tg_message_id: number | null;
+  created_at: string;
+};
 
 function useResource<T>(load: () => Promise<T>, deps: unknown[] = []) {
   const [value, setValue] = useState<T | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState("");
@@ -348,6 +362,23 @@ export const useReviews = (canModerate = false, canTrackOwn = false) => {
   };
 };
 export const useSubscribe = () => ({ subscribe: (email: string) => apiJson<{ email: string; confirmed: boolean }>("/subscribe", "POST", { email }) });
+export function useTourRequest(enabled: boolean) {
+  const countriesResource = useResource(
+    () => enabled ? api<Country[]>("/countries") : Promise.resolve([]),
+    [enabled],
+  );
+  const submit = useCallback(
+    (payload: TourRequestPayload) => apiJson<TourRequestResponse>("/tour-requests", "POST", payload),
+    [],
+  );
+  return {
+    countries: countriesResource.value ?? [],
+    countriesLoading: countriesResource.loading,
+    countriesError: countriesResource.error,
+    reloadCountries: countriesResource.reload,
+    submit,
+  };
+}
 export const useQA = () => {
   const resource = useResource(() => api<Question[]>("/qa/my"), []);
   const hasOpenQuestions = Boolean(resource.value?.some((question) => question.status === "open"));

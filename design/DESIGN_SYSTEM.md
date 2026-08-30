@@ -71,6 +71,19 @@ Aliases resolve through the active theme and must remain variable references rat
 - Body copy, form text, and reviews use `--text` or `--card-text`.
 - `--muted` and `--gold-ink` are reserved for decorative or large text: at least 19px bold or 24px regular.
 
+## WIDG-1: floating tour-request pattern
+
+`TourRequestWidget` is a single global lead entry point mounted by `Layout`, outside `PageCard`. Its product breakpoint is exact and must not drift with unrelated shell breakpoints:
+
+| Viewport | Entry point |
+| --- | --- |
+| `<= 767px` | Show the lower-left FAB and hide the desktop card. The FAB uses a minimum 44px target and sits above mobile navigation with `bottom: calc(74px + env(safe-area-inset-bottom))`; it must not cover navigation or focused content. |
+| `>= 768px` | Show the fixed card in the left navigation column and hide the FAB. The card stays within the shell's left rail and may not overlap center content. |
+
+Both entry points open the same full-viewport dialog. The dialog must use `role="dialog"`, `aria-modal="true"`, a programmatic heading, body scroll lock, initial focus on the first field, a focus trap, Escape close, and focus return to the exact opener. Motion uses the shared transitions and is suppressed by the global `prefers-reduced-motion: reduce` rule.
+
+The form keeps visible labels, `type="tel"` for contact, inline `aria-invalid` errors, and a required personal-data checkbox linked to the privacy policy. Country data from `/countries` is suggestion-only: destination remains a free-text field. Loading disables form controls, server failures stay inside an alert, and a successful submission replaces the form with a status message. Structural icons are inline SVGs; emoji are not used as control icons.
+
 ## Change checklist
 
 - Keep the sidebar, center card, and right-section cards as three distinct visual layers.

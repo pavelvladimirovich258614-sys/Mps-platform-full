@@ -191,3 +191,69 @@ input:focus-visible,select:focus-visible,[contenteditable="true"]:focus-visible 
 @media (max-width:767px) {
   .page-card { margin:16px 12px 98px; padding:24px 16px 28px; }
 }
+
+/* WIDG-1: one global lead entry point, split explicitly at the 768px product breakpoint. */
+.tour-request-desktop,.tour-request-fab { align-items:center; border:1px solid var(--gold); box-shadow:0 12px 30px rgba(10,14,24,.24); color:var(--action-ink); font-family:inherit; font-weight:800; position:fixed; z-index:35; }
+.tour-request-desktop { display:none; }
+.tour-request-fab { display:none; }
+.tour-request-desktop svg,.tour-request-fab svg,.tour-request-dialog-mark svg { fill:none; flex:none; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.7; }
+.tour-request-desktop:hover,.tour-request-fab:hover { box-shadow:0 14px 34px rgba(10,14,24,.32),0 0 0 3px var(--gold-soft); transform:translateY(-1px); }
+.tour-request-desktop:focus-visible,.tour-request-fab:focus-visible { outline:2px solid var(--text); outline-offset:3px; }
+.tour-request-desktop { background:linear-gradient(150deg,var(--gold-lt),var(--gold)); border-radius:8px; bottom:24px; gap:10px; left:max(10px,calc((100vw - 1180px)/2 + 10px)); min-height:82px; padding:12px; text-align:left; width:154px; }
+.tour-request-desktop svg { height:30px; width:30px; }
+.tour-request-desktop span { display:grid; gap:4px; min-width:0; }
+.tour-request-desktop strong { font-size:13px; line-height:1.25; }
+.tour-request-desktop small { font-size:10px; font-weight:600; line-height:1.35; }
+.tour-request-fab { background:linear-gradient(150deg,var(--gold-lt),var(--gold)); border-radius:999px; bottom:calc(74px + env(safe-area-inset-bottom)); gap:8px; left:16px; min-height:52px; padding:10px 16px; }
+.tour-request-fab svg { height:24px; width:24px; }
+.tour-request-fab span { font-size:13px; }
+.tour-request-dialog-shell { background:var(--bg); inset:0; overflow:hidden; position:fixed; z-index:100; }
+.tour-request-dialog { background:var(--bg); color:var(--text); height:100dvh; min-height:100vh; overflow-y:auto; position:relative; width:100%; }
+.tour-request-dialog-content { margin:0 auto; max-width:720px; min-height:100%; padding:clamp(72px,10vh,112px) 28px 56px; }
+.tour-request-dialog-content>header { align-items:center; display:flex; gap:16px; margin-bottom:30px; }
+.tour-request-dialog-mark { align-items:center; background:linear-gradient(150deg,var(--gold-lt),var(--gold)); border-radius:50%; color:var(--action-ink); display:flex; flex:none; height:58px; justify-content:center; width:58px; }
+.tour-request-dialog-mark svg { height:30px; width:30px; }
+.tour-request-dialog-content header p { color:var(--card-muted); font-size:11px; font-weight:800; letter-spacing:.12em; margin:0 0 5px; text-transform:uppercase; }
+.tour-request-dialog-content h2 { font:700 clamp(34px,6vw,54px)/1.05 "Playfair Display",Georgia,serif; margin:0; }
+.tour-request-dialog form { background:var(--card); border:1px solid var(--card-line); border-radius:16px; box-shadow:var(--card-shadow); padding:28px; }
+.tour-request-fields { display:grid; gap:8px; grid-template-columns:1fr; }
+.tour-request-fields label { color:var(--card-text); font-size:13px; font-weight:800; margin-top:8px; }
+.tour-request-fields input,.tour-request-fields textarea { background:var(--field); border:1px solid var(--card-line); border-radius:6px; color:var(--card-text); font:inherit; line-height:1.5; min-height:46px; padding:10px 12px; width:100%; }
+.tour-request-fields textarea { min-height:104px; resize:vertical; }
+.tour-request-fields input::placeholder,.tour-request-fields textarea::placeholder { color:var(--card-muted); opacity:1; }
+.tour-request-fields>small,.tour-request-countries-error small { color:var(--card-muted); font-size:12px; line-height:1.45; }
+.tour-request-error { color:#a52a2a !important; display:block; font-size:12px; font-weight:700; line-height:1.45; }
+html[data-theme="dark"] .tour-request-error { color:#ffb4ab !important; }
+.tour-request-countries-error { align-items:center; display:flex; gap:10px; }
+.tour-request-countries-error button,.tour-request-policy { background:transparent; border:0; color:var(--accent-hi); font:inherit; min-height:44px; padding:4px 0; text-decoration:underline; text-underline-offset:3px; }
+.tour-request-consent { align-items:flex-start; color:var(--card-text); display:flex; gap:10px; line-height:1.5; margin-top:20px; }
+.tour-request-consent input { flex:none; height:20px; margin:1px 0 0; width:20px; }
+.tour-request-policy { display:block; font-size:12px; margin-top:4px; text-align:left; }
+.tour-request-server-error { background:rgba(165,42,42,.1); border:1px solid currentColor; border-radius:6px; color:#a52a2a; line-height:1.5; margin:14px 0 0; padding:10px 12px; }
+html[data-theme="dark"] .tour-request-server-error { color:#ffb4ab; }
+.tour-request-submit,.tour-request-success button { background:linear-gradient(180deg,var(--gold-lt),var(--gold)); border:1px solid var(--gold); border-radius:6px; color:var(--action-ink); font-weight:800; min-height:48px; padding:10px 18px; }
+.tour-request-submit { margin-top:20px; width:100%; }
+.tour-request-dialog button:disabled,.tour-request-dialog input:disabled,.tour-request-dialog textarea:disabled { cursor:wait; opacity:.62; }
+.tour-request-close { align-items:center; background:var(--card); border:1px solid var(--card-line); border-radius:50%; color:var(--card-text); display:flex; height:48px; justify-content:center; padding:0; position:fixed; right:24px; top:24px; width:48px; z-index:1; }
+.tour-request-close svg { height:24px; stroke:currentColor; stroke-linecap:round; stroke-width:1.8; width:24px; }
+.tour-request-success { background:var(--card); border:1px solid var(--card-line); border-radius:16px; box-shadow:var(--card-shadow); padding:clamp(32px,8vw,56px); text-align:center; }
+.tour-request-success>span { align-items:center; background:var(--ok); border-radius:50%; color:var(--card); display:flex; height:58px; justify-content:center; margin:0 auto 18px; width:58px; }
+.tour-request-success>span svg { height:30px; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:2.2; width:30px; }
+.tour-request-success h3 { font:700 32px/1.2 "Playfair Display",Georgia,serif; margin:0; }
+.tour-request-success p { color:var(--card-muted); line-height:1.6; margin:12px auto 24px; max-width:420px; }
+
+@media (max-width:767px) {
+  .tour-request-desktop { display:none; }
+  .tour-request-fab { display:flex; }
+  .tour-request-dialog-content { padding:76px 16px calc(36px + env(safe-area-inset-bottom)); }
+  .tour-request-dialog-content>header { gap:12px; margin-bottom:22px; }
+  .tour-request-dialog-mark { height:48px; width:48px; }
+  .tour-request-dialog-content h2 { font-size:36px; }
+  .tour-request-dialog form { border-radius:12px; padding:20px 16px; }
+  .tour-request-close { height:44px; right:14px; top:14px; width:44px; }
+}
+
+@media (min-width:768px) {
+  .tour-request-desktop { display:flex; }
+  .tour-request-fab { display:none; }
+}

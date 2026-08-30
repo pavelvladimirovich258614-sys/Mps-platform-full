@@ -9,6 +9,26 @@ const callbacks = {
 };
 
 describe("Layout presence", () => {
+  it("mounts the WIDG-1 tour entry points globally", () => {
+    const view = render(
+      <Layout
+        {...callbacks}
+        page="feed"
+        theme="light"
+        notificationsOpen={false}
+        unreadCount={0}
+        userName="Павел"
+        online={[]}
+        publicSettings={null}
+      >
+        <main>Лента</main>
+      </Layout>,
+    );
+
+    expect(view.container.querySelector(".tour-request-desktop")).toBeTruthy();
+    expect(view.container.querySelector(".tour-request-fab")).toBeTruthy();
+  });
+
   it("places About between Feed and Country Forum in desktop and mobile navigation", () => {
     const view = render(
       <Layout
