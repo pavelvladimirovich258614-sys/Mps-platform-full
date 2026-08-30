@@ -2,15 +2,16 @@ import secrets
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, literal_column, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps import get_current_user, get_db
 from app.models.comment import Comment
-from app.models.post import Post, PostStatus
+from app.models.forum import ForumTopic
+from app.models.post import Post, PostStatus, PostType
 from app.models.review import ModerationStatus
 from app.models.user import User, UserFollow
-from app.schemas.discovery import RecommendedAuthorsResponse
+from app.schemas.discovery import DiscoverySearchResponse, RecommendedAuthorsResponse
 
 
 router = APIRouter(prefix="/discovery", tags=["discovery"])
@@ -47,6 +48,66 @@ def author_item(user: User) -> dict:
         "name": user.name,
         "avatar_url": user.avatar_url,
         "bio": user.bio,
+    }
+
+
+@router.get("/search", response_model=DiscoverySearchResponse)
+async def discovery_search(
+    q: str = Query(min_length=2, max_length=100),
+    limit: int = Query(default=5, ge=1, le=10),
+    session: AsyncSession = Depends(get_db),
+) -> dict:
+    """Search published articles, public authors, and forum topics."""
+
+    term = q.strip()
+    russian = literal_column("'russian'::regconfig")
+    empty_text = literal_column("''")
+    separator = literal_column("' '")
+    article_document = func.to_tsvector(
+        russian,
+        func.coalesce(Post.title, empty_text)
+        + separator
+        + func.coalesce(Post.body, empty_text),
+    )
+    article_query = func.websearch_to_tsquery(russian, term)
+
+    articles = list((await session.scalars(
+        select(Post)
+        .where(
+            Post.type == PostType.ARTICLE,
+            Post.status == PostStatus.PUBLISHED,
+            article_document.op("@@")(article_query),
+        )
+        .order_by(func.ts_rank_cd(article_document, article_query).desc(), Post.id.desc())
+        .limit(limit)
+    )).all())
+    authors = list((await session.scalars(
+        select(User)
+        .where(
+            User.is_anonymous.is_(False),
+            User.is_banned.is_(False),
+            User.name.ilike(f"%{term}%"),
+        )
+        .order_by(func.similarity(User.name, term).desc(), User.id.desc())
+        .limit(limit)
+    )).all())
+    forum_topics = list((await session.scalars(
+        select(ForumTopic)
+        .where(ForumTopic.title.ilike(f"%{term}%"))
+        .order_by(func.similarity(ForumTopic.title, term).desc(), ForumTopic.id.desc())
+        .limit(limit)
+    )).all())
+
+    return {
+        "articles": [
+            {"id": article.id, "title": article.title, "slug": article.slug}
+            for article in articles
+        ],
+        "authors": [author_item(author) for author in authors],
+        "forum_topics": [
+            {"id": topic.id, "title": topic.title, "country_id": topic.country_id}
+            for topic in forum_topics
+        ],
     }
 
 
