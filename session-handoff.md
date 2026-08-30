@@ -1,58 +1,36 @@
 # Session handoff — МПС
 
-## Next session first — P0 post-media Stage 4 approval gate
+## Completed production checkpoint — WIDG-4 + P0-POST-MEDIA
 
-1. Read `AGENTS.md`; run `./init.sh`; read `claude-progress.md`, `feature_list.json` and this handoff. Git Bash Win32 Error 5/global pip-check issues remain known external blockers; rerun only MPS checks directly outside sandbox when necessary.
-2. `P0-POST-MEDIA` Stages 1–3 are the latest local-only commits. The feature remains `in_progress`. Do not start Stage 4 until the owner explicitly confirms it in a separate message.
-3. Stage 4 is the point migration of the already published `poezdka-v-tailand-2026`: use the approved SSH key, inspect the exact production DB/media paths read-only, create verified rollback copies of every original file and affected DB values, generate four optimized files under new names, then atomically update `cover_url` and body HTML links. Do not delete or overwrite originals.
-4. After Stage 4 verification, update all three trackers, create one local `[in_progress]` commit and stop. Do not start throttled Stage 5, push or deploy without the next confirmation.
-5. WIDG-4 remains locally verified `passing` but publication is paused until all five media stages close and the owner approves the combined rollout.
+1. WIDG-4 and all five P0 post-media stages are production-deployed and verified `passing`. Application code was deployed at `0b33784d18736b82526b9dd35cc6def245ae239c`; the final scoped nginx-test/template/tracker commit is the next commit in `origin/main` after this handoff.
+2. PostgreSQL is at Alembic `20260830_0019 (head)` with `pg_trgm` and the three discovery indexes. `mps-backend` is active/healthy. Production serves `index-Y8_k3Iw_.js` with the production API/bot markers and no localhost fallback.
+3. The production post `poezdka-v-tailand-2026` now references four UUID media sets with 24 physical WebP/AVIF variants. The guarded transaction updated one row, originals were not deleted, and every public variant matched the saved SHA manifest.
+4. The scoped `/media/` nginx mapping serves AVIF as `image/avif` and WebP as `image/webp`, retains `try_files`, inherited `nosniff`, and 30-day cache headers. `nginx -t`, reload and post-change smoke passed without restarting backend.
+5. Start the next owner-selected task from the normal HEAD/origin/VPS/clean/init preflight. Do not reopen this cycle because of the known frontend chunk warning, guest 401s, F47 or F48c; those are separate scopes.
 
-## P0-POST-MEDIA Stage 3 — committed frontend checkpoint
+## Verified rollback inventory
 
-### Completed package
+- PostgreSQL: `/var/backups/mps/mps-2026-08-30-084759.dump.gz`, SHA-256 `3912ffd2bc3d21da7f74ff93b781591391890f015fe77b64067cbff98e36689f`; `pg_restore --list` passed.
+- Combined media rollback directory: `/root/backups/p0-post-media-20260830T124758Z`.
+- Frontend archive SHA-256: `afdb9b4cbde9c2aac10ca7367e82df204c469c7fc575491f5118045336f37f91`.
+- Original post-row SHA-256: `5586f418021864831eb47630258bfdb9d37d170c8cfb5bde08d88c54fc102c6c`.
+- Four-original PNG manifest SHA-256: `a68dd7201f9902eea5b5bd35104b5b1be568499e95a4165548531becae77bf33`.
+- 24-variant manifest SHA-256: `ccbd75139039f4a3c233a33a8e47ac5335204b4fc0dd89425287da2b7548da6f`; mapping SHA-256 `df28ac2c47413aedcc62ef9b2e81e4eb8fbfc3127725fa388de3573711d11587`.
+- Nginx `sites-available` backup: `/root/backups/mps-nginx-avif-20260830T130411Z.conf`, SHA-256 `ced963e07a1da93ab8244f60702f9cea24b387164777f949f8b1056b8a179dcc`.
+- Nginx active `sites-enabled` backup: `/root/backups/mps-nginx-enabled-avif-20260830T130857Z.conf`, SHA-256 `6fb3004d3fc419a019b09ec56206fdc057bbaff3b8ad65054bf7c28c0287bee7`.
 
-- `frontend/app/src/components/ResponsivePostImage.tsx` centralizes `(max-width: 900px) 100vw, 760px` and derives 320/960/1600 WebP+AVIF sets from the backend large-variant URL while retaining the large WebP fallback.
-- `ArticleComments`, `Feed`, `PublicProfile`, `PostComposer` and TipTap image previews use the shared responsive renderer. Article/feed hero and active carousel frames are eager; below-fold inline and liked-post images are lazy; every rendered post image decodes asynchronously.
-- `RichTextContent` allows only the approved `loading`, `decoding`, `srcset` and `sizes` image attributes in addition to the previous strict allowlist. Inline images are enhanced after DOMPurify; generated AVIF `<source>` markup is created only from the already-sanitized URL.
-- `ImageCarousel` renders only the active image and its responsive sources. No inactive slide URL appears in the DOM before arrow/dot interaction.
-- Minimal scoped CSS makes `<picture>` preserve the existing cover/carousel/editor layout; no theme token or visual design was changed.
+## Final verification evidence
 
-### RED→GREEN and verification
+- MIME RED: deploy-bootstrap target `1 failed / 3 passed` because scoped types/cache were absent. After preserving production `try_files`, GREEN target passed `4/4`.
+- Public media: 24/24 SHA matches; AVIF=`image/avif`, WebP=`image/webp`, `X-Content-Type-Options=nosniff`, `Cache-Control=max-age=2592000`, Expires present.
+- Throttled Playwright at 400 Kbit/s, 400ms latency, CPU×4: iPhone 14 load/network-idle `7.945/21.434s`; Pixel 7 `7.490/20.851s`, versus original `97–112s`. Initial media `418316` bytes; no inactive slide requests, request failures or page errors.
+- Full backend: `131 passed, 10 skipped` (the known PostgreSQL-only environment skips). Full frontend: 29 files / 190 tests. Production-configured build: 123 modules, JS 705.15 kB / gzip 228.02 kB, expected CJS/chunk warning only.
+- `deploy/smoke.sh` passed after code deployment and again after the nginx MIME reload. Backend PID remained `1034912` across the nginx-only change.
 
-- Fresh accepted RED: `ImageCarousel.test.tsx` — 1 failed / 1 passed because the active image still had `srcset=null`; the inactive-slide guard was already green.
-- Expanded RED: six related files — 7 expected failures / 44 passed for missing responsive attributes, AVIF source, inline lazy loading and sanitizer allowance.
-- Target GREEN: six files / 51 tests passed.
-- Fresh full frontend: `npm test` — 29 files / 190 tests passed.
-- Production build: `npm run build` — 123 modules transformed; output JS 705.15 kB (gzip 228.02 kB). Build succeeded with only the existing CJS/chunk-size warnings.
-- Browser matrix: light/dark at 375/768/1024/1440 passed. Cover, inline and active carousel images fit every viewport with no horizontal overflow; all exposed AVIF source + WebP 320/960/1600 `srcset`, `sizes` and async decoding. Inline was lazy; hero/active slide eager. The second slide was absent before action and became the only rendered frame after click in all 8 combinations.
-- Accessibility/browser evidence: focus-visible was present on the carousel arrow, CSSOM parsed the reduced-motion 0.01ms fallback, console errors were empty, and text/card contrast was 16.04:1 light / 14.43:1 dark.
-- `git diff --check` passed with only informational Windows line-ending notices.
+## Known boundaries
 
-### Boundary
-
-- No backend, dependency, migration, database, existing media, VPS, push or deployment was changed in Stage 3.
-- The localhost browser mock and Vite processes were stopped and the temporary browser tab was closed; no harness artifact was added to the repository.
-- `P0-POST-MEDIA` correctly remains `in_progress` until Stages 4–5 finish.
-
-## Earlier P0 checkpoints
-
-- Stage 2 backend: `POST /media` accepts the existing up-to-10-MiB input, applies EXIF transpose and RGB/RGBA normalization, creates 320/960/1600 WebP+AVIF pairs under one UUID, never writes the original JPEG/PNG, and returns backward-compatible large WebP `url` plus `variants`.
-- Each medium encoding is capped at 350 KiB. Test artifacts measured two medium WebP files at 542684 bytes total and two medium AVIF files at 434952 bytes total, both below 700 KiB.
-- Stage 2 verification: new target 2/2, full `test_media.py` 13/13, full backend 130 passed / 10 known PostgreSQL-only skipped without `MPS_TEST_POSTGRES_URL`.
-- Stage 1 retains the explicit initial-page budget and active-only carousel RED contracts.
-
-## Publication and operational boundary
-
-1. No P0 media commit has been pushed or deployed. Production media and DB were not mutated.
-2. The WIDG-4 stage-3 completion commit is also local-only; its stages 1–2 are already in `origin/main`.
-3. The combined rollout remains owner-gated. Before any future push/deploy, rerun HEAD/origin/VPS SHA, clean-state, BatchMode SSH, rollback, migration/head, production Vite/no-localhost/served-bundle, backend health/smoke and production browser checks.
-4. Historical production application checkpoint before these local commits was `7ba81997f6dd165350395967f89789283c245918`; treat it as historical until live-revalidated.
-
-## Known risks / boundaries
-
-- The original Thailand post files must remain recoverable during Stage 4; use new filenames and atomically update only verified references.
-- The existing build chunk-size warning remains unresolved and is outside Stage 3 scope.
-- Global `init.sh` may stop on unrelated shared-environment errors; do not modify the shared environment to hide them.
-- SSH key availability changed once historically. Every production session must begin with a read-only BatchMode key preflight; never guess credentials or print secrets.
-- F47 and F48c were independently already marked `in_progress`; do not change their statuses during this owner-prioritized P0 exception.
+- `./init.sh` still stops at the known Git Bash Win32 Error 5/global shared-environment `pip check`; direct complete MPS suites are the completion evidence. Do not repair the shared environment in this project.
+- Three guest `401` console messages are exactly `/api/v1/me`, `/api/v1/notifications`, and `/api/v1/auth/refresh`; none is a failed/hanging request.
+- The existing 705.15 kB frontend chunk warning remains a separate optimization scope.
+- `/etc/nginx/sites-enabled/mps-platform` is a regular file rather than a symlink to `sites-available`; both exact media blocks were backed up and updated. Do not silently change that topology in a future task.
+- F47 and F48c remain their pre-existing independent `in_progress` tracker items and were not changed by this cycle.
