@@ -170,6 +170,38 @@ async def test_recommended_authors_limit_uses_no_database_random_sort(client, te
     assert all("RANDOM(" not in statement.upper() for statement in statements)
 
 
+async def test_recommended_authors_accept_limited_exclude_ids(client, test_app):
+    now = datetime.now(UTC)
+    async with test_app.state.database.session_factory() as session:
+        viewer = User(email="exclude-viewer@example.test", name="Зритель", last_seen_at=now)
+        candidates = [
+            User(email=f"excluded-{index}@example.test", name=f"Скрытый {index}", last_seen_at=now)
+            for index in range(3)
+        ]
+        session.add_all([viewer, *candidates])
+        await session.flush()
+        session.add_all([
+            published_post(candidate.id, f"excluded-post-{candidate.id}")
+            for candidate in candidates
+        ])
+        await session.commit()
+
+    response = await client.get(
+        "/api/v1/discovery/recommended-authors",
+        params=[("exclude_ids", str(candidate.id)) for candidate in candidates],
+        headers=headers(test_app, viewer),
+    )
+    too_many = await client.get(
+        "/api/v1/discovery/recommended-authors",
+        params=[("exclude_ids", str(index + 1)) for index in range(51)],
+        headers=headers(test_app, viewer),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["items"] == []
+    assert too_many.status_code == 422
+
+
 async def test_discovery_search_finds_each_entity_and_country(postgresql_discovery_client):
     client, app = postgresql_discovery_client
     async with app.state.database.session_factory() as session:

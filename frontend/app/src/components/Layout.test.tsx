@@ -169,4 +169,53 @@ describe("Layout presence", () => {
     expect(view.container.querySelector(".presence-avatar-fallback")).toBeTruthy();
     expect(view.container.querySelector(".presence-person > i")).toBeNull();
   });
+
+  it("keeps the right rail in search, recommendations, subscriptions, presence order", () => {
+    const view = render(
+      <Layout
+        {...callbacks}
+        page="feed"
+        theme="light"
+        notificationsOpen={false}
+        unreadCount={0}
+        userName="Павел"
+        isAuthenticated
+        online={[]}
+        subscriptions={[{ id: 2, name: "Подписка", avatar_url: null, is_following: true }]}
+        subscriptionsLoading={false}
+        journalSearch={{
+          query: "",
+          results: { articles: [], authors: [], forum_topics: [] },
+          loading: false,
+          error: "",
+          onQueryChange: vi.fn(),
+          onRetry: vi.fn(),
+          onOpenArticle: vi.fn(),
+          onOpenProfile: vi.fn(),
+          onOpenForumTopic: vi.fn(),
+        }}
+        recommendations={{
+          authors: [{ id: 3, name: "Рекомендация", avatar_url: null, bio: null }],
+          loading: false,
+          error: "",
+          followingId: null,
+          onOpenProfile: vi.fn(),
+          onFollow: vi.fn(),
+          onDismiss: vi.fn(),
+          onRetry: vi.fn(),
+        }}
+        publicSettings={null}
+      >
+        <main>Лента</main>
+      </Layout>,
+    );
+
+    const rail = view.container.querySelector(".right-rail") as HTMLElement;
+    expect(Array.from(rail.children).map((child) => child.className)).toEqual([
+      "journal-search-panel",
+      "recommended-panel",
+      "subscriptions-panel",
+      "presence",
+    ]);
+  });
 });

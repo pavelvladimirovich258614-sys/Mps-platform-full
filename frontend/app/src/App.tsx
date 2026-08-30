@@ -18,7 +18,7 @@ import { PublicProfile } from "./components/PublicProfile";
 import { QA } from "./components/QA";
 import { Reviews } from "./components/Reviews";
 import { Subscribe } from "./components/Subscribe";
-import { getDraft, getLikedPosts, type ApiPost, type FishkaDraft, useAuthorPosts, useAuth, useDrafts, useFishkaAdminSettings, useFishkaCategories, useFishkaPermission, useIrishkaAdminSettings, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, useProfileActivity, useProfileComments, useProfileFollowers, useProfileFollowing, usePublicProfile, usePublicSettings, useQAQuestions, useUserFollow } from "./hooks";
+import { getDraft, getLikedPosts, type ApiPost, type FishkaDraft, useAuthorPosts, useAuth, useDiscoverySearch, useDrafts, useFishkaAdminSettings, useFishkaCategories, useFishkaPermission, useHiddenRecommendationIds, useIrishkaAdminSettings, useLikedPosts, useNotifications, useOnline, usePost, usePostCreator, usePostEditor, usePostLike, usePosts, useProfileActivity, useProfileComments, useProfileFollowers, useProfileFollowing, usePublicProfile, usePublicSettings, useQAQuestions, useRecommendedAuthors, useUserFollow } from "./hooks";
 import { pathForRoute, type PathRoute, routeFromPath } from "./router";
 
 type Theme = "dark" | "light";
@@ -60,6 +60,8 @@ export function App() {
   const [editingPost, setEditingPost] = useState<EditablePost | null>(null);
   const [fishkaCategory, setFishkaCategory] = useState("");
   const [createPostRequested, setCreatePostRequested] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [followingRecommendedId, setFollowingRecommendedId] = useState<number | null>(null);
 
   const auth = useAuth();
   const canManagePosts = auth.user?.role === "editor" || auth.user?.role === "admin";
@@ -88,6 +90,9 @@ export function App() {
   const profileFollowing = useProfileFollowing(route.page === "profile" ? route.userId : undefined);
   const railSubscriptions = useProfileFollowing(auth.user?.id);
   const userFollow = useUserFollow();
+  const hiddenRecommendations = useHiddenRecommendationIds(auth.user?.id);
+  const recommendations = useRecommendedAuthors(Boolean(auth.user), hiddenRecommendations.hiddenIds);
+  const discoverySearch = useDiscoverySearch(searchQuery);
 
   useEffect(() => {
     if (route.page !== "profile" || likedPosts.loading || likedPosts.value === null) return;
@@ -146,6 +151,17 @@ export function App() {
   };
 
   const openArticle = (post: ApiPost) => navigate({ page: "article", slug: post.slug });
+  const followRecommended = async (userId: number) => {
+    setFollowingRecommendedId(userId);
+    try {
+      await userFollow.toggle(userId, false);
+      await Promise.all([recommendations.reload(), railSubscriptions.reload()]);
+    } catch (cause) {
+      showError(cause instanceof Error ? cause.message : "Не удалось подписаться на автора");
+    } finally {
+      setFollowingRecommendedId(null);
+    }
+  };
   const withLikesCount = (post: ApiPost): ApiPost => ({ ...post, likes_count: likesByPostId[post.id] ?? post.likes_count });
   const toggleLike = async (post: ApiPost) => {
     if (!auth.user) {
@@ -211,7 +227,7 @@ export function App() {
     await postEditor.remove(draft.id);
     drafts.setValue((current) => (current ?? []).filter((item) => item.id !== draft.id));
   };
-  const page: Page = route.page === "countries" && topicOpen ? "topic" : route.page;
+  const page: Page = route.page === "countries" && (topicOpen || route.topicId !== undefined) ? "topic" : route.page;
   let content = null;
   if (page === "feed") content = <Feed posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} canCreate={canManagePosts} onCreatePost={createPost} createPostRequested={createPostRequested} onCreatePostRequestHandled={() => setCreatePostRequested(false)} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} onNotice={setToast} />;
   if (page === "fishki") content = <Feed mode="fishki" posts={(posts.value ?? []).map(withLikesCount)} loading={posts.loading} canCreateFishka={canManagePosts || fishkaPermission.value?.can_submit_fishka === true} fishkaPublishesImmediately={canManagePosts} fishkaAdminControls={<FishkaAdminSettings settings={isAdmin ? fishkaAdminSettings.value : null} loading={isAdmin && fishkaAdminSettings.loading} onUpdate={fishkaAdminSettings.update} />} fishkaCategories={fishkaCategories.value ?? []} fishkaCategory={fishkaCategory} onFishkaCategoryChange={setFishkaCategory} onCreateFishka={createFishka} onToggleLike={toggleLike} onOpenArticle={openArticle} onOpenProfile={(userId) => navigate({ page: "profile", userId })} onNotice={setToast} />;
@@ -220,6 +236,7 @@ export function App() {
       <Forum
         page={page}
         initialCountryId={route.page === "countries" ? route.countryId : undefined}
+        initialTopicId={route.page === "countries" ? route.topicId : undefined}
         viewer={auth.user}
         onNavigate={openPage}
         onCountryNavigate={(countryId) => navigate({ page: "countries", countryId })}
@@ -332,6 +349,29 @@ export function App() {
         online={online.value ?? []}
         subscriptions={railSubscriptions.value ?? []}
         subscriptionsLoading={railSubscriptions.loading}
+        journalSearch={{
+          query: searchQuery,
+          results: discoverySearch.results,
+          loading: discoverySearch.loading,
+          error: discoverySearch.error,
+          onQueryChange: setSearchQuery,
+          onRetry: discoverySearch.reload,
+          onOpenArticle: (slug) => navigate({ page: "article", slug }),
+          onOpenProfile: (userId) => navigate({ page: "profile", userId }),
+          onOpenForumTopic: (countryId, topicId) => navigate({ page: "countries", countryId, topicId }),
+        }}
+        recommendations={auth.user ? {
+          authors: recommendations.items.filter(
+            (author) => !hiddenRecommendations.hiddenIds.includes(author.id),
+          ),
+          loading: recommendations.loading,
+          error: recommendations.error,
+          followingId: followingRecommendedId,
+          onOpenProfile: (userId) => navigate({ page: "profile", userId }),
+          onFollow: followRecommended,
+          onDismiss: hiddenRecommendations.dismiss,
+          onRetry: recommendations.reload,
+        } : undefined}
         publicSettings={publicSettings.value}
         onNavigate={openPage}
         onThemeToggle={() => setTheme(theme === "dark" ? "light" : "dark")}

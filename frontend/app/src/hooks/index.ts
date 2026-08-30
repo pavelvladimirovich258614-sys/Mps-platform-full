@@ -22,6 +22,16 @@ export type Notification = { id: number; type: string; payload: Record<string, u
 export type OnlineUser = { id: number; name: string; avatar_url: string | null };
 export type PublicProfile = { id: number; name: string; avatar_url: string | null; bio: string | null; posts_count: number; followers_count: number; following_count: number; is_following: boolean; countries: Array<{ id: number; name: string; flag_emoji: string }> };
 export type PublicProfileFollow = { id: number; name: string; avatar_url: string | null; is_following: boolean };
+export type RecommendedAuthor = { id: number; name: string; avatar_url: string | null; bio: string | null };
+export type RecommendedAuthorsResponse = { items: RecommendedAuthor[]; activity_window_days: number };
+export type DiscoveryArticle = { id: number; title: string; slug: string };
+export type DiscoveryAuthor = { id: number; name: string; avatar_url: string | null; bio: string | null };
+export type DiscoveryForumTopic = { id: number; title: string; country_id: number };
+export type DiscoverySearchResponse = {
+  articles: DiscoveryArticle[];
+  authors: DiscoveryAuthor[];
+  forum_topics: DiscoveryForumTopic[];
+};
 export type PublicProfileComment = { id: number; body: string; created_at: string; status: "pending" | "approved" | "rejected"; post: { slug: string; title: string } };
 export type PublicProfileActivity = {
   id: number;
@@ -40,6 +50,114 @@ function useResource<T>(load: () => Promise<T>, deps: unknown[] = []) {
   const reload = useCallback(async () => { setLoading(true); setError(""); try { setValue(await load()); } catch (cause) { setError(cause instanceof Error ? cause.message : "Не удалось загрузить данные"); } finally { setLoading(false); } }, deps);
   useEffect(() => { void reload(); }, [reload]);
   return { value, loading, error, reload, setValue };
+}
+
+const EMPTY_DISCOVERY_RESULTS: DiscoverySearchResponse = {
+  articles: [],
+  authors: [],
+  forum_topics: [],
+};
+const MAX_RECOMMENDATION_EXCLUDE_IDS = 50;
+export const HIDDEN_RECOMMENDATION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+type HiddenRecommendation = { id: number; hiddenAt: number };
+
+function hiddenRecommendationKey(userId: number) {
+  return `mps-hidden-recommendations:${userId}`;
+}
+
+function readHiddenRecommendations(userId?: number): HiddenRecommendation[] {
+  if (!userId) return [];
+  const key = hiddenRecommendationKey(userId);
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) ?? "[]") as unknown;
+    if (!Array.isArray(parsed)) return [];
+    const now = Date.now();
+    const current = parsed.filter((entry): entry is HiddenRecommendation => {
+      if (!entry || typeof entry !== "object") return false;
+      const value = entry as Partial<HiddenRecommendation>;
+      return Number.isInteger(value.id)
+        && typeof value.hiddenAt === "number"
+        && now - value.hiddenAt < HIDDEN_RECOMMENDATION_TTL_MS;
+    });
+    localStorage.setItem(key, JSON.stringify(current));
+    return current;
+  } catch {
+    localStorage.removeItem(key);
+    return [];
+  }
+}
+
+export function useHiddenRecommendationIds(userId?: number) {
+  const [entries, setEntries] = useState<HiddenRecommendation[]>(() => readHiddenRecommendations(userId));
+  useEffect(() => { setEntries(readHiddenRecommendations(userId)); }, [userId]);
+  const dismiss = useCallback((id: number) => {
+    if (!userId) return;
+    setEntries((current) => {
+      const next = [...current.filter((entry) => entry.id !== id), { id, hiddenAt: Date.now() }];
+      localStorage.setItem(hiddenRecommendationKey(userId), JSON.stringify(next));
+      return next;
+    });
+  }, [userId]);
+  return { hiddenIds: entries.map((entry) => entry.id), dismiss };
+}
+
+export function useRecommendedAuthors(enabled: boolean, excludeIds: number[]) {
+  const cappedExcludeIds = Array.from(new Set(excludeIds)).slice(0, MAX_RECOMMENDATION_EXCLUDE_IDS);
+  const excludeKey = cappedExcludeIds.join(",");
+  const resource = useResource(async () => {
+    if (!enabled) return { items: [], activity_window_days: 30 };
+    const query = new URLSearchParams({ limit: "4" });
+    cappedExcludeIds.forEach((id) => query.append("exclude_ids", String(id)));
+    return api<RecommendedAuthorsResponse>(`/discovery/recommended-authors?${query.toString()}`);
+  }, [enabled, excludeKey]);
+  return { ...resource, items: resource.value?.items ?? [] };
+}
+
+export function useDiscoverySearch(query: string, limit = 5) {
+  const [results, setResults] = useState<DiscoverySearchResponse>(EMPTY_DISCOVERY_RESULTS);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [reloadVersion, setReloadVersion] = useState(0);
+  const requestVersion = useRef(0);
+
+  useEffect(() => {
+    const version = ++requestVersion.current;
+    const term = query.trim();
+    if (term.length < 2) {
+      setResults(EMPTY_DISCOVERY_RESULTS);
+      setLoading(false);
+      setError("");
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const params = new URLSearchParams({ q: term, limit: String(limit) });
+        const response = await api<DiscoverySearchResponse>(`/discovery/search?${params.toString()}`, {
+          signal: controller.signal,
+        });
+        if (version === requestVersion.current && !controller.signal.aborted) setResults(response);
+      } catch (cause) {
+        if (controller.signal.aborted || version !== requestVersion.current) return;
+        setResults(EMPTY_DISCOVERY_RESULTS);
+        setError(cause instanceof Error ? cause.message : "Поиск временно недоступен");
+      } finally {
+        if (version === requestVersion.current && !controller.signal.aborted) setLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [limit, query, reloadVersion]);
+
+  const reload = useCallback(() => setReloadVersion((current) => current + 1), []);
+  return { results, loading, error, reload };
 }
 
 export function useAuth() {

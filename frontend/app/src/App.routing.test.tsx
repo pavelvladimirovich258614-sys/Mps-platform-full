@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { setAccessToken } from "./api/client";
 import { App } from "./App";
-import type { ApiPost, Notification, Question } from "./hooks";
+import type { ApiPost, Notification, PublicProfileFollow, Question, RecommendedAuthor } from "./hooks";
 
 const post = {
   id: 17,
@@ -64,6 +64,7 @@ type FishkaOptions = {
   categories?: string[];
   irishkaEnabled?: boolean;
   irishkaDelayMin?: number;
+  recommendations?: RecommendedAuthor[];
 };
 type QAOptions = {
   irishkaResponse?: Promise<Response>;
@@ -74,6 +75,10 @@ type QAOptions = {
 function installApi(detailResult: DetailResult = "ok", currentUser: Record<string, unknown> | null = null, posts: ApiPost[] = [post], online: Array<{ id: number; name: string; avatar_url: string | null }> = [], profileComments: unknown[] = [], profileLikes: ApiPost[] = [], profileActivity: { items: unknown[]; next_cursor: string | null } = { items: [], next_cursor: null }, nextProfileActivity: { items: unknown[]; next_cursor: string | null } = { items: [], next_cursor: null }, fishkaOptions: FishkaOptions = {}, qaOptions: QAOptions = {}) {
   let likesCount = post.likes_count;
   let currentProfileLikes = profileLikes;
+  let recommendedAuthors = fishkaOptions.recommendations ?? [];
+  let ownFollowing: PublicProfileFollow[] = currentUser
+    ? [{ id: 7, name: "Мария", avatar_url: "/media/maria.webp", is_following: true }]
+    : [];
   const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
     const url = new URL(String(input));
     const path = url.pathname;
@@ -82,9 +87,33 @@ function installApi(detailResult: DetailResult = "ok", currentUser: Record<strin
     if (path === "/api/v1/users/7/activity") return jsonResponse(200, url.searchParams.has("cursor") ? nextProfileActivity : profileActivity);
     if (path === "/api/v1/users/7/comments") return jsonResponse(200, profileComments);
     if (path === "/api/v1/users/7/followers") return jsonResponse(200, []);
+    if (path === "/api/v1/discovery/search") {
+      return jsonResponse(200, {
+        articles: [],
+        authors: [],
+        forum_topics: [{ id: 9, title: "Связь в ОАЭ", country_id: 1 }],
+      });
+    }
+    if (path === "/api/v1/discovery/recommended-authors") {
+      return jsonResponse(200, { items: recommendedAuthors, activity_window_days: 30 });
+    }
+    if (/^\/api\/v1\/users\/\d+\/follow$/.test(path) && init?.method === "POST") {
+      const userId = Number(path.split("/").at(-2));
+      const followed = recommendedAuthors.find((author) => author.id === userId);
+      if (followed) {
+        ownFollowing = [...ownFollowing, {
+          id: followed.id,
+          name: followed.name,
+          avatar_url: followed.avatar_url,
+          is_following: true,
+        }];
+        recommendedAuthors = recommendedAuthors.filter((author) => author.id !== userId);
+      }
+      return jsonResponse(200, { is_following: true });
+    }
     if (path.endsWith("/following")) {
       const ownFollowingPath = currentUser ? `/api/v1/users/${currentUser.id}/following` : "";
-      return jsonResponse(200, path === ownFollowingPath ? [{ id: 7, name: "Мария", avatar_url: "/media/maria.webp", is_following: true }] : []);
+      return jsonResponse(200, path === ownFollowingPath ? ownFollowing : []);
     }
     if (path === "/api/v1/posts/bali-guide") {
       if (detailResult === "missing") return jsonResponse(404, { detail: "Публикация не найдена" });
@@ -117,8 +146,12 @@ function installApi(detailResult: DetailResult = "ok", currentUser: Record<strin
     if (path === "/api/v1/posts/17/comments") return jsonResponse(200, []);
     if (path === "/api/v1/qa/my") return jsonResponse(200, qaOptions.questions ?? []);
     if (path === "/api/v1/qa/irishka" && init?.method === "POST") return qaOptions.irishkaResponse ?? jsonResponse(200, { answer: "Ответ Иришки" });
-    if (path === "/api/v1/countries") return jsonResponse(200, [{ id: 1, name: "ОАЭ", topics_count: 0 }]);
-    if (path === "/api/v1/countries/1/topics") return jsonResponse(200, { items: [], next_cursor: null });
+    if (path === "/api/v1/countries") return jsonResponse(200, [{ id: 1, name: "ОАЭ", topics_count: 1 }]);
+    if (path === "/api/v1/countries/1/topics") return jsonResponse(200, {
+      items: [{ id: 9, title: "Связь в ОАЭ", messages_count: 0, author_id: 7 }],
+      next_cursor: null,
+    });
+    if (path === "/api/v1/topics/9/messages") return jsonResponse(200, { items: [], next_cursor: null });
     if (path === "/api/v1/online") return jsonResponse(200, online);
     if (path === "/api/v1/notifications") return jsonResponse(200, { items: qaOptions.notifications ?? [] });
     if (path === "/api/v1/notifications/read" && init?.method === "PATCH") return jsonResponse(200, { updated: 1 });
@@ -370,6 +403,45 @@ describe("App pathname routing", () => {
     fireEvent.click(within(panel).getByRole("button", { name: "Открыть профиль Мария" }));
     expect(await screen.findByRole("heading", { level: 1, name: "Мария" })).toBeTruthy();
     expect(fetchMock.mock.calls.some(([input]) => new URL(String(input)).pathname === "/api/v1/users/5/following")).toBe(true);
+  });
+
+  it("refreshes recommendations and subscriptions together after following an author", async () => {
+    setAccessToken("reader-access-token");
+    const fetchMock = installApi(
+      "ok",
+      { id: 5, email: null, name: "Читатель", avatar_url: null, bio: null, role: "reader", is_anonymous: false },
+      [post],
+      [],
+      [],
+      [],
+      { items: [], next_cursor: null },
+      { items: [], next_cursor: null },
+      { recommendations: [{ id: 9, name: "Анна Новая", avatar_url: null, bio: "Пишу о маршрутах" }] },
+    );
+
+    render(<App />);
+
+    const recommendations = await screen.findByRole("complementary", { name: "Рекомендовано для вас" });
+    fireEvent.click(await within(recommendations).findByRole("button", { name: "Подписаться на Анна Новая" }));
+
+    const subscriptions = await screen.findByRole("complementary", { name: "Подписки" });
+    expect(await within(subscriptions).findByRole("button", { name: "Открыть профиль Анна Новая" })).toBeTruthy();
+    await waitFor(() => expect(within(recommendations).queryByText("Анна Новая")).toBeNull());
+    expect(fetchMock.mock.calls.filter(([input]) => new URL(String(input)).pathname === "/api/v1/discovery/recommended-authors")).toHaveLength(2);
+    expect(fetchMock.mock.calls.filter(([input]) => new URL(String(input)).pathname === "/api/v1/users/5/following")).toHaveLength(2);
+  });
+
+  it("opens the exact forum topic selected in journal search", async () => {
+    installApi();
+    render(<App />);
+
+    fireEvent.change(await screen.findByRole("searchbox", { name: "Поиск по журналу" }), {
+      target: { value: "связь" },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "Открыть тему Связь в ОАЭ" }));
+
+    await waitFor(() => expect(window.location.pathname).toBe("/countries/1/topics/9"));
+    expect(await screen.findByRole("heading", { level: 1, name: "Связь в ОАЭ" })).toBeTruthy();
   });
 
   it("always shows the fishka form to an editor and publishes selected emoji immediately", async () => {

@@ -114,6 +114,7 @@ async def discovery_search(
 @router.get("/recommended-authors", response_model=RecommendedAuthorsResponse)
 async def recommended_authors(
     limit: int = Query(default=4, ge=3, le=4),
+    exclude_ids: list[int] = Query(default=[], max_length=50),
     viewer: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> dict:
@@ -125,6 +126,8 @@ async def recommended_authors(
 
     pivot = secrets.randbelow(max_user_id) + 1
     conditions = eligible_author_conditions(viewer.id)
+    if exclude_ids:
+        conditions = (*conditions, User.id.not_in(exclude_ids))
     selected = list((await session.scalars(
         select(User)
         .where(*conditions, User.id >= pivot)
