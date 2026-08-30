@@ -21,7 +21,7 @@ const post = {
   title: "Гид по Бали",
   slug: "bali-guide",
   body: "Большой материал о путешествии.",
-  cover_url: "/media/bali-cover.webp",
+  cover_url: "/media/bali-cover-large.webp",
   liked_at: "2026-08-11T09:30:00Z",
   views: 12,
   likes_count: 3,
@@ -246,7 +246,9 @@ describe("PublicProfile", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: "Лайки" }));
     expect(screen.getByText("Гид по Бали")).toBeTruthy();
-    expect(screen.getByRole("img", { name: "Обложка: Гид по Бали" })).toBeTruthy();
+    const cover = screen.getByRole("img", { name: "Обложка: Гид по Бали" });
+    expect(cover.getAttribute("srcset")).toContain("/media/bali-cover-medium.webp 960w");
+    expect(cover.getAttribute("decoding")).toBe("async");
     expect(screen.getByText("Понравилось 11.08.2026")).toBeTruthy();
     expect(screen.queryByText("Скоро здесь появятся понравившиеся публикации.")).toBeNull();
 

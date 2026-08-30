@@ -1,10 +1,11 @@
 import DOMPurify from "dompurify";
 import { useEffect, useState } from "react";
 import { ImageCarousel, type CarouselImage } from "./ImageCarousel";
+import { POST_IMAGE_SIZES, responsivePostImageSources } from "./ResponsivePostImage";
 
 const richTextPattern = /<(?:p|br|strong|em|s|h[1-3]|ul|ol|li|blockquote|a|img|figure)(?:\s|\/?>)/i;
 const allowedTags = ["p", "br", "strong", "em", "s", "h1", "h2", "h3", "ul", "ol", "li", "blockquote", "a", "img", "figure"];
-const allowedAttributes = ["href", "src", "alt", "data-carousel"];
+const allowedAttributes = ["href", "src", "alt", "data-carousel", "loading", "decoding", "srcset", "sizes"];
 
 type RichTextContentProps = { html: string; className?: string; preview?: boolean; collapseCarouselInPreview?: boolean };
 type ContentSegment = { kind: "html"; html: string } | { kind: "carousel"; images: CarouselImage[] };
@@ -19,7 +20,40 @@ function carouselImages(node: Element): CarouselImage[] | null {
   if (node.tagName !== "FIGURE" || node.getAttribute("data-carousel") !== "images") return null;
   const children = Array.from(node.children);
   if (children.length < 2 || children.some((child) => child.tagName !== "IMG")) return null;
-  return children.map((image) => ({ src: image.getAttribute("src") ?? "", alt: image.getAttribute("alt") ?? "" }));
+  return children.map((image) => ({
+    src: image.getAttribute("src") ?? "",
+    alt: image.getAttribute("alt") ?? "",
+    srcSet: image.getAttribute("srcset") ?? undefined,
+    sizes: image.getAttribute("sizes") ?? undefined,
+  }));
+}
+
+function enhanceInlineImages(html: string) {
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  template.content.querySelectorAll("img").forEach((image) => {
+    const src = image.getAttribute("src") ?? "";
+    const sources = responsivePostImageSources(src);
+    const webpSrcSet = image.getAttribute("srcset") ?? sources.webpSrcSet;
+    const sizes = image.getAttribute("sizes") ?? POST_IMAGE_SIZES;
+
+    image.setAttribute("loading", "lazy");
+    image.setAttribute("decoding", "async");
+    if (webpSrcSet) {
+      image.setAttribute("srcset", webpSrcSet);
+      image.setAttribute("sizes", sizes);
+    }
+
+    if (!sources.avifSrcSet || image.parentElement?.tagName === "PICTURE") return;
+    const picture = document.createElement("picture");
+    const source = document.createElement("source");
+    source.setAttribute("type", "image/avif");
+    source.setAttribute("srcset", sources.avifSrcSet);
+    source.setAttribute("sizes", sizes);
+    image.replaceWith(picture);
+    picture.append(source, image);
+  });
+  return template.innerHTML;
 }
 
 function splitCarouselSegments(safeHtml: string): ContentSegment[] {
@@ -117,11 +151,11 @@ function previewLegacyText(text: string): { text: string; truncated: boolean } {
 function RichHtml({ html, className, showCarousels = true }: { html: string; className: string; showCarousels?: boolean }) {
   const segments = splitCarouselSegments(html);
   if (!segments.some((segment) => segment.kind === "carousel")) {
-    return <div className={`rich-text-content ${className}`.trim()} dangerouslySetInnerHTML={{ __html: html }} />;
+    return <div className={`rich-text-content ${className}`.trim()} dangerouslySetInnerHTML={{ __html: enhanceInlineImages(html) }} />;
   }
   return <div className={`rich-text-content ${className}`.trim()}>{segments.filter((segment) => showCarousels || segment.kind !== "carousel").map((segment, index) => segment.kind === "carousel"
     ? <ImageCarousel key={`carousel-${index}`} images={segment.images} />
-    : <div key={`html-${index}`} dangerouslySetInnerHTML={{ __html: segment.html }} />,
+    : <div key={`html-${index}`} dangerouslySetInnerHTML={{ __html: enhanceInlineImages(segment.html) }} />,
   )}</div>;
 }
 

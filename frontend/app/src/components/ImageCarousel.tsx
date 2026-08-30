@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { ResponsivePostImage } from "./ResponsivePostImage";
 
-export type CarouselImage = { src: string; alt: string };
+export type CarouselImage = { src: string; alt: string; srcSet?: string; avifSrcSet?: string; sizes?: string };
 
 type ImageCarouselProps = { images: CarouselImage[]; onRemoveImage?: (index: number) => void };
 
@@ -20,7 +21,7 @@ export function ImageCarousel({ images, onRemoveImage }: ImageCarouselProps) {
 
   return <section className="image-carousel" role="region" aria-label="Карусель изображений">
     <div className="image-carousel-stage">
-      <img src={activeImage.src} alt={activeImage.alt} />
+      <ResponsivePostImage src={activeImage.src} alt={activeImage.alt} srcSet={activeImage.srcSet} avifSrcSet={activeImage.avifSrcSet} sizes={activeImage.sizes} loading="eager" />
       {onRemoveImage && <button type="button" className="image-carousel-remove" aria-label={`Удалить изображение: ${activeImage.alt || `Слайд ${safeActiveIndex + 1}`}`} onClick={() => onRemoveImage(safeActiveIndex)}>×</button>}
       <button type="button" className="image-carousel-arrow image-carousel-previous" aria-label="Предыдущее изображение" onClick={previous}>‹</button>
       <button type="button" className="image-carousel-arrow image-carousel-next" aria-label="Следующее изображение" onClick={next}>›</button>

@@ -13,7 +13,7 @@ import { PostComposer } from "./PostComposer";
 
 describe("PostComposer", () => {
   it("uploads a separately selected cover and submits its URL outside the article body", async () => {
-    mocks.upload.mockResolvedValue({ url: "/media/cover.webp" });
+    mocks.upload.mockResolvedValue({ url: "/media/cover-large.webp", variants: {} });
     const onCreate = vi.fn().mockResolvedValue(undefined);
     render(<PostComposer onCreate={onCreate} />);
 
@@ -21,12 +21,15 @@ describe("PostComposer", () => {
     fireEvent.change(screen.getByLabelText("Выбрать файл обложки"), { target: { files: [new File(["cover"], "cover.webp", { type: "image/webp" })] } });
 
     await waitFor(() => expect(mocks.upload).toHaveBeenCalledWith("/media", "POST", expect.any(FormData)));
-    expect(screen.getByRole("img", { name: "Предпросмотр обложки" }).getAttribute("src")).toBe("/media/cover.webp");
+    const preview = screen.getByRole("img", { name: "Предпросмотр обложки" });
+    expect(preview.getAttribute("src")).toBe("/media/cover-large.webp");
+    expect(preview.getAttribute("srcset")).toContain("/media/cover-medium.webp 960w");
+    expect(preview.getAttribute("decoding")).toBe("async");
     fireEvent.change(screen.getByLabelText("Заголовок публикации"), { target: { value: "Мой маршрут" } });
     fireEvent.click(screen.getByRole("button", { name: "Заполнить текст публикации" }));
     fireEvent.click(screen.getByRole("button", { name: "Опубликовать" }));
 
-    await waitFor(() => expect(onCreate).toHaveBeenCalledWith({ title: "Мой маршрут", type: "article", body: "<p><strong>Готово</strong></p>", status: "published", cover_url: "/media/cover.webp" }));
+    await waitFor(() => expect(onCreate).toHaveBeenCalledWith({ title: "Мой маршрут", type: "article", body: "<p><strong>Готово</strong></p>", status: "published", cover_url: "/media/cover-large.webp" }));
   });
 
   it("prefills the saved cover in edit mode", () => {

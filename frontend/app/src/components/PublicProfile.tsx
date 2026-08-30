@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { ApiPost, PublicProfile as PublicProfileData, PublicProfileActivity, PublicProfileComment, PublicProfileFollow, User } from "../hooks";
+import { ResponsivePostImage } from "./ResponsivePostImage";
 import { RichTextContent } from "./RichTextContent";
 
 type Tab = "activity" | "posts" | "answers" | "likes" | "subscriptions";
@@ -212,7 +213,7 @@ export function PublicProfile({ profile, posts, likes, activity = [], comments =
           {postsLoading && <div className="comment-skeleton"><i /><i /><i /></div>}
           {!postsLoading && visiblePosts.map((post) => (
             <article key={post.id} className="public-profile-post">
-              {showingLikes && post.cover_url?.trim() && <img className="public-profile-liked-cover" src={post.cover_url.trim()} alt={`Обложка: ${post.title}`} />}
+              {showingLikes && post.cover_url?.trim() && <ResponsivePostImage className="public-profile-liked-cover" src={post.cover_url.trim()} alt={`Обложка: ${post.title}`} loading="lazy" />}
               <p className="post-tag">{post.type === "article" ? "Статья" : post.type === "video_review" ? "Видеообзор" : "Фишка"}</p>
               <h2>{post.title}</h2>
               {showingLikes && post.liked_at && <p className="public-profile-liked-date">Понравилось {formatLikedDate(post.liked_at)}</p>}

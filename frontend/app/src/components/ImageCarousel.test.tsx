@@ -34,11 +34,15 @@ describe("ImageCarousel media loading", () => {
   });
 
   it("exposes responsive sources and async decoding on the active slide", () => {
-    render(<ImageCarousel images={images} />);
+    const { container } = render(<ImageCarousel images={images} />);
 
     const first = screen.getByRole("img", { name: "Первый слайд" });
     expect(first.getAttribute("srcset")).toBe(images[0].srcSet);
     expect(first.getAttribute("sizes")).toBe(images[0].sizes);
     expect(first.getAttribute("decoding")).toBe("async");
+    expect(first.getAttribute("loading")).toBe("eager");
+    expect(container.querySelector('source[type="image/avif"]')?.getAttribute("srcset")).toBe(
+      "/media/one-thumbnail.avif 320w, /media/one-medium.avif 960w, /media/one-large.avif 1600w",
+    );
   });
 });

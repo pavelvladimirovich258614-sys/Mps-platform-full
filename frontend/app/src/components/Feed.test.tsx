@@ -133,9 +133,14 @@ describe("Feed composer modal", () => {
   });
 
   it("renders an explicit cover image instead of the article fallback", () => {
-    const { container } = render(<Feed {...editorProps} posts={[{ ...post, cover_url: "/media/bali-cover.webp" }]} onToggleLike={vi.fn()} />);
+    const { container } = render(<Feed {...editorProps} posts={[{ ...post, cover_url: "/media/bali-cover-large.webp" }]} onToggleLike={vi.fn()} />);
 
-    expect(screen.getByRole("img", { name: "Обложка: Гид по Бали" }).getAttribute("src")).toBe("/media/bali-cover.webp");
+    const cover = screen.getByRole("img", { name: "Обложка: Гид по Бали" });
+    expect(cover.getAttribute("src")).toBe("/media/bali-cover-large.webp");
+    expect(cover.getAttribute("srcset")).toContain("/media/bali-cover-medium.webp 960w");
+    expect(cover.getAttribute("sizes")).toBe("(max-width: 900px) 100vw, 760px");
+    expect(cover.getAttribute("decoding")).toBe("async");
+    expect(container.querySelector('source[type="image/avif"]')?.getAttribute("srcset")).toContain("bali-cover-large.avif 1600w");
     expect(screen.queryByText("Под солнцем")).toBeNull();
     expect(container.querySelector(".article-cover")).toBeNull();
   });

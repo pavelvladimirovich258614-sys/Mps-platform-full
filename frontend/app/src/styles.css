@@ -176,6 +176,9 @@ input:focus-visible,select:focus-visible,[contenteditable="true"]:focus-visible 
   *,*::before,*::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; transition-duration:.01ms !important; }
 }
 
+.article-page>picture,.post-card>picture,.public-profile-post>picture,.image-carousel-stage>picture,.rich-text-content picture,.editor-image-node picture { display:block; width:100%; }
+.post-composer-cover picture { display:block; flex:0 0 180px; width:180px; }
+
 @media (max-width:1100px) and (min-width:901px) {
   .right-rail { padding-left:8px; padding-right:8px; width:252px; }
   .subscription-avatar { height:42px; width:42px; }

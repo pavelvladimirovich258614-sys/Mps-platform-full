@@ -48,9 +48,17 @@ describe("RichTextContent", () => {
   });
 
   it("renders an uploaded relative media image in a published article", () => {
-    render(<RichTextContent html={'<p>Маршрут</p><img src="/media/sea.webp" alt="Море">'} />);
+    const { container } = render(<RichTextContent html={'<p>Маршрут</p><img src="/media/sea-large.webp" alt="Море">'} />);
 
-    expect(screen.getByRole("img", { name: "Море" }).getAttribute("src")).toBe("/media/sea.webp");
+    const image = screen.getByRole("img", { name: "Море" });
+    expect(image.getAttribute("src")).toBe("/media/sea-large.webp");
+    expect(image.getAttribute("srcset")).toBe("/media/sea-thumbnail.webp 320w, /media/sea-medium.webp 960w, /media/sea-large.webp 1600w");
+    expect(image.getAttribute("sizes")).toBe("(max-width: 900px) 100vw, 760px");
+    expect(image.getAttribute("loading")).toBe("lazy");
+    expect(image.getAttribute("decoding")).toBe("async");
+    expect(container.querySelector('source[type="image/avif"]')?.getAttribute("srcset")).toBe(
+      "/media/sea-thumbnail.avif 320w, /media/sea-medium.avif 960w, /media/sea-large.avif 1600w",
+    );
   });
 
   it("renders a stored image carousel with accessible controls and leaves a single image ordinary", () => {
@@ -86,8 +94,8 @@ describe("RichTextContent", () => {
     expect(screen.getByRole("img", { name: "Второе" }).getAttribute("src")).toBe("/media/two.webp");
   });
 
-  it("keeps only the approved carousel attribute after the client sanitization boundary", () => {
-    const safeHtml = sanitizeRichTextHtml('<figure data-carousel="images" class="evil" style="display:none" onclick="alert(1)" data-extra="x"><img src="/media/one.webp" alt="Первое" onclick="alert(1)"><img src="/media/two.webp" alt="Второе" style="display:none"></figure>');
+  it("keeps responsive image attributes but strips unapproved attributes at the client sanitization boundary", () => {
+    const safeHtml = sanitizeRichTextHtml('<figure data-carousel="images" class="evil" style="display:none" onclick="alert(1)" data-extra="x"><img src="/media/one-large.webp" alt="Первое" loading="lazy" decoding="async" srcset="/media/one-medium.webp 960w" sizes="100vw" onclick="alert(1)"><img src="/media/two.webp" alt="Второе" style="display:none"></figure>');
     const container = document.createElement("div");
     container.innerHTML = safeHtml;
 
@@ -97,6 +105,11 @@ describe("RichTextContent", () => {
     expect(carousel?.hasAttribute("style")).toBe(false);
     expect(carousel?.hasAttribute("onclick")).toBe(false);
     expect(carousel?.hasAttribute("data-extra")).toBe(false);
-    expect(carousel?.querySelector("img")?.hasAttribute("onclick")).toBe(false);
+    const image = carousel?.querySelector("img");
+    expect(image?.getAttribute("loading")).toBe("lazy");
+    expect(image?.getAttribute("decoding")).toBe("async");
+    expect(image?.getAttribute("srcset")).toBe("/media/one-medium.webp 960w");
+    expect(image?.getAttribute("sizes")).toBe("100vw");
+    expect(image?.hasAttribute("onclick")).toBe(false);
   });
 });

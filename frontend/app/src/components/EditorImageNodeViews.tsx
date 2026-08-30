@@ -3,6 +3,7 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from "@tiptap/react";
 
 import { ImageCarousel, type CarouselImage } from "./ImageCarousel";
+import { ResponsivePostImage } from "./ResponsivePostImage";
 
 function imageLabel(alt: unknown, fallback: string) {
   return typeof alt === "string" && alt ? alt : fallback;
@@ -12,7 +13,7 @@ function EditorImageView({ node, deleteNode }: NodeViewProps) {
   const alt = imageLabel(node.attrs.alt, "Изображение");
 
   return <NodeViewWrapper className="editor-image-node" contentEditable={false}>
-    <img src={node.attrs.src} alt={typeof node.attrs.alt === "string" ? node.attrs.alt : ""} draggable={false} />
+    <ResponsivePostImage src={node.attrs.src} alt={typeof node.attrs.alt === "string" ? node.attrs.alt : ""} draggable={false} loading="eager" />
     <button type="button" className="editor-image-remove" aria-label={`Удалить изображение: ${alt}`} onMouseDown={(event) => event.preventDefault()} onClick={deleteNode}>×</button>
   </NodeViewWrapper>;
 }
