@@ -3,8 +3,8 @@
 ## Next session first — P0 checklist gate
 
 1. Read `AGENTS.md`; run `./init.sh`; read `claude-progress.md`, `feature_list.json` and this handoff; fetch and confirm local/origin/VPS SHA, clean tracked trees and backend health before any change.
-2. Retrieve or confirm the exact owner P0 checklist before selecting scope or writing code. The closeout request referenced «см. ниже», but no checklist items followed, so the list must not be inferred.
-3. Keep F47, F48c and `WIDG-4` separate unless the confirmed P0 list explicitly prioritizes them. Preserve Plan → Approve → Code, RED→GREEN and a separate production approval for every new package.
+2. WIDG-4 stages 1–2 are accepted commits `b8b6568` and `0d98e14`; stage 3 remains an uncommitted 13-file working-tree package and WIDG-4 is `in_progress`. Resume from the detailed handoff below; do not restart diagnosis or discard the working tree.
+3. Keep F47 and F48c separate from WIDG-4 completion. Preserve Plan → Approve → Code, RED→GREEN and a separate production approval for every new package.
 4. Preflight SSH in BatchMode with the currently authorized replacement key before a future deploy. If access fails again, stop and diagnose key authorization/provider-console recovery; do not guess credentials.
 
 ## Current verified checkpoint — 2026-08-30
@@ -32,13 +32,47 @@
 - Production commit `7ba8199` moves «О нас» immediately after «Лента», before «Форум стран», through the shared `Layout` navigation array. Desktop sidebar and mobile sheet use the same order; footer and `/about` content are unchanged.
 - Navigation RED received the old order with «О нас» after «Подписка»; targeted GREEN passed 1/1 and the whole Layout file passed 7/7. Fresh full frontend passed 25 files / 178 tests; build passed with 120 modules plus only the existing chunk-size warning. Chrome light/dark at 375/768/1024/1440 passed 8/8 for exact order, `/about`, unchanged footer, focus, reduced motion and zero horizontal overflow.
 - The external design reference `D:/Профессиональный редизайн сайта/Мир под солнцем.dc.html` remained read-only and was not copied or tracked.
-- `WIDG-4` is planned, not implemented: journal/user search, recommendations, recommendation descriptions/algorithm and hidden-card state require a separate backend+frontend contract. No static recommendation data was introduced.
+- `WIDG-4` is `in_progress`. Accepted commits: `b8b6568` recommendations and `0d98e14` search/PostgreSQL indexes. Stage 3 is implemented but uncommitted; no static recommendation data was introduced, and production has none of WIDG-4 until a separately approved deploy.
+- Historical stage-3 frontend evidence before interruption: missing components/hooks produced the expected RED; targeted GREEN passed 4 files/15 tests and follow-refresh integration passed 1/1. Full frontend passed 28 files/187 tests; build passed with 122 modules and existing warnings only. Browser light/dark at 375/768/1024/1440 passed 8/8 for rail order, 44px controls, focus/ARIA, reduced-motion, contrast 4.88:1 light / 7.53:1 dark and zero horizontal overflow. This evidence was not rerun during the documentation closeout and must not be treated as the final post-fix gate.
 - REV-2 is production-deployed `passing` at package SHA `58a49f5038141b967324e581f0856757cba08dd8`, included in final application SHA `7ba81997f6dd165350395967f89789283c245918`, with Alembic `20260829_0018 (head)`.
 - Reviews support up to two ordered photos, a 1000-character body limit and authenticated `/reviews/mine` statuses. Public `/reviews` remains approved-only; editor moderation remains role-gated.
 - The live stale-state follow-up is included in the same production SHA: `useReviews.moderate` replaces the matching mine entry with the review returned by PATCH, so reject immediately renders «Не опубликован» while preserving queue removal.
 - Local verification for the follow-up: backend protective PATCH + `/mine` contract 1/1; frontend RED received `pending` instead of expected `rejected`; hook+UI GREEN 2 files/9 tests; full backend `125 passed, 7 skipped`; full frontend 24 files/156 tests; build 118 modules.
 - Production evidence: rollback `/root/backups/mps-frontend-rev2-mine-fix-58a49f5.tar.gz`, SHA-256 `339b994a0990db83ada5969a01536603b200ebf670e3cfed1fd6b61564d4e75f`; served bundle `index-DOiIEML6.js` contains production API/bot values and no localhost API; `mps-backend` stayed PID `891354`, active/healthy without restart; `deploy/smoke.sh` passed.
 - Fresh closeout check again observed VPS SHA `58a49f5038141b967324e581f0856757cba08dd8`, backend `active` with health `ok`, production bundle guards and smoke `[OK]`.
+
+## WIDG-4 stage 3 — exact uncommitted working-tree handoff
+
+### Files already changed
+
+- `backend/app/api/discovery.py`: `/discovery/recommended-authors` accepts repeated `exclude_ids`, caps them at 50 through FastAPI validation and adds `User.id.not_in(exclude_ids)` to the existing eligible-author conditions.
+- `backend/tests/test_discovery.py`: adds the contract that excluded eligible authors are absent and 51 IDs return 422.
+- `frontend/app/src/App.tsx`: creates discovery search/recommendation state, loads per-user hidden IDs, wires both panels, and after following waits for parallel recommendation and subscription reloads.
+- `frontend/app/src/App.routing.test.tsx`: extends API fixtures for discovery/following and adds the recommendation-follow synchronization integration test.
+- `frontend/app/src/components/Layout.tsx`: adds the optional search/recommendation panel props and renders `JournalSearchPanel → RecommendedPanel → SubscriptionsPanel → presence`.
+- `frontend/app/src/components/Layout.test.tsx`: covers the exact right-rail order and authenticated recommendation rendering.
+- `frontend/app/src/hooks/index.ts`: adds discovery response types, 300ms debounced search with `AbortController`/stale-response guard/retry, recommendation loading with at most 50 exclude IDs, and 30-day per-user localStorage hidden-ID state.
+- `frontend/app/src/hooks/useDiscovery.test.tsx` (new): covers debounce, request cancellation/stale result suppression, TTL pruning and the 50-ID cap.
+- `frontend/app/src/components/JournalSearchPanel.tsx` and `.test.tsx` (new): separate journal search with idle/loading/empty/error states and grouped article/author/forum-topic results.
+- `frontend/app/src/components/RecommendedPanel.tsx` and `.test.tsx` (new): real author cards with avatar/initials, bio, profile navigation, follow action, accessible dismiss and loading/empty/error states.
+- `frontend/app/src/styles.css`: only additive WIDG-4 styles using the existing theme tokens; includes 44px interactive targets and overflow-safe text/layout.
+
+### What is already observed, but not sufficient for final `passing`
+
+- Frontend RED failed because the new components/hooks did not exist; targeted GREEN later passed 4 files / 15 tests.
+- App follow-refresh integration passed 1/1 after waiting for the recommendation to load.
+- Full frontend passed 28 files / 187 tests; `npm run build` passed with 122 modules and only existing CJS/chunk-size warnings.
+- Browser light/dark passed 8/8 at 375/768/1024/1440: desktop order, 44px controls, focus, dismiss aria-label, reduced-motion, no console errors and zero horizontal overflow. Secondary-copy contrast measured 4.88:1 light / 7.53:1 dark.
+- Backend exclude-ID test had a real RED (excluded authors were returned) and a targeted GREEN 1/1. Two later control invocations never reached the tests because pytest cleanup hit Win32 Error 5 on `basetemp`; the protected temporary directories were removed.
+
+### Remaining before the stage-3 code commit
+
+1. Add a RED integration/component contract for selecting an exact forum topic from `JournalSearchPanel`. Current `App.tsx` ignores `topicId` in `onOpenForumTopic` and navigates only to `/countries/{countryId}`; the current pathname route has no topic ID, while `Forum` keeps the selected topic only in local state. Decide and implement the smallest route/state contract that opens the requested topic rather than merely its country.
+2. Rerun the changed backend exclude-ID target outside the Windows sandbox restriction and run the relevant backend regression suite. Do not count a Win32 Error 5 setup/cleanup failure as a test result.
+3. After the topic-navigation fix, rerun targeted component/hooks/App tests, the full frontend suite and `npm run build`.
+4. Repeat the light/dark browser matrix at 375/768/1024/1440, including exact topic opening, debounce/abort, loading/empty/error, keyboard focus, aria-label, 44px targets, contrast, reduced-motion and zero horizontal overflow.
+5. Review the complete 13-file implementation diff, run `git diff --check`, verify JSON/trackers as applicable, and stage only the intended stage-3 files. Then create a separate code commit; update WIDG-4 to `passing` only after fresh observed output from every required gate.
+6. Push/deploy only under new explicit approvals. Production rollout must remain a separate DB/frontend backup + migration + health/smoke/browser cycle.
 
 ## Known risks / boundaries
 

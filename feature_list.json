@@ -27,14 +27,14 @@
       "area": "frontend-backend",
       "title": "Поиск и рекомендации в правой колонке",
       "user_visible_behavior": "Правый rail получает отдельный поиск по журналу/пользователям и блок персональных рекомендаций с подпиской и возможностью скрыть карточку.",
-      "status": "planned",
+      "status": "in_progress",
       "verification": [
         "RED/GREEN backend API-контракты поиска, рекомендаций и скрытых карточек",
         "RED/GREEN frontend-компоненты поиска и рекомендаций с реальными данными",
         "Полные backend/frontend suites, build и browser light/dark на 375/768/1024/1440"
       ],
-      "evidence": "2026-08-29: диагностика подтвердила существующие UserFollow model/API/hooks, но не обнаружила общего поиска по журналу/пользователям, recommendation endpoint/алгоритм, описания кандидатов в списочном ответе или состояние скрытых рекомендаций.",
-      "notes": "Отложено отдельным owner-approved backend+frontend scope. Не входит в light-theme/subscriptions commits `613faab` и `85cb16a`; статические или вымышленные рекомендации запрещены."
+      "evidence": "2026-08-30 WIDG-4: этап 1 закоммичен как `b8b6568` — ID-pivot рекомендации активных авторов с фильтрами inactive/self/followed/anonymous/banned и защитой от ORDER BY RANDOM(); этап 2 закоммичен как `0d98e14` — единый discovery search, PostgreSQL FTS/trigram migration и regression-контракт прежнего форумного поиска. Оба этапа приняты после RED→GREEN, включая активный PostgreSQL для этапа 2. Незакоммиченный этап 3 исторически получил frontend RED→GREEN: targeted 4 files / 15 tests, follow-refresh integration 1/1, full frontend 28 files / 187 tests, build 122 modules и browser light/dark 8/8 на 375/768/1024/1440. В текущем closeout эти проверки не перезапускались; два контрольных backend-прогона ранее остановились на известном Win32 Error 5 при работе pytest с basetemp.",
+      "notes": "Остаётся `in_progress`: 13 файлов этапа 3 находятся в незакоммиченном рабочем дереве. До code commit нужно решить/проверить переход результата поиска темы к конкретной теме (сейчас callback открывает только страну), получить свежий backend verification для добавленного exclude_ids, повторить требуемый финальный frontend suite/build/browser gate после последней правки, выполнить final diff review и закоммитить этап 3 отдельно. Рекомендации используют реальные API-данные; hidden IDs хранятся 30 дней в per-user localStorage и ограничены 50 значениями для backend."
     },
     {
       "id": "FEED-UX-SEO",
