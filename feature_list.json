@@ -22,6 +22,23 @@
       "notes": "Production-deployed `passing`: base light-theme commit `a11fcab`, header/sidebar structure `613faab`, subscriptions rail `85cb16a`, tracker checkpoint `e997b7a`, shared PageCard `c4f10e4`, warm `--card-soft` follow-up `ac0235a` and final About-navigation commit `7ba8199`. Current production application SHA `7ba81997f6dd165350395967f89789283c245918` includes the complete package. The read-only external reference `D:/Профессиональный редизайн сайта/Мир под солнцем.dc.html` was not copied or tracked. `--gold-ink` is used only by the 40px hero heading and `--muted` is not used as a small-text color. The central create action remains in place; the sidebar action is additional. Subscriptions reuse the existing UserFollow API/hooks. The shared PageCard wraps only route content, leaving notifications and modal overlays outside; page roots retain their internal layout without duplicate outer padding. Empty states and inset informational/CTA surfaces use `--card-soft`; buttons and overlays retain `--panel`. `design/DESIGN_SYSTEM.md` records the normative shell/card rules and all theme tokens. Footer and `/about` content are unchanged by the navigation-order follow-up."
     },
     {
+      "id": "P0-POST-MEDIA",
+      "priority": 0,
+      "area": "media-performance",
+      "title": "P0: оптимизация изображений публикаций на мобильных",
+      "user_visible_behavior": "Опубликованные посты быстро открываются на мобильной сети: upload автоматически исправляет EXIF-ориентацию, создаёт ограниченные responsive WebP/AVIF-варианты, а страница загружает только подходящий размер и активный кадр карусели.",
+      "status": "in_progress",
+      "verification": [
+        "RED/GREEN backend: thumbnail/medium/large в WebP+AVIF, EXIF transpose и отсутствие сохранённого исходного JPEG/PNG как публичного файла",
+        "RED/GREEN backend: два medium fallback-изображения первого экрана суммарно не превышают 700 KiB",
+        "RED/GREEN frontend: srcset/sizes/decoding для фото поста и отсутствие inactive carousel sources до взаимодействия",
+        "Точечная миграция poezdka-v-tailand-2026 с backup/rollback и четырьмя новыми именами файлов",
+        "Throttled Playwright Safari/Chrome: 400 Kbit/s, latency 400ms, CPU x4; полный backend/frontend suite и build"
+      ],
+      "evidence": "2026-08-30 Stage 1. Fresh baseline outside Windows sandbox: `python -m pytest tests/test_media.py -q` — 11 passed; frontend RichTextContent+ArticleComments — 2 files / 18 passed. RED backend target — 2 failed / 11 deselected for the expected reason: POST /media still returns only `{url}` and has no responsive `variants`, so EXIF/format/dimension and 700 KiB contracts cannot pass. RED frontend ImageCarousel — 1 failed / 1 passed: inactive slide is already absent before interaction, while the active image has no `srcset` (received null), `sizes` or async decoding. Startup `./init.sh` stopped before project checks on the known Git Bash Win32 Error 5; direct project baselines were rerun successfully outside sandbox.",
+      "notes": "Owner-approved five-stage P0. Stage 1 contains tests only; production code, database, media files and VPS were not changed. Stage 2 must implement the upload pipeline without hard-rejecting normal author files up to the existing 10 MiB ingress limit. WIDG-4 remains locally passing but its push/deploy is paused until this P0 is closed. F47/F48c were already independently in_progress before this owner-prioritized exception."
+    },
+    {
       "id": "WIDG-4",
       "priority": 4,
       "area": "frontend-backend",

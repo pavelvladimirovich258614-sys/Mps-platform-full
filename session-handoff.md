@@ -1,11 +1,20 @@
 # Session handoff — МПС
 
-## Next session first — WIDG-4 publication approval gate
+## Next session first — P0 post-media Stage 2 approval gate
 
-1. Read `AGENTS.md`; run `./init.sh`; read `claude-progress.md`, `feature_list.json` and this handoff; fetch and confirm local/origin/VPS SHA, clean tracked trees and backend health before any publication action.
-2. WIDG-4 is locally verified `passing`. Stages 1–2 are accepted commits `b8b6568` and `0d98e14` already present in `origin/main`; stage 3 is the latest local-only commit. Do not push or deploy until the owner gives the requested separate approval.
-3. After approval, publish the complete WIDG-4 history in one controlled cycle and verify it together with the existing About-navigation checkpoint. Preserve Plan → Approve → Code, DB/frontend rollback, migration, production Vite/no-localhost guards, health/smoke and browser verification. Keep F47 and F48c separate.
-4. Preflight SSH in BatchMode with the authorized deployment key before a future deploy. If access fails again, stop and diagnose key authorization/provider-console recovery; do not guess credentials.
+1. Read `AGENTS.md`; run `./init.sh`; read `claude-progress.md`, `feature_list.json` and this handoff. The Git Bash Win32 Error 5/global pip-check issues remain known external blockers; rerun MPS checks directly outside sandbox when necessary.
+2. `P0-POST-MEDIA` Stage 1 is the latest local-only commit and intentionally RED. Do not alter the tests to fit the current implementation. Wait for the owner's explicit confirmation before Stage 2.
+3. Stage 2 scope is backend upload only: EXIF transpose; 320/960/1600 variants; WebP fallback plus AVIF; iterative/quality-bounded encoding that satisfies the two-medium 700 KiB contract; never publish the input JPEG/PNG as-is. Preserve the existing 10 MiB author upload acceptance and Russian validation errors.
+4. After Stage 2 targeted GREEN, run the full relevant backend suite, update the three trackers, create one local `[in_progress]` commit and stop. Do not start frontend Stage 3, production post migration, push or deploy without the next confirmation.
+5. WIDG-4 remains locally verified `passing`; stages 1–2 are already in `origin/main`, stage 3 is the commit immediately before this P0 work. Its push/deploy remains paused until all five media stages close.
+
+## P0-POST-MEDIA Stage 1 — committed RED checkpoint
+
+- Baseline outside sandbox: backend `tests/test_media.py` 11 passed; frontend RichTextContent+ArticleComments 2 files / 18 passed.
+- Backend RED: 2 failed / 11 deselected. Both failures are exact: POST `/media` returns only `{url}`, so responsive variants/EXIF/format/dimension and the 700 KiB initial mobile budget are absent.
+- Frontend RED/regression: `ImageCarousel.test.tsx` has 1 passing inactive-slide guard and 1 expected failure because the active image has no `srcset`; the same contract also requires `sizes` and `decoding=async` once Stage 3 starts.
+- Chosen limits: generated widths 320/960/1600; initial cover + active-slide medium WebP budget 700 KiB. This accepts the existing input limit and auto-normalizes instead of disrupting the author UX with a resolution/encoded-size rejection.
+- No application code, dependency, DB, VPS or production media was changed. `feature_list.json` keeps `P0-POST-MEDIA` `in_progress`; no passing/complete claim is valid yet.
 
 ## Current verified checkpoint — 2026-08-30
 
