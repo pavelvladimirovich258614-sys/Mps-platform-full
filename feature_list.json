@@ -3,6 +3,24 @@
   "rule": "Только одна фича может быть in_progress. Статус passing только с evidence.",
   "features": [
     {
+      "id": "TOOLING-VITE6",
+      "priority": 0,
+      "area": "frontend-dev-tooling",
+      "title": "Vite 6.4.3 / Vitest 3.2.6: закрытие пяти npm audit findings",
+      "user_visible_behavior": "Поведение сайта сохраняется; обновлены только dev-зависимости сборки и тестов, без изменения runtime dependencies, приложения или тестов.",
+      "status": "passing",
+      "verification": [
+        "Явные диапазоны vite ^6.4.3 / vitest ^3.2.6 и обновлённый lockfile, без npm audit fix --force",
+        "npm audit --registry=https://registry.npmjs.org: 0 vulnerabilities",
+        "Полный frontend npm test: 32 файла / 200 тестов; отдельно оценить hooks, routing, editor и mocks/timers",
+        "Production npm run build, dev/HMR и реальный dist: light/dark на 375/768/1024/1440",
+        "Полный backend pytest с MPS_TEST_POSTGRES_URL на изолированной PostgreSQL 16, подготовленной штатными Alembic-миграциями",
+        "Проверить JSON, git diff --check и точный scope; финальный коммит только после отдельного разрешения, без push/deploy"
+      ],
+      "evidence": "2026-08-31, принятые владельцем этапы 1–3: исходный npm audit — 5 findings (3 moderate, 1 high, 1 critical); явное обновление manifest/lockfile в 06dd1b8 установило Vite 6.4.3 и Vitest 3.2.6 при сохранении @vitejs/plugin-react 4.7.0. После установки audit 0; frontend npm test с первого прогона: 32 files / 200 passed, 49.26s, 0 правок. Production npm run build: exit 0, Vite 6.4.3, 121 modules, JS 731.91 kB / gzip 232.01 kB, только chunk-size warning. Dev/HMR применил изменение модуля без reload с сохранением состояния. Browser на preview реального dist: 8/8 light/dark x 375/768/1024/1440; theme toggle, modal keyboard focus/Escape и /about прошли, overflow/page errors/broken visible images = 0. Served JS index-Cx13uxnX.js совпал с dist по SHA-256 10aab2d75ed5501f94431932ad0f72fc01eb5d29134971d15ae3e18288501009; production API/bot markers присутствуют, localhost fallback отсутствует. Browser использовал read-only production GET API/media bridge для локального CORS и /media, без записей в production. Свежий этап 4: npm audit снова 0; backend без PostgreSQL — 141 passed / 10 skipped (3 discovery, 3 forum, 4 Irishka). Первый прогон на пустой PostgreSQL — 149 passed / 2 failed из-за отсутствующего pg_trgm/similarity; fixture create_all не выполняет Alembic. После штатного python -m alembic upgrade head до 20260830_0020 на одноразовой БД неизменённый discovery target — 6 passed; финальный python -m pytest tests -q -rs -p no:cacheprovider --basetemp D:/mps-platform-full/.pytest-vite-stage4-pg-final-0831 с process-scoped MPS_TEST_POSTGRES_URL — 151 passed in 55.26s, 0 skipped, exit 0. Backend diff относительно 38c6e07 пуст.",
+      "notes": "Локально passing после принятых владельцем этапов 1–4. 2026-08-31 владелец разрешил отдельный коммит этих трекеров поверх 06dd1b8, push обоих коммитов и frontend-only production deploy с backup, сверкой VITE/served bundle, health и smoke, без backend restart. На момент подготовки tracker-коммита production rollout ещё не выполнен: локальный passing не означает deployed. Не amend/squash 06dd1b8. Принятые результаты этапов 1–3 не выдаются за повторные запуски этапа 4. Внешние init.sh Win32 Error 5/global pip check и текстовый .codex/skills/*.md gap сохраняются отдельно; общая Python-среда не ремонтировалась. F47/F48c остаются прежними исключениями in_progress. Локальный browser evidence: C:/Users/vin-m/.codex/visualizations/2026/08/31/01a057ec-8c49-78c0-9ff1-976f3a32506e/stage3-results.json; артефакт вне git."
+    },
+    {
       "id": "P0-LIGHT-THEME",
       "priority": 0,
       "area": "frontend-theme",

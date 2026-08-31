@@ -1,6 +1,24 @@
 # Session handoff — МПС
 
-## Current checkpoint — WIDG-1 + WIDG-2 production complete
+## Current checkpoint — 2026-08-31, Vite/Vitest locally verified; release authorized
+
+1. Local HEAD `06dd1b8b0b2d691fbdb5105ac1331e082c2744ec` is the only existing upgrade commit, changing frontend manifest/lockfile to Vite `^6.4.3` / Vitest `^3.2.6`; plugin-react remains 4.7.0. The local origin/main reference remains `38c6e07`. This upgrade has not been pushed or deployed.
+2. Owner accepted Stages 1–3: npm audit 5 findings -> 0; first frontend run 32 files / 200 tests passed without fixes; production build with Vite 6.4.3 succeeded (121 modules, JS 731.91 kB / gzip 232.01 kB, only the chunk warning); dev/HMR updated a module without reload or state loss.
+3. Accepted real-dist browser matrix: light/dark x 375/768/1024/1440, 8/8 passed. Theme switch, modal focus/Escape and /about passed; overflow, JavaScript errors and broken visible images were zero; Svyazio loaded. Public production API/media GETs were bridged read-only to overcome localhost CORS and preview's absent nginx /media mapping. No production writes or authenticated-account checks were made. Served `index-Cx13uxnX.js` matched dist SHA-256 `10aab2d75ed5501f94431932ad0f72fc01eb5d29134971d15ae3e18288501009`, with production API/bot markers and no localhost fallback. Evidence and eight screenshots are outside git in `C:/Users/vin-m/.codex/visualizations/2026/08/31/01a057ec-8c49-78c0-9ff1-976f3a32506e/` (`stage3-results.json`). These are accepted prior-stage results, not Stage 4 reruns.
+4. Fresh Stage 4 audit: `npm audit --registry=https://registry.npmjs.org` -> `found 0 vulnerabilities`, exit 0. Fresh backend: initially 141 passed / 10 PostgreSQL skips; first empty-PostgreSQL run 149 passed / 2 failed for missing pg_trgm `similarity()`. Diagnosis found that discovery fixture creates tables without migrations. Existing `python -m alembic upgrade head` on the disposable PostgreSQL 16 DB installed the extension and reached `20260830_0020`; unchanged discovery tests passed 6/6.
+5. Final backend command from backend with process-scoped `MPS_TEST_POSTGRES_URL`: `python -m pytest tests -q -rs -p no:cacheprovider --basetemp D:/mps-platform-full/.pytest-vite-stage4-pg-final-0831` -> **151 passed in 55.26s, 0 skipped, exit 0**. No source/tests/backend changes. Temporary container `mps-vite-stage4-pg-0831` was stopped with automatic removal; Docker Desktop was started only for this verification and returned to its initial stopped state. Do not use production for pytest: these fixtures drop/create tables.
+6. Owner accepted Stage 4 and now authorizes a separate commit of exactly `feature_list.json`, `claude-progress.md`, `session-handoff.md` above `06dd1b8`, then push/deploy both commits together. TOOLING-VITE6 is locally `passing`; do not amend/squash the dependency commit. At preparation of this tracker commit, production deployment is still pending, so local validation must not be reported as live deployment evidence.
+
+## Next action and other session outcomes
+
+1. Execute the authorized tracker commit, verify clean state and push both commits. Before frontend deployment, preserve existing dist and record rollback path/SHA-256. Fast-forward production, install the committed lockfile, rebuild with the same production VITE values, verify served JS and `deploy/smoke.sh`, and confirm backend health/PID without restart. No backend install or production DB migration is part of this scope. Record actual deployment evidence separately after observing it; do not prefill success. Do not change F47/F48c, runtime dependencies or the known text-rule gap.
+2. Sergey admin task was completed earlier in this session using the existing management command: initial lookup found no matching row; post-command verification found exactly one matching user, role admin, not banned. Do not repeat creation or expose identifying fields in trackers.
+3. Q&A F40/F41 diagnosis: manager replies are authorized by the configured managers group chat, without a separate user/username whitelist. Pavel adds the four managers to the existing Telegram group manually; no site admin/editor roles were requested or assigned.
+4. Svyazio diagnosis remains incomplete at the SaaS panel boundary. The earlier authorized live-widget test obtained message-creation API 201; this does not prove visibility in «Чаты» or agent notification delivery. Panel authentication was unavailable. Next panel checks: find the test conversation, inspect personal agent Telegram notification binding and agent/channel/department assignment. Do not claim a precise SaaS configuration cause until checked; no new widget code is justified by current evidence.
+
+## Historical checkpoint — WIDG-1 + WIDG-2 production complete
+
+The records below preserve the previous rollout/rollback evidence. Stage 4 did not reconnect to the VPS or refresh production health. Initial session preflight recorded local/origin/VPS `38c6e07` before the local upgrade.
 
 1. WIDG-1 and WIDG-2 are both production-deployed `passing`. The completed application rollout is `9586cafe0885941cfcfbd6c4f3bd634751e69680`, confirmed on local `main`, `origin/main` and the VPS checkout before this documentation-only closeout.
 2. WIDG-1 commits `6711b0f` and `dc2e89e` are live. Alembic reached `20260830_0020`; `mps-backend` is active/healthy. The public tour-request form, consent gate, persistence and existing Telegram relay path are deployed.
@@ -8,12 +26,6 @@
 4. The WIDG-2 production frontend build contains the production API/bot values and no localhost fallback. The served bundle matched the built asset, `deploy/smoke.sh` passed, and backend PID remained unchanged because this rollout was frontend-only.
 5. Live iPhone 14 verification at 390x664 confirmed both launchers simultaneously visible after the normal cookie-consent step: WIDG-1 on the left, WIDG-2 on the right, no mutual or mobile-nav overlap, `bottom: 74px`, zero horizontal overflow, clickable Svyazio launcher and fullscreen 390x664 chat with no page errors or Svyazio request failures.
 6. Known vendor boundary: the current third-party launcher exposes no accessible name inside its Shadow DOM. This remains a separate vendor/accessibility decision rather than an unverified local override.
-
-## Next session
-
-1. Назначение Сергея админом — ждёт email/Telegram ID от Павла. Не менять production-роли без этих точных контактных данных и отдельного подтверждения.
-2. `npm audit`: 3 moderate, 1 high, 1 critical. До любого исправления провести отдельную RED-диагностику critical advisory; не применять `npm audit fix --force` вслепую.
-3. Разобрать, почему Telegram-уведомления от виджета Связио не доходят. Диагностика запланирована на завтра отдельным промптом; не начинать её из этого closeout.
 
 ## Completed production checkpoint — WIDG-4 + P0-POST-MEDIA
 
@@ -45,7 +57,8 @@
 ## Known boundaries
 
 - `./init.sh` still stops at the known Git Bash Win32 Error 5/global shared-environment `pip check`; direct complete MPS suites are the completion evidence. Do not repair the shared environment in this project.
+- The known text-rule `.codex/skills/*.md` gap remains unchanged. The existing `verification-before-completion/SKILL.md` and `tdd-fix-workflow/SKILL.md` were read and applied; no replacement rule files were added.
 - Three guest `401` console messages are exactly `/api/v1/me`, `/api/v1/notifications`, and `/api/v1/auth/refresh`; none is a failed/hanging request.
-- The existing 705.15 kB frontend chunk warning remains a separate optimization scope.
+- The historical 705.15 kB production chunk and the local Stage 3 Vite 6 chunk of 731.91 kB remain above the 500 kB warning threshold; optimization is a separate scope.
 - `/etc/nginx/sites-enabled/mps-platform` is a regular file rather than a symlink to `sites-available`; both exact media blocks were backed up and updated. Do not silently change that topology in a future task.
 - F47 and F48c remain their pre-existing independent `in_progress` tracker items and were not changed by this cycle.
