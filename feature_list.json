@@ -3,6 +3,23 @@
   "rule": "Только одна фича может быть in_progress. Статус passing только с evidence.",
   "features": [
     {
+      "id": "SEC-HEIF-STOPGAP",
+      "priority": 0,
+      "area": "backend-media-security",
+      "title": "Временное отключение HEIC/HEIF до исправления native libheif",
+      "user_visible_behavior": "POST /api/v1/media отклоняет HEIC/HEIF понятной временной ошибкой; JPEG/PNG/WebP/AVIF сохраняют существующую обработку.",
+      "status": "passing",
+      "verification": [
+        "RED: настоящий HEIC/HEIF отклоняется с HTTP 422 и понятным сообщением, включая подменённый MIME/filename",
+        "HEIF decoder не вызывается даже при его регистрации сторонним кодом",
+        "Targeted media suite: JPEG/PNG/WebP/AVIF, варианты и EXIF без регрессий",
+        "Полный backend suite с одноразовым PostgreSQL и штатными Alembic-миграциями, без skipped",
+        "git diff --check, JSON и точный scope; локальный commit без push/deploy"
+      ],
+      "evidence": "2026-09-01: RED до изменения media.py — 10 failed / 4 passed / 6 deselected: шесть HEIF uploads (включая JPEG/PNG/WebP/AVIF MIME/filename spoof) вернули 200 вместо 422; два guard-теста вызвали зарегистрированный HEIF opener; сообщение перечисляло HEIF как допустимый; AVIF с mif1 ошибочно попал в HEIF plugin. После отключения регистрации и явного Image.open formats=(JPEG,PNG,WEBP,AVIF) полный media target — 20 passed in 9.16s. HEIF возвращает 422 с временной ошибкой и без файлов; оба decoder guards прошли; JPEG/PNG/WebP/AVIF (включая mif1), EXIF и шесть responsive-вариантов работают. Полный python -m pytest tests -q -rs --tb=short -p no:cacheprovider --basetemp D:/mps-platform-full/.pytest-heif-full-0901 с process-scoped MPS_TEST_POSTGRES_URL на одноразовом postgres:16, подготовленном штатным Alembic до 20260830_0020: 158 passed in 64.14s, 0 skipped, exit 0. flake8 двух Python-файлов --select E4,E7,E9,F --jobs=1: exit 0. init.sh остановился до установки на известном Git Bash Win32 Error 5; это не GREEN init. Зависимости, production и другие audit findings не менялись. Локальный passing означает проверенный stopgap, не исправленную libheif и не production deploy.",
+      "notes": "Explicit temporary stopgap для GHSA-g89c-p67h-r497, не исправление самой native-библиотеки. Восстановление HEIC — отдельная задача только после проверки фактически загруженной libheif >=1.23.2 и полного media regression. F47/F48c и прочие audit findings не менять. Push/deploy требуют отдельного подтверждения. Текстовый .codex/skills/*.md gap остаётся известным."
+    },
+    {
       "id": "TOOLING-VITE6",
       "priority": 0,
       "area": "frontend-dev-tooling",

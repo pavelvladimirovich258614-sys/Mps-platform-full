@@ -4,6 +4,7 @@ import hmac
 from pathlib import Path
 import random
 import time
+from unittest.mock import Mock
 
 import httpx
 import pytest
@@ -92,27 +93,57 @@ async def test_upload_supported_images(client, test_app, image_format, content_t
 
 @pytest.mark.parametrize(
     ("format_name", "content_type", "filename"),
-    [("HEIF", "image/heic", "iphone.heic"), ("HEIF", "image/heif", "iphone.heif")],
+    [
+        ("HEIF", "image/heic", "iphone.heic"),
+        ("HEIF", "image/heif", "iphone.heif"),
+        ("HEIF", "image/jpeg", "disguised.jpg"),
+        ("HEIF", "image/png", "disguised.png"),
+        ("HEIF", "image/webp", "disguised.webp"),
+        ("HEIF", "image/avif", "disguised.avif"),
+    ],
 )
-async def test_upload_converts_heic_and_heif_to_displayable_webp(client, test_app, format_name, content_type, filename):
+async def test_upload_temporarily_rejects_heic_and_heif(client, test_app, format_name, content_type, filename):
     response = await client.post(
         "/api/v1/media",
         headers=await authorization(client),
         files={"file": (filename, heif_bytes(format_name), content_type)},
     )
 
-    assert response.status_code == 200
-    saved_file = Path(test_app.state.settings.media_dir, Path(response.json()["url"]).name)
-    assert saved_file.suffix == ".webp"
-    with Image.open(saved_file) as saved:
-        assert saved.format == "WEBP"
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Формат HEIC/HEIF временно недоступен, используйте JPEG/PNG/WebP"
+    media_dir = Path(test_app.state.settings.media_dir)
+    assert not media_dir.exists() or list(media_dir.iterdir()) == []
 
 
-async def test_upload_accepts_avif(client, test_app):
+@pytest.mark.parametrize("major_brand", [b"heic", b"mif1"])
+async def test_upload_never_calls_registered_heif_decoder(client, monkeypatch, major_brand):
+    # Model a HEIF opener registered elsewhere; no native decoding is needed.
+    Image.init()
+    heif_decoder = Mock(return_value=Image.new("RGB", (20, 20), "red"))
+    monkeypatch.setitem(Image.OPEN, "HEIF", (heif_decoder, lambda prefix: prefix[4:8] == b"ftyp"))
+    monkeypatch.setattr(Image, "ID", [*Image.ID, "HEIF"])
+    container_header = b"\x00\x00\x00\x18ftyp" + major_brand + b"\x00" * 4 + b"heicmif1"
+
     response = await client.post(
         "/api/v1/media",
         headers=await authorization(client),
-        files={"file": ("photo.avif", image_bytes("AVIF"), "image/avif")},
+        files={"file": ("disguised.jpg", container_header, "image/jpeg")},
+    )
+
+    heif_decoder.assert_not_called()
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Формат HEIC/HEIF временно недоступен, используйте JPEG/PNG/WebP"
+
+
+@pytest.mark.parametrize("major_brand", [b"avif", b"mif1"])
+async def test_upload_accepts_avif(client, test_app, major_brand):
+    source = bytearray(image_bytes("AVIF"))
+    assert source[4:8] == b"ftyp"
+    source[8:12] = major_brand
+    response = await client.post(
+        "/api/v1/media",
+        headers=await authorization(client),
+        files={"file": ("photo.avif", bytes(source), "image/avif")},
     )
 
     assert response.status_code == 200
@@ -170,7 +201,7 @@ async def test_upload_explains_unsupported_format(client):
     )
 
     assert response.status_code == 422
-    assert response.json()["detail"] == "Допустимы JPEG, PNG, WebP, HEIC, HEIF или AVIF"
+    assert response.json()["detail"] == "Допустимы JPEG, PNG, WebP или AVIF"
 
 
 async def test_upload_rejects_truncated_png_with_valid_mime(client, test_app):

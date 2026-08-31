@@ -1,6 +1,15 @@
 # claude-progress.md — журнал прогресса МПС
 
 ## Current Verified State
+
+- Current task (2026-09-01): SEC-HEIF-STOPGAP is locally `passing`; temporary HEIC/HEIF rejection in POST /api/v1/media, pending separately approved push/deploy. The decoder allowlist prevents MIME/filename bypass and HEIF opener dispatch; JPEG/PNG/WebP/AVIF processing is preserved. Native libheif has NOT been upgraded or declared fixed.
+- Verification: RED 10 failed / 4 passed / 6 deselected before the handler edit; GREEN full media 20 passed in 9.16s. Full backend with disposable PostgreSQL 16 and existing Alembic migrations: **158 passed in 64.14s, 0 skipped**. Changed Python files passed flake8 E4/E7/E9/F with one job. init.sh hit its known Win32 Error 5 before dependency installation; no shared-environment repair.
+- Scope: backend/app/api/media.py, backend/tests/test_media.py and these three harness trackers only. No frontend, dependency, migration, production or unrelated audit changes. Feature inventory: 62 records; the previous 61 records including F47/F48c remain unchanged.
+- Git/release boundary: base HEAD and origin/main are `07566c8`; owner authorized a separate local stopgap commit, **no push/deploy**. Last production observation was the preceding 2026-08-31 audit at `07566c8`, health OK; this task made no production connection. Do not repeat the old Vite/Vitest release steps below.
+- Next best action: obtain the separate owner approval for immediate standalone stopgap deployment. Re-enable HEIC only in a later separately verified change after the actually loaded libheif is >=1.23.2. Known text-rule `.codex/skills/*.md` gap remains unchanged.
+
+### Historical state before the completed Vite/Vitest release (retained evidence)
+
 - Repository root directory: mps-platform/
 - Standard startup path: ./init.sh, затем `uvicorn app.main:app --reload --port 8000 --app-dir backend`
 - Standard verification path: `python -m pytest backend/tests -q`
@@ -1130,3 +1139,14 @@
 - Owner accepted Stage 4 and explicitly authorized a separate commit of exactly the three trackers above `06dd1b8`, then `git push origin main` and deployment of both commits together. Do not rewrite the dependency commit.
 - TOOLING-VITE6 is now locally `passing` on the accepted audit/frontend/build/browser/backend evidence. At preparation of this tracker commit, production deployment is still pending; no backup SHA, live revision or smoke success is claimed in advance.
 - Approved release boundary: backup existing frontend and record its path/SHA-256; fast-forward checkout; install the lockfile and rebuild with the existing production public VITE values; verify generated and served bundle, backend health and unchanged PID, then run `deploy/smoke.sh`. No backend restart, backend dependency installation or production DB migration is authorized or required by this frontend-only change.
+
+### Session 78 — SEC-HEIF-STOPGAP, 2026-09-01
+
+- Goal: owner's urgent temporary HEIC/HEIF disablement for GHSA-g89c-p67h-r497, separate from all other audit findings; local commit only.
+- Completed: removed HEIF opener registration from the application and restricted upload decoding to JPEG/PNG/WebP/AVIF. Explicit HEIF MIME receives 422 immediately; disguised HEIF is declined by the decoder allowlist and receives the same clear temporary message. Header recognition is used only for the error text after safe decoders decline, so valid AVIF with a generic mif1 brand is retained. Existing size/EXIF/resize/encode/storage pipeline is unchanged.
+- Verification run: RED target before application edits produced 10 failed / 4 passed / 6 deselected. Six real HEIF uploads were accepted, including four supported-MIME disguises; two synthetic registered-opener guards were called. The format-list message and existing generic-brand AVIF dispatch also failed. The AVIF failure was diagnosed as HEIF opener selection, not patched by weakening the test. GREEN test_media.py: 20 passed in 9.16s. Full backend: 158 passed in 64.14s with zero skipped on a disposable loopback-only PostgreSQL 16 DB prepared through the existing Alembic chain to 20260830_0020. Test container automatically removed after the run; no production DB was used.
+- Evidence recorded: SEC-HEIF-STOPGAP contains the commands and observed results. flake8 E4/E7/E9/F passed on the two changed Python files using --jobs=1; default multiprocessing was blocked by the sandbox before linting. init.sh failed at the known Git Bash Win32 Error 5 before pip installation. These infrastructure failures are not reported as passing checks.
+- Commits: a separate local SEC-HEIF-STOPGAP commit is authorized over 07566c8, without amend/squash, push or deploy. Its SHA will be reported after creation rather than guessed in this record.
+- Final pre-commit verification: `python -m pytest tests/test_media.py -k 'temporarily_rejects or never_calls_registered' -q --tb=short -p no:cacheprovider --basetemp D:/mps-platform-full/.pytest-heif-target-final-0901` returned **8 passed, 12 deselected in 2.64s**. JSON validates with 62 unique feature IDs and all previous 61 records unchanged. Exact five-file scope, one-job flake8 and `git diff --check` passed.
+- Known risks: production remains exposed until the separately approved deployment; the native library remains vulnerable and installed. The frontend picker is intentionally unchanged and may still offer HEIC, but the API supplies a clear rejection. No dependency upgrade, media DoS/rate-limit/auth fix, frontend change or production access is mixed into this stopgap. F47/F48c and the text-rule gap are unchanged.
+- Next best action: present local commit and verification evidence; await explicit push/deploy approval. Permanent follow-up: verified libheif >=1.23.2, then RED/GREEN HEIC restoration and full regression.

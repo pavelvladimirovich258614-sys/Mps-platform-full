@@ -4,15 +4,17 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, Request
 from PIL import Image, ImageOps, UnidentifiedImageError
-from pillow_heif import register_heif_opener
 
 from app.deps import get_current_user
 from app.models.user import User
 
 router = APIRouter(prefix="/media", tags=["media"])
-register_heif_opener()
 
-SUPPORTED_MEDIA_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "image/avif"}
+SUPPORTED_MEDIA_TYPES = {"image/jpeg", "image/png", "image/webp", "image/avif"}
+# Temporary GHSA-g89c-p67h-r497 stopgap: restore HEIF only after verifying libheif >= 1.23.2.
+UPLOAD_FORMATS = ("JPEG", "PNG", "WEBP", "AVIF")
+HEIF_UNAVAILABLE = "Формат HEIC/HEIF временно недоступен, используйте JPEG/PNG/WebP"
+HEIF_BRANDS = {b"heic", b"heix", b"heim", b"heis", b"hevc", b"hevx", b"hevm", b"hevs", b"mif1", b"msf1"}
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 MEDIUM_VARIANT_MAX_BYTES = 350 * 1024
 VARIANT_MAX_DIMENSIONS = {"thumbnail": 320, "medium": 960, "large": 1600}
@@ -75,19 +77,27 @@ def _build_variants(image: Image.Image, stem: str) -> tuple[dict[str, dict[str, 
 @router.post("")
 async def upload(request: Request, file: UploadFile = File(...), user: User = Depends(get_current_user)):
     media_type = file.content_type
+    if media_type in {"image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence"}:
+        raise HTTPException(422, HEIF_UNAVAILABLE)
     if media_type not in SUPPORTED_MEDIA_TYPES:
-        raise HTTPException(422, "Допустимы JPEG, PNG, WebP, HEIC, HEIF или AVIF")
+        raise HTTPException(422, "Допустимы JPEG, PNG, WebP или AVIF")
 
     raw = await file.read()
     if len(raw) > MAX_UPLOAD_BYTES:
         raise HTTPException(422, "Файл превышает 10 МБ")
 
     try:
-        source = Image.open(BytesIO(raw))
+        # The decoder allowlist, not the untrusted MIME/filename, enforces the stopgap.
+        source = Image.open(BytesIO(raw), formats=UPLOAD_FORMATS)
         source.load()
         normalized = ImageOps.exif_transpose(source).convert(_display_mode(source))
         variants, files = _build_variants(normalized, uuid4().hex)
-    except (Image.DecompressionBombError, OSError, UnidentifiedImageError, ValueError) as exc:
+    except UnidentifiedImageError as exc:
+        # Message-only sniff after safe decoders decline; AVIF can also use mif1/msf1.
+        if raw[4:8] == b"ftyp" and raw[8:12] in HEIF_BRANDS:
+            raise HTTPException(422, HEIF_UNAVAILABLE) from exc
+        raise HTTPException(422, "Некорректное изображение") from exc
+    except (Image.DecompressionBombError, OSError, ValueError) as exc:
         raise HTTPException(422, "Некорректное изображение") from exc
 
     directory = Path(request.app.state.settings.media_dir)
