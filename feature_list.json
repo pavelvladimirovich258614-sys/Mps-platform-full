@@ -3,6 +3,23 @@
   "rule": "Только одна фича может быть in_progress. Статус passing только с evidence.",
   "features": [
     {
+      "id": "SEC-HEIF-UPGRADE",
+      "priority": 0,
+      "area": "backend-media-security",
+      "title": "Исправленный libheif 1.23.2 и безопасный возврат HEIC/HEIF",
+      "user_visible_behavior": "До полного GREEN действует production stopgap и HEIC/HEIF возвращают временную 422; после проверенного wheel и отдельного rollout загрузка HEIC/HEIF снова должна создавать обычные responsive WebP/AVIF-варианты.",
+      "status": "in_progress",
+      "verification": [
+        "Собрать воспроизводимый cp311 manylinux_2_27/2_28 x86_64 wheel с bundled libheif 1.23.2 и зафиксированными provenance/SHA-256",
+        "В изолированном target environment подтвердить libheif_info() >= 1.23.2, ldd/RPATH на bundled 1.23.2 и отсутствие загрузки 1.23.1",
+        "RED: текущий stopgap отклоняет настоящий HEIC/HEIF вместо ожидаемого восстановленного 200-контракта; fail-closed guard сохраняет 422 при native версии <1.23.2",
+        "GREEN: HEIC/HEIF, MIME/filename disguise, EXIF, alpha/HDR fixtures, malformed/limits и JPEG/PNG/WebP/AVIF regression с шестью responsive-вариантами",
+        "Полный backend suite на одноразовой PostgreSQL 16 со штатными Alembic-миграциями; затем отдельно одобренные backup/install/restart, health/smoke/live HEIC/JPEG и cleanup"
+      ],
+      "evidence": "2026-09-01 read-only diagnosis, не GREEN: production /opt/mps-platform/venv использует Python 3.11.0rc1 и pillow-heif 1.5.0. libheif_info() вернул libheif 1.23.1; pip show -f нашёл pillow_heif.libs/libheif-6b5c61d3.so.1.23.1. ldd фактического _pillow_heif.cpython-311-x86_64-linux-gnu.so и ELF RPATH $ORIGIN/pillow_heif.libs подтвердили загрузку именно bundled 1.23.1 вместе с libde265 1.1.1 и x265 ABI 216. Системные libheif1/libheif-dev отсутствуют; Ubuntu 22.04 предлагает только 1.12.0. Target: Ubuntu 22.04 x86_64, glibc 2.35, cp311-cp311, manylinux_2_27/2_28. Текущий extension SHA-256 f7add24c090e9e466972a79aa91f1635cfc088603d1e5fbe0a6d54a5fb381249; bundled libheif 1.23.1 SHA-256 c7b743710e5b7b8e836173bec697379bbc667236f7974a05ae65b4208ecd7604. Wheel с libheif 1.23.2 ещё не собран, не установлен и не проверен; RED/GREEN не запускался, production HEIC остаётся отключён существующим SEC-HEIF-STOPGAP.",
+      "notes": "Status in_progress. Следующий шаг новой сессии: продолжить/завершить изолированную сборку wheel, проверить native linkage/version, затем выполнить TDD RED->GREEN и только после отдельного согласования production rollout. После этого приоритеты: AUTH_BOT_TOKEN rotation -> stable Python вместо 3.11.0rc1 -> 33 dependency drifts -> Medium/Low audit findings. Старые F47/F48c остаются отдельными историческими in_progress exceptions; текстовый .codex/skills/*.md gap не меняется."
+    },
+    {
       "id": "SEC-HEIF-STOPGAP",
       "priority": 0,
       "area": "backend-media-security",
