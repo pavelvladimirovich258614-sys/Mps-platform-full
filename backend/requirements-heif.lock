@@ -1,0 +1,8 @@
+# Production target: pillow-heif==1.5.0+libheif1.23.2 on Linux CPython 3.11 x86_64.
+# This project-built wheel is not an official PyPI release. The release asset
+# was published under a new tag and independently hash-checked before rollout.
+pillow-heif @ https://github.com/pavelvladimirovich258614-sys/Mps-platform-full/releases/download/sec-heif-upgrade-1.5.0-libheif1.23.2/pillow_heif-1.5.0%2Blibheif1.23.2-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl#sha256=2588563fcf48184a1523e549d741345d43613c35b94e934eba01e8136dc62b3d ; sys_platform == "linux" and python_version == "3.11" and platform_machine == "x86_64"
+
+# Keep non-production development platforms installable. The application-level
+# native-version guard still rejects HEIF when this package loads libheif <1.23.2.
+pillow-heif==1.5.0 ; sys_platform != "linux" or python_version != "3.11" or platform_machine != "x86_64"
