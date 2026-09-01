@@ -1,9 +1,16 @@
 from io import BytesIO
 from pathlib import Path
+import re
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, Request
 from PIL import Image, ImageOps, UnidentifiedImageError
+
+try:
+    from pillow_heif import libheif_info, register_heif_opener
+except (ImportError, OSError):
+    libheif_info = None
+    register_heif_opener = None
 
 from app.deps import get_current_user
 from app.models.user import User
@@ -11,13 +18,29 @@ from app.models.user import User
 router = APIRouter(prefix="/media", tags=["media"])
 
 SUPPORTED_MEDIA_TYPES = {"image/jpeg", "image/png", "image/webp", "image/avif"}
-# Temporary GHSA-g89c-p67h-r497 stopgap: restore HEIF only after verifying libheif >= 1.23.2.
 UPLOAD_FORMATS = ("JPEG", "PNG", "WEBP", "AVIF")
+HEIF_MEDIA_TYPES = {"image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence"}
+MINIMUM_SAFE_LIBHEIF = (1, 23, 2)
 HEIF_UNAVAILABLE = "Формат HEIC/HEIF временно недоступен, используйте JPEG/PNG/WebP"
 HEIF_BRANDS = {b"heic", b"heix", b"heim", b"heis", b"hevc", b"hevx", b"hevm", b"hevs", b"mif1", b"msf1"}
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 MEDIUM_VARIANT_MAX_BYTES = 350 * 1024
 VARIANT_MAX_DIMENSIONS = {"thumbnail": 320, "medium": 960, "large": 1600}
+
+
+def _enable_safe_heif_decoder() -> bool:
+    if libheif_info is None or register_heif_opener is None:
+        return False
+    try:
+        info = libheif_info()
+        version_text = info["libheif"]
+        match = re.search(r"(\d+)\.(\d+)\.(\d+)", version_text)
+        if match is None or tuple(map(int, match.groups())) < MINIMUM_SAFE_LIBHEIF:
+            return False
+        register_heif_opener()
+    except (KeyError, OSError, RuntimeError, TypeError, ValueError):
+        return False
+    return True
 
 
 def _display_mode(image: Image.Image) -> str:
@@ -77,9 +100,10 @@ def _build_variants(image: Image.Image, stem: str) -> tuple[dict[str, dict[str, 
 @router.post("")
 async def upload(request: Request, file: UploadFile = File(...), user: User = Depends(get_current_user)):
     media_type = file.content_type
-    if media_type in {"image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence"}:
+    heif_enabled = _enable_safe_heif_decoder()
+    if media_type in HEIF_MEDIA_TYPES and not heif_enabled:
         raise HTTPException(422, HEIF_UNAVAILABLE)
-    if media_type not in SUPPORTED_MEDIA_TYPES:
+    if media_type not in SUPPORTED_MEDIA_TYPES | HEIF_MEDIA_TYPES:
         raise HTTPException(422, "Допустимы JPEG, PNG, WebP или AVIF")
 
     raw = await file.read()
@@ -87,8 +111,9 @@ async def upload(request: Request, file: UploadFile = File(...), user: User = De
         raise HTTPException(422, "Файл превышает 10 МБ")
 
     try:
-        # The decoder allowlist, not the untrusted MIME/filename, enforces the stopgap.
-        source = Image.open(BytesIO(raw), formats=UPLOAD_FORMATS)
+        # The decoder allowlist, not the untrusted MIME/filename, enforces fail-closed HEIF handling.
+        upload_formats = (*UPLOAD_FORMATS, "HEIF") if heif_enabled else UPLOAD_FORMATS
+        source = Image.open(BytesIO(raw), formats=upload_formats)
         source.load()
         normalized = ImageOps.exif_transpose(source).convert(_display_mode(source))
         variants, files = _build_variants(normalized, uuid4().hex)

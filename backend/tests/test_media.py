@@ -9,7 +9,9 @@ from unittest.mock import Mock
 import httpx
 import pytest
 from PIL import Image
-from pillow_heif import from_pillow
+from pillow_heif import from_pillow, register_heif_opener
+
+from app.api import media as media_api
 
 
 def telegram_payload():
@@ -43,11 +45,18 @@ def image_bytes(image_format: str) -> bytes:
     return data.getvalue()
 
 
-def heif_bytes(format_name: str) -> bytes:
-    image = Image.new("RGB", (20, 20), color="red")
+def heif_bytes(image: Image.Image | None = None, exif: bytes | None = None) -> bytes:
+    image = image or Image.new("RGB", (20, 20), color="red")
     data = BytesIO()
-    from_pillow(image).save(data, format=format_name)
+    from_pillow(image).save(data, format="HEIF", exif=exif)
     return data.getvalue()
+
+
+def exif_rotated_heif_bytes() -> bytes:
+    image = Image.new("RGB", (1200, 1800), color=(44, 122, 173))
+    exif = Image.Exif()
+    exif[274] = 6
+    return heif_bytes(image, exif.tobytes())
 
 
 def png_larger_than_nginx_default() -> bytes:
@@ -92,47 +101,166 @@ async def test_upload_supported_images(client, test_app, image_format, content_t
 
 
 @pytest.mark.parametrize(
-    ("format_name", "content_type", "filename"),
+    ("content_type", "filename"),
     [
-        ("HEIF", "image/heic", "iphone.heic"),
-        ("HEIF", "image/heif", "iphone.heif"),
-        ("HEIF", "image/jpeg", "disguised.jpg"),
-        ("HEIF", "image/png", "disguised.png"),
-        ("HEIF", "image/webp", "disguised.webp"),
-        ("HEIF", "image/avif", "disguised.avif"),
+        ("image/heic", "iphone.heic"),
+        ("image/heif", "iphone.heif"),
     ],
 )
-async def test_upload_temporarily_rejects_heic_and_heif(client, test_app, format_name, content_type, filename):
+async def test_upload_accepts_real_heic_and_heif(client, test_app, content_type, filename):
     response = await client.post(
         "/api/v1/media",
         headers=await authorization(client),
-        files={"file": (filename, heif_bytes(format_name), content_type)},
+        files={"file": (filename, heif_bytes(), content_type)},
     )
 
+    assert response.status_code == 200
+    assert response.json()["url"].endswith("-large.webp")
+    assert len(list(Path(test_app.state.settings.media_dir).iterdir())) == 6
+
+
+async def test_upload_heif_creates_all_responsive_webp_avif_variants(client, test_app):
+    source = Image.new("RGB", (1800, 1200), color=(30, 90, 150))
+    response = await client.post(
+        "/api/v1/media",
+        headers=await authorization(client),
+        files={"file": ("landscape.heic", heif_bytes(source), "image/heic")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert set(payload["variants"]) == {"thumbnail", "medium", "large"}
+    media_dir = Path(test_app.state.settings.media_dir)
+    for name, expected_width in {"thumbnail": 320, "medium": 960, "large": 1600}.items():
+        variant = payload["variants"][name]
+        assert variant["width"] == expected_width
+        assert variant["height"] == round(expected_width * 2 / 3)
+        for field, expected_format in (("webp_url", "WEBP"), ("avif_url", "AVIF")):
+            saved_file = media_dir / Path(variant[field]).name
+            with Image.open(saved_file) as saved:
+                assert saved.format == expected_format
+                assert saved.size == (variant["width"], variant["height"])
+    assert len(list(media_dir.iterdir())) == 6
+
+
+async def test_upload_heif_fails_closed_below_safe_native_version(client, test_app, monkeypatch):
+    opener = Mock(wraps=register_heif_opener)
+    monkeypatch.setattr(media_api, "libheif_info", lambda: {"libheif": "1.23.1"}, raising=False)
+    monkeypatch.setattr(media_api, "register_heif_opener", opener, raising=False)
+
+    response = await client.post(
+        "/api/v1/media",
+        headers=await authorization(client),
+        files={"file": ("disguised.jpg", heif_bytes(), "image/jpeg")},
+    )
+
+    opener.assert_not_called()
     assert response.status_code == 422
     assert response.json()["detail"] == "Формат HEIC/HEIF временно недоступен, используйте JPEG/PNG/WebP"
     media_dir = Path(test_app.state.settings.media_dir)
     assert not media_dir.exists() or list(media_dir.iterdir()) == []
 
 
-@pytest.mark.parametrize("major_brand", [b"heic", b"mif1"])
-async def test_upload_never_calls_registered_heif_decoder(client, monkeypatch, major_brand):
-    # Model a HEIF opener registered elsewhere; no native decoding is needed.
-    Image.init()
-    heif_decoder = Mock(return_value=Image.new("RGB", (20, 20), "red"))
-    monkeypatch.setitem(Image.OPEN, "HEIF", (heif_decoder, lambda prefix: prefix[4:8] == b"ftyp"))
-    monkeypatch.setattr(Image, "ID", [*Image.ID, "HEIF"])
-    container_header = b"\x00\x00\x00\x18ftyp" + major_brand + b"\x00" * 4 + b"heicmif1"
+async def test_upload_heif_fails_closed_when_native_runtime_is_unavailable(client, monkeypatch):
+    monkeypatch.setattr(media_api, "libheif_info", None)
+    monkeypatch.setattr(media_api, "register_heif_opener", None)
 
     response = await client.post(
         "/api/v1/media",
         headers=await authorization(client),
-        files={"file": ("disguised.jpg", container_header, "image/jpeg")},
+        files={"file": ("unavailable.heic", heif_bytes(), "image/heic")},
     )
 
-    heif_decoder.assert_not_called()
     assert response.status_code == 422
     assert response.json()["detail"] == "Формат HEIC/HEIF временно недоступен, используйте JPEG/PNG/WebP"
+
+
+async def test_upload_heif_enables_decoder_at_safe_native_version(client, monkeypatch):
+    opener = Mock(wraps=register_heif_opener)
+    monkeypatch.setattr(media_api, "libheif_info", lambda: {"libheif": "1.23.2"}, raising=False)
+    monkeypatch.setattr(media_api, "register_heif_opener", opener, raising=False)
+
+    response = await client.post(
+        "/api/v1/media",
+        headers=await authorization(client),
+        files={"file": ("safe.heic", heif_bytes(), "image/heic")},
+    )
+
+    opener.assert_called()
+    assert response.status_code == 200
+
+
+async def test_upload_heif_applies_iphone_exif_orientation(client, test_app):
+    response = await client.post(
+        "/api/v1/media",
+        headers=await authorization(client),
+        files={"file": ("iphone.heic", exif_rotated_heif_bytes(), "image/heic")},
+    )
+
+    assert response.status_code == 200
+    assert all(
+        variant["width"] > variant["height"]
+        for variant in response.json()["variants"].values()
+    )
+
+
+async def test_upload_heif_preserves_alpha_in_generated_variants(client, test_app):
+    source = Image.new("RGBA", (640, 360), color=(30, 90, 150, 96))
+    response = await client.post(
+        "/api/v1/media",
+        headers=await authorization(client),
+        files={"file": ("alpha.heif", heif_bytes(source), "image/heif")},
+    )
+
+    assert response.status_code == 200
+    media_dir = Path(test_app.state.settings.media_dir)
+    for variant in response.json()["variants"].values():
+        for field in ("webp_url", "avif_url"):
+            with Image.open(media_dir / Path(variant[field]).name) as saved:
+                saved.load()
+                assert "A" in saved.mode
+                assert saved.getchannel("A").getextrema()[1] < 255
+
+
+async def test_upload_heif_disguise_cannot_bypass_unsafe_runtime_guard(client, monkeypatch):
+    monkeypatch.setattr(media_api, "libheif_info", lambda: {"libheif": "1.22.0"}, raising=False)
+
+    response = await client.post(
+        "/api/v1/media",
+        headers=await authorization(client),
+        files={"file": ("photo.jpg", heif_bytes(), "image/jpeg")},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Формат HEIC/HEIF временно недоступен, используйте JPEG/PNG/WebP"
+
+
+async def test_upload_rejects_malformed_and_truncated_heif_without_writes(client, test_app):
+    valid = heif_bytes()
+    headers = await authorization(client)
+    responses = [
+        await client.post(
+            "/api/v1/media",
+            headers=headers,
+            files={"file": ("broken.heic", payload, "image/heic")},
+        )
+        for payload in (b"not a heif image", valid[: max(32, len(valid) // 3)])
+    ]
+
+    assert [response.status_code for response in responses] == [422, 422]
+    media_dir = Path(test_app.state.settings.media_dir)
+    assert not media_dir.exists() or list(media_dir.iterdir()) == []
+
+
+async def test_upload_rejects_heif_over_ten_mib_before_decode(client):
+    response = await client.post(
+        "/api/v1/media",
+        headers=await authorization(client),
+        files={"file": ("large.heic", b"x" * (10 * 1024 * 1024 + 1), "image/heic")},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Файл превышает 10 МБ"
 
 
 @pytest.mark.parametrize("major_brand", [b"avif", b"mif1"])
